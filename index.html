@@ -120,6 +120,10 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 .bsheet .foot .btn{flex:1}
 .opt{display:block;width:100%;min-height:52px;padding:12px 8px;border:0;border-bottom:1px solid var(--rule);background:transparent;text-align:left;font-size:16px}
 .opt[aria-selected="true"]{font-weight:700;color:var(--gc)}
+.photo{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.photo img{width:96px;height:96px;object-fit:cover;border-radius:var(--r-s);border:1px solid var(--rule)}
+.photo .pbtn{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 16px;border:1px dashed var(--gc);border-radius:var(--r-s);color:var(--gc);font-weight:700;background:var(--soft);cursor:pointer}
+.photo input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .review dt{font-size:13px;color:var(--sub);margin-top:10px}
 .review dd{margin:2px 0 0;white-space:pre-wrap;word-break:break-word}
 
@@ -215,7 +219,7 @@ function toast(msg, ms = 2600){ const t = $('toast'); t.textContent = msg; t.cla
 
 /* ================= デモ用データ（URL に ?demo を付けたとき） ================= */
 const DEMO_FORMS = [
-  ['日々の記録',['支援経過記録','相談記録表','ヒヤリハット報告書','感染症報告','欠席時対応(加算)記録表','施設外実績記録表','研修受講報告書']],
+  ['日々の記録',['支援経過記録','相談記録表','ヒヤリハット報告書','感染症報告','欠席時対応(加算)記録表','施設外実績記録表','研修受講報告書','事故報告書','家族連絡記録','検温管理','待機期間管理','アルコールチェッカー記録','自動車運転日誌','虐待チェックシート']],
   ['支援計画・会議',['個別支援計画書','個別支援計画の作成に係るアセスメント表','支援計画作成面談表','個別支援計画モニタリング面談記録','個別支援会議録','モニタリング会議録','会議録','他機関連携記録','個人の強みと課題表']],
   ['アセスメント・採用',['就労アセスメント','アセスメントシート暫定時','利用者スキルシート','面接シート']],
   ['届出・報告',['賃金工賃実績報告調査表','基－３基本報酬算定区分','【加－41】送迎加算に関する届出書']]
@@ -234,12 +238,20 @@ const DEMO_FIELDS = [
   { label:'送迎の有無', type:'text', options:['有り','無し'], strict:true },
   { label:'≪備考≫', type:'textarea' }
 ].map((f, i) => ({ index:i, options:[], hidden:false, auto:false, strict:false, multi:false, required:false, ...f }));
+const DEMO_ALC = [
+  { label:'確認日時', type:'datetime', required:true },
+  { label:'運転者', type:'text', options:['石橋','大鶴','吉澤','平山'], strict:true },
+  { label:'確認方法', type:'text', options:['対面','アルコールチェッカー'], strict:true },
+  { label:'酒気の有無(検知結果)', type:'text', options:['無し','有り'], strict:true },
+  { label:'画像', type:'image' },
+  { label:'地域連携活動を公表している', type:'check' }
+].map((f, i) => ({ index:i, options:[], hidden:false, auto:false, strict:false, multi:false, required:false, ...f }));
 async function demoApi(p){
   await new Promise(r => setTimeout(r, 250));
   if (p.app === 'forms') return { forms: DEMO_FORMS };
-  if (p.app === 'fields') return { sheet:p.sheet, fields: DEMO_FIELDS };
+  if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
-  if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[] }; }
+  if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[], note: p.sheet === '検温管理' ? '36.8℃：発熱無し 🟢' : '' }; }
 }
 
 /* ================= サーバー呼び出し（GETのみ） ================= */
@@ -253,6 +265,35 @@ async function api(params, override){
   const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした。設定のURLを確認してください。'); });
   if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
   return j;
+}
+
+async function apiPost(body){
+  if (isDemo()) return demoApi(body);
+  let r;
+  try { r = await fetch(cfg.url, { method:'POST', body: JSON.stringify({ ...body, key: cfg.key }) }); }
+  catch (e) { throw new Error('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
+  const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした。少し待ってからもう一度お試しください。'); });
+  if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
+  return j;
+}
+
+/* 写真を縮小してから送る（長い辺 1280px・JPEG） */
+function shrinkImage(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1280, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      const dataUrl = c.toDataURL('image/jpeg', 0.8);
+      resolve({ dataUrl, b64: dataUrl.split(',')[1], mime:'image/jpeg' });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('この写真は読み込めませんでした')); };
+    img.src = url;
+  });
 }
 
 /* ================= 画面の切り替え（#/…） ================= */
@@ -416,7 +457,8 @@ function renderForm(sheet, fields, keepValues){
   const draft = keepValues ? null : LS.get(draftKey(sheet), null);
   const values = keepValues || (draft ? { ...draft.values } : {});
   if (!draft && !keepValues) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = ymd(); }
-  F = { sheet, fields, values, group };
+  const files = (F && F.sheet === sheet && keepValues) ? F.files : {};
+  F = { sheet, fields, values, group, files };
   const vis = fields.filter(f => !f.hidden);
 
   let html = `<div class="${gClass(group)}">`;
@@ -446,18 +488,31 @@ function fieldHtml(f, raw){
     label = `<div class="label" id="${id}l">${esc(f.label)}${req}</div>`;
     body = `<div class="chips" role="radiogroup" aria-labelledby="${id}l">${opts.map(o =>
       `<button type="button" class="chip" data-f="${f.index}" data-v="${esc(o)}" data-mode="one" aria-pressed="${raw === o}">${esc(o)}</button>`).join('')}</div>`;
+  } else if (f.type === 'image') {
+    const ph = F.files[f.index];
+    label = `<div class="label">${esc(f.label)}${req}<span class="hint">写真は下書きに残りません</span></div>`;
+    body = `<div class="photo">${ph ? `<img src="${ph.dataUrl}" alt="選んだ写真">` : ''}
+      <label class="pbtn">${ph ? '撮り直す' : '写真を撮る・選ぶ'}<input type="file" accept="image/*" data-photo="${f.index}"></label>
+      ${ph ? `<button type="button" class="link" style="color:var(--sub)" data-unphoto="${f.index}">外す</button>` : ''}</div>`;
+  } else if (f.type === 'check') {
+    label = `<div class="label" id="${id}l">${esc(f.label)}${req}</div>`;
+    body = `<div class="chips" role="radiogroup" aria-labelledby="${id}l">${['はい','いいえ'].map(o => {
+      const v = o === 'はい' ? 'TRUE' : 'FALSE';
+      return `<button type="button" class="chip" data-f="${f.index}" data-v="${v}" data-mode="one" aria-pressed="${String(raw).toUpperCase() === v}">${o}</button>`; }).join('')}</div>`;
   } else if (f.type === 'textarea') {
     body = `<textarea class="in" id="${id}" data-f="${f.index}">${val}</textarea>`;
   } else {
-    const t = { date:'date', time:'time', number:'number' }[f.type] || 'text';
+    const t = { date:'date', time:'time', number:'number', datetime:'datetime-local' }[f.type] || 'text';
     const list = opts.length > 8 ? ` list="dl${f.index}"` : '';
     body = `<input class="in" id="${id}" data-f="${f.index}" type="${t}" value="${val}"${t === 'number' ? ' inputmode="decimal"' : ''}${list}>`;
     if (list) body += `<datalist id="dl${f.index}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
+    if (t === 'datetime-local') body += `<div class="chips after"><button type="button" class="chip mini" data-now="${f.index}">今の時刻</button></div>`;
     if (t === 'date') body += `<div class="chips after"><button type="button" class="chip mini" data-date="0" data-f="${f.index}">今日</button><button type="button" class="chip mini" data-date="-1" data-f="${f.index}">昨日</button></div>`;
     else if (opts.length && opts.length <= 8) body += `<div class="chips after">${opts.map(o =>
       `<button type="button" class="chip mini" data-f="${f.index}" data-v="${esc(o)}" data-mode="fill">${esc(o)}</button>`).join('')}</div>`;
   }
-  return `<div class="field${String(raw).trim() ? ' filled' : ''}" id="w${f.index}">${label}${body}</div>`;
+  const has = f.type === 'image' ? !!F.files[f.index] : !!String(raw).trim();
+  return `<div class="field${has ? ' filled' : ''}" id="w${f.index}">${label}${body}</div>`;
 }
 
 function setValue(i, v){
@@ -479,7 +534,7 @@ function saveDraft(){
 }
 function updateProgress(){
   const vis = F.fields.filter(f => !f.hidden);
-  const done = vis.filter(f => String(F.values[f.index] ?? '').trim()).length;
+  const done = vis.filter(f => f.type === 'image' ? F.files[f.index] : String(F.values[f.index] ?? '').trim()).length;
   const c = $('count'); if (c) c.textContent = `記入 ${done} / ${vis.length}`;
   const bar = $('prog').querySelector('i'); bar.style.width = (vis.length ? done / vis.length * 100 : 0) + '%';
 }
@@ -509,11 +564,28 @@ function bindForm(){
     const d = new Date(Date.now() + Number(ch.dataset.date) * 864e5);
     const el = $('f' + ch.dataset.f); el.value = ymd(d); setValue(ch.dataset.f, el.value);
   });
+  v.querySelectorAll('[data-now]').forEach(ch => ch.onclick = () => {
+    const el = $('f' + ch.dataset.now); el.value = jst().toISOString().slice(0, 16); setValue(ch.dataset.now, el.value);
+  });
+  v.querySelectorAll('[data-photo]').forEach(inp => inp.onchange = async () => {
+    const file = inp.files && inp.files[0]; if (!file) return;
+    const i = inp.dataset.photo;
+    try { F.files[i] = await shrinkImage(file); } catch (e) { toast(e.message); return; }
+    redrawField(i);
+  });
+  v.querySelectorAll('[data-unphoto]').forEach(b => b.onclick = () => { delete F.files[b.dataset.unphoto]; redrawField(b.dataset.unphoto); });
   v.querySelectorAll('.picker').forEach(p => p.onclick = () => openPicker(F.fields.find(f => String(f.index) === p.dataset.f)));
   $('send').onclick = openReview;
 }
 
-/* ===== 下から出るシート ===== */
+function redrawField(i){
+  const f = F.fields.find(x => String(x.index) === String(i));
+  const w = $('w' + i); if (!f || !w) return;
+  w.outerHTML = fieldHtml(f, F.values[i] ?? '');
+  bindForm(); updateProgress();
+}
+
+/* ===== 下から出るシート（JS） ===== */
 function openSheet(title, body, foot, cls){
   $('bsTitle').textContent = title;
   $('bsBody').innerHTML = body;
@@ -553,16 +625,23 @@ function openPicker(f){
 /* ===== 送信前の確認 ===== */
 function openReview(){
   const vis = F.fields.filter(f => !f.hidden);
-  if (!vis.some(f => String(F.values[f.index] ?? '').trim())) { toast('まだ何も入力されていません'); return; }
-  const missing = vis.filter(f => f.required && !String(F.values[f.index] ?? '').trim());
+  if (!vis.some(f => String(F.values[f.index] ?? '').trim()) && !Object.keys(F.files).length) { toast('まだ何も入力されていません'); return; }
+  const missing = vis.filter(f => f.required && (f.type === 'image' ? !F.files[f.index] : !String(F.values[f.index] ?? '').trim()));
   if (missing.length) {
     missing.forEach(f => $('w' + f.index)?.classList.add('miss'));
     $('w' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
     toast('必須の項目が空いています：' + missing.map(f => f.label).join('、'), 3600);
     return;
   }
-  const filled = vis.filter(f => String(F.values[f.index] ?? '').trim());
-  const rows = filled.map(f => `<dt>${esc(f.label)}</dt><dd>${esc(f.multi ? splitMulti(F.values[f.index]).join('、') : F.values[f.index])}</dd>`).join('');
+  const filled = vis.filter(f => f.type === 'image' ? F.files[f.index] : String(F.values[f.index] ?? '').trim());
+  const show = f => {
+    if (f.type === 'image') return `<img src="${F.files[f.index].dataUrl}" alt="" style="width:120px;border-radius:8px">`;
+    const v = F.values[f.index];
+    if (f.type === 'check') return String(v).toUpperCase() === 'TRUE' ? 'はい' : 'いいえ';
+    if (f.type === 'datetime') return esc(String(v).replace('T', ' '));
+    return esc(f.multi ? splitMulti(v).join('、') : v);
+  };
+  const rows = filled.map(f => `<dt>${esc(f.label)}</dt><dd>${show(f)}</dd>`).join('');
   const blanks = vis.length - filled.length;
   openSheet('この内容で送信しますか？',
     `<dl class="review">${rows}</dl>${blanks ? `<p class="small" style="margin-top:14px">未記入の項目が ${blanks} 件あります。そのまま送信できます。</p>` : ''}`,
@@ -576,9 +655,11 @@ async function submitForm(){
   $('busy').classList.add('on');
   const { sheet, values } = F;
   try {
-    const j = await api({ app:'submit', sheet, data: JSON.stringify(values) });
+    const files = {};
+    Object.keys(F.files).forEach(i => { files[i] = { b64:F.files[i].b64, mime:F.files[i].mime }; });
+    const j = await apiPost({ app:'submit', sheet, data: values, files });
     LS.del(draftKey(sheet));
-    const rec = { sheet, ts:Date.now(), pdfs:j.pdfs || [], who: values[F.fields.find(f => !f.hidden && f.strict && (f.options || []).length > 8)?.index] || '' };
+    const rec = { sheet, ts:Date.now(), pdfs:j.pdfs || [], note:j.note || '', who: values[F.fields.find(f => !f.hidden && f.strict && (f.options || []).length > 8)?.index] || '' };
     LS.set('fb_history', [rec, ...getHistory()].slice(0, 50));
     F = null;
     location.replace('#/done/' + encodeURIComponent(sheet));
@@ -600,7 +681,8 @@ function showDone(sheet){
   $('view').innerHTML = `<div class="${gClass(group)}"><div class="done">
     <div class="mark">${ICON.check}</div><h2>記録しました</h2>
     <p>${esc(sheet)}${rec && rec.who ? '（' + esc(rec.who) + '）' : ''}</p>
-    <p class="small">${rec ? fmtTime(rec.ts) : ''}　PDFを作成しました</p></div>
+    ${rec && rec.note ? `<p style="font-size:20px;font-weight:700;color:var(--ink);margin-top:10px">${esc(rec.note)}</p>` : ''}
+    <p class="small">${rec ? fmtTime(rec.ts) : ''}　${pdf ? 'PDFを作成しました' : 'スプレッドシートに記録しました'}</p></div>
     <div class="stack">
       ${pdf ? `<a class="btn s wide" style="display:grid;place-items:center;text-decoration:none;color:inherit" href="${esc(pdf.url)}" target="_blank" rel="noopener">PDFを開く</a>` : ''}
       <a class="btn p wide" style="display:grid;place-items:center;text-decoration:none" href="#/form/${encodeURIComponent(sheet)}">続けてもう1件入力する</a>
