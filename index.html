@@ -55,7 +55,9 @@ const LS = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
-let cfg = LS.get('fb_cfg', { url:'', key:'' });
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyrtRt3p7kBtgZHkOSfwa06ciMve2R4Vm1A_X7ooPGguONzdl8oECafAoA06tSoWpcW/exec';
+let cfg = LS.get('fb_cfg', { url: DEFAULT_URL, key:'' });
+if (!cfg.url) cfg.url = DEFAULT_URL;
 const isDemo = () => !cfg.url;
 const draftKey = s => 'fb_draft_' + s;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -208,7 +210,7 @@ function showSettings(){
   $('view').innerHTML = `
     <div class="field"><label for="url">GAS ウェブアプリURL（…/exec）</label><input id="url" value="${esc(cfg.url)}" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
     <div class="field"><label for="key">アプリキー（スクリプトプロパティ APP_KEY と同じ値）</label><input id="key" value="${esc(cfg.key)}"></div>
-    <p class="small">URLを空にするとデモ表示に戻ります。設定はこの端末だけに保存されます。</p>
+    <p class="small">URLは最初から入っています。アプリキーだけ入力して保存してください。設定はこの端末だけに保存されます。</p>
     <div class="bar"><button class="btn s" id="test">接続テスト</button><button class="btn p" id="save">保存</button></div>`;
   const read = () => ({ url: $('url').value.trim(), key: $('key').value.trim() });
   $('save').onclick = () => { cfg = read(); LS.set('fb_cfg', cfg); toast('保存しました'); showHome(); };
