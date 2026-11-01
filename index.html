@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#2f6b4f">
 <title>福祉ボット２</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
@@ -54,7 +56,8 @@ body.no-nav main.wrap{padding-bottom:0}
 .progress i{display:block;height:100%;width:0;background:var(--gc);transition:width .25s}
 
 /* ===== ホーム ===== */
-.today{padding:18px 0 6px}
+.today{padding:18px 0 6px;display:flex;align-items:center;gap:14px}
+.today .logo{width:84px;height:84px;flex:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))}
 .today .date{font-size:26px;font-weight:700;letter-spacing:.02em}
 .today .stat{color:var(--sub);font-size:14px;margin-top:2px}
 .search{position:relative;display:block;margin:12px 0 4px}
@@ -315,7 +318,7 @@ const DEMO_FORMS = [
   ['支援計画・会議',['個別支援計画書','個別支援計画の作成に係るアセスメント表','支援計画作成面談表','個別支援計画モニタリング面談記録','個別支援会議録','モニタリング会議録','会議録','他機関連携記録','個人の強みと課題表']],
   ['アセスメント・採用',['就労アセスメント','アセスメントシート暫定時','利用者スキルシート','面接シート']],
   ['届出・報告',['賃金工賃実績報告調査表','基－３基本報酬算定区分','【加－41】送迎加算に関する届出書']]
-].flatMap(([g, list]) => list.map(s => ({ group:g, sheet:s })));
+].flatMap(([g, list]) => list.map(s => ({ group:g, sheet:s, private: s === '虐待チェックシート' || s === '面接シート' })));
 const DEMO_NAMES = ['峰 恭子','稼木 敏明','松川 忠義','田中 尚樹','佐々木 勇斗','木村 圭吾','仲西 大介','中村 啓志郎','帯田 真','井上 俊二','佐藤 史佳','長屋 結衣'];
 const DEMO_FIELDS = [
   { label:'日付', type:'date', required:true },
@@ -486,6 +489,7 @@ window.addEventListener('hashchange', route);
 
 /* ================= 共通データ ================= */
 const getForms = () => LS.get('fb_forms_' + (isDemo() ? 'demo' : 'live'), null);
+const isPrivate = sheet => !!(getForms() || []).find(f => f.sheet === sheet)?.private;
 const groupOf = sheet => (getForms() || []).find(f => f.sheet === sheet)?.group || GROUPS[0];
 const getPins = () => LS.get('fb_pins', []);
 const getHistory = () => LS.get('fb_history', []);
@@ -509,8 +513,8 @@ async function showHome(){
     const todayCount = getHistory().filter(h => ymd(new Date(h.ts)) === ymd()).length;
     const d = jst();
     const week = '日月火水木金土'[d.getUTCDay()];
-    let html = `<div class="today"><div class="date">${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${week}）</div>
-      <div class="stat">今日の送信 ${todayCount}件　下書き ${drafts.length}件</div></div>`;
+    let html = `<div class="today"><img class="logo" src="logo.png" alt="Fukushi 記録Bot II" width="84" height="84"><div><div class="date">${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${week}）</div>
+      <div class="stat">今日の送信 ${todayCount}件　下書き ${drafts.length}件</div></div></div>`;
     if (authError) html += `<div class="note err">${esc(authError)}</div>`;
     else if (!signedIn()) html += `<div class="note">LINEから開くと、そのまま使えます。<br>パソコンなどでは${liffReady() ? '<button class="link" style="padding:0" onclick="lineLogin()">LINEでログイン</button>するか、' : ''}<a class="link" style="padding:0" href="#/settings">設定</a>でアプリキーを入力してください。</div>`;
     else if (ME && ME.name) html = html.replace('<div class="stat">', `<div class="stat">${esc(ME.name)} さん${isAdmin() ? '<span class="admin-mark">管理者</span>' : ''}<br>`);
@@ -619,7 +623,9 @@ function renderForm(sheet, fields, keepValues, edit){
   let html = `<div class="${gClass(group)}">`;
   if (edit) html += `<div class="note">記録を修正しています（${esc(edit.label || '')}）。保存すると元の記録が書き換わります。</div>`;
   else {
-    html += `<a class="list-item" href="#/records/${encodeURIComponent(sheet)}" style="color:inherit;text-decoration:none;margin-top:12px"><div class="main"><div class="t" style="font-weight:400">これまでの記録を見る</div><div class="m">さがす・修正する</div></div>${ICON.chev}</a>`;
+    const priv = isPrivate(sheet);
+    if (!priv || isAdmin()) html += `<a class="list-item" href="#/records/${encodeURIComponent(sheet)}" style="color:inherit;text-decoration:none;margin-top:12px"><div class="main"><div class="t" style="font-weight:400">これまでの記録を見る${priv ? '<span class="admin-mark">管理者</span>' : ''}</div><div class="m">さがす・修正する</div></div>${ICON.chev}</a>`;
+    else html += `<div class="note">この帳票の過去の記録は、管理者だけが見られます。</div>`;
     if (draft && draft.at) html += `<div class="note">${esc(draft.at)} の下書きから続けています。</div>`;
   }
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
