@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>福祉ボットくん 入力</title>
+<style>
+:root{--bg:#f4f7f6;--card:#fff;--ink:#1f2d2b;--sub:#5f716d;--line:#dde6e3;--main:#2e8b75;--main-d:#246f5d;--warn:#b5651d;--err:#c0392b;--draft:#fff4e0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;background:var(--main);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:8px;z-index:5}
+header h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:transparent;border:0;color:#fff;font-size:20px;padding:4px 8px;cursor:pointer}
+main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
+.group{margin:20px 0 8px;font-size:13px;color:var(--sub);font-weight:700}
+.item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer}
+.item:active{background:#eef5f3}
+.badge{flex-shrink:0;font-size:12px;background:var(--draft);color:var(--warn);border-radius:99px;padding:2px 8px;font-weight:700}
+.field{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.field label{display:block;font-size:13px;color:var(--sub);margin-bottom:6px;font-weight:700}
+input,textarea{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit}
+input:focus,textarea:focus{outline:2px solid var(--main);border-color:var(--main)}
+textarea{min-height:100px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--line);background:#f8fbfa;border-radius:99px;padding:6px 12px;font-size:14px;cursor:pointer;color:var(--ink)}
+.chip.on{background:var(--main);border-color:var(--main);color:#fff}
+.bar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px}
+.btn{flex:1;border:0;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
+.btn.p{background:var(--main);color:#fff}.btn.p:active{background:var(--main-d)}
+.btn.s{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.note{background:var(--draft);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px;line-height:1.6}
+.note.err{background:#fdecea;color:var(--err)}
+.saved{font-size:12px;color:var(--sub);text-align:right;margin:0 0 8px;min-height:16px}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1f2d2b;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%;z-index:30}
+.toast.on{opacity:1}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:700;text-align:center;padding:24px}
+.overlay.on{display:flex}
+.small{font-size:13px;color:var(--sub);line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <button id="back" aria-label="戻る" style="visibility:hidden">←</button>
+  <h1 id="title">福祉ボットくん</h1>
+  <button id="gear" aria-label="設定">⚙</button>
+</header>
+<main id="view"></main>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay"><div>送信中…<br><span style="font-weight:400;font-size:14px">転記・PDF作成・通知まで少しかかります</span></div></div>
+
+<script>
+/* ===== 保存（localStorage が使えない環境でも動くように） ===== */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+let cfg = LS.get('fb_cfg', { url:'', key:'' });
+const isDemo = () => !cfg.url;
+const draftKey = s => 'fb_draft_' + s;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+
+function toast(msg, ms=2500){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'), ms); }
+
+/* ===== デモ用データ（GAS URL 未設定のとき） ===== */
+const DEMO_FORMS = [
+  ['日々の記録',['支援経過記録','相談記録表','ヒヤリハット報告書','感染症報告','欠席時対応(加算)記録表','施設外実績記録表','研修受講報告書']],
+  ['支援計画・会議',['個別支援計画書','個別支援計画の作成に係るアセスメント表','支援計画作成面談表','個別支援計画モニタリング面談記録','個別支援会議録','モニタリング会議録','会議録','他機関連携記録','個人の強みと課題表']],
+  ['アセスメント・採用',['就労アセスメント','アセスメントシート暫定時','利用者スキルシート','面接シート']],
+  ['届出・報告',['賃金工賃実績報告調査表','基－３基本報酬算定区分']]
+].flatMap(([g, list]) => list.map(s => ({ group:g, sheet:s })));
+const DEMO_FIELDS = [
+  { label:'日付', type:'date' }, { label:'名前', type:'text', options:['利用者A','利用者B','利用者C'] },
+  { label:'出勤状況', type:'text', options:['出勤','欠勤','遅刻','早退'] },
+  { label:'利用開始時間', type:'time' }, { label:'利用終了時間', type:'time' },
+  { label:'休憩（分）', type:'number' }, { label:'作業内容', type:'textarea' },
+  { label:'本人の様子', type:'textarea' }, { label:'支援員対応', type:'textarea' },
+  { label:'保存用名前', type:'text', hidden:true, auto:true }
+].map((f,i) => ({ index:i, options:[], hidden:false, auto:false, ...f }));
+async function demoApi(p){
+  await new Promise(r => setTimeout(r, 300));
+  if (p.app === 'forms') return { forms: DEMO_FORMS };
+  if (p.app === 'fields') return { sheet:p.sheet, fields: DEMO_FIELDS };
+  if (p.app === 'submit') { await new Promise(r => setTimeout(r, 900)); return { message:'（デモ）保存しました。実際には転記→PDF→LINE通知まで行います' }; }
+  if (p.app === 'ping') return { message:'デモモードです' };
+}
+
+/* ===== GAS 呼び出し（GETのみ） ===== */
+async function api(params){
+  if (isDemo()) return demoApi(params);
+  const url = cfg.url + '?' + new URLSearchParams({ ...params, key: cfg.key });
+  if (url.length > 7500) throw new Error('入力量が多すぎて一度に送れません（約' + url.length + '文字）。長文を短くしてください。');
+  const r = await fetch(url);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
+  return j;
+}
+
+/* ===== 画面：ホーム ===== */
+async function showHome(){
+  $('title').textContent = '福祉ボットくん';
+  $('back').style.visibility = 'hidden';
+  const v = $('view');
+  let forms = LS.get('fb_forms_' + (isDemo()?'demo':'live'), null);
+  const draw = () => {
+    let html = isDemo() ? '<div class="note">デモ表示中です。⚙ 設定で GAS の URL とアプリキーを入れると、複製したスプレッドシートにつながります。</div>' : '';
+    if (!forms) { v.innerHTML = html + '<p class="small">読み込み中…</p>'; return; }
+    let g = '';
+    forms.forEach(f => {
+      if (f.group !== g) { g = f.group; html += `<div class="group">${esc(g)}</div>`; }
+      const d = LS.get(draftKey(f.sheet), null);
+      html += `<div class="item" data-sheet="${esc(f.sheet)}"><span>${esc(f.sheet)}</span>${d ? '<span class="badge">下書きあり</span>' : ''}</div>`;
+    });
+    v.innerHTML = html;
+    v.querySelectorAll('.item').forEach(el => el.onclick = () => showForm(el.dataset.sheet));
+  };
+  draw();
+  try {
+    const j = await api({ app:'forms' });
+    forms = j.forms; LS.set('fb_forms_' + (isDemo()?'demo':'live'), forms); draw();
+  } catch (e) {
+    if (!forms) v.innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+    else toast('一覧の更新に失敗：' + e.message);
+  }
+}
+
+/* ===== 画面：入力フォーム（下書き自動保存） ===== */
+async function showForm(sheet){
+  $('title').textContent = sheet;
+  $('back').style.visibility = 'visible';
+  const v = $('view');
+  const cacheKey = 'fb_fields_' + (isDemo()?'demo_':'') + sheet;
+  let fields = LS.get(cacheKey, null);
+  if (!fields) v.innerHTML = '<p class="small">入力欄を読み込み中…</p>';
+  try {
+    const j = await api({ app:'fields', sheet });
+    fields = j.fields; LS.set(cacheKey, fields);
+  } catch (e) {
+    if (!fields) { v.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+    toast('入力欄の更新に失敗（前回の形で表示）');
+  }
+
+  const draft = LS.get(draftKey(sheet), null);
+  const values = draft ? { ...draft.values } : {};
+  if (!draft) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = new Date(Date.now()+9*3600e3).toISOString().slice(0,10); }
+
+  let html = draft ? `<div class="note">前回 ${esc(draft.at)} の下書きを復元しました。</div>` : '';
+  html += '<div class="saved" id="saved"></div>';
+  fields.filter(f => !f.hidden).forEach(f => {
+    const id = 'f' + f.index, val = esc(values[f.index] ?? '');
+    let input;
+    if (f.type === 'textarea') input = `<textarea id="${id}" data-i="${f.index}">${val}</textarea>`;
+    else {
+      const t = { date:'date', time:'time', number:'number' }[f.type] || 'text';
+      const list = f.options.length > 8 ? ` list="dl${f.index}"` : '';
+      input = `<input id="${id}" data-i="${f.index}" type="${t}" value="${val}"${t==='number'?' inputmode="decimal"':''}${list}>`;
+      if (list) input += `<datalist id="dl${f.index}">${f.options.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
+      if (f.options.length && f.options.length <= 8) input += `<div class="chips">${f.options.map(o => `<button type="button" class="chip${String(values[f.index]??'')===o?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+    }
+    html += `<div class="field"><label for="${id}">${esc(f.label)}</label>${input}</div>`;
+  });
+  html += `<div class="bar"><button class="btn s" id="clear">下書きを消す</button><button class="btn p" id="send">送信</button></div>`;
+  v.innerHTML = html;
+
+  let timer;
+  const saveDraft = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const at = new Date().toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+      LS.set(draftKey(sheet), { values, at });
+      $('saved').textContent = '下書き保存 ' + at;
+    }, 400);
+  };
+  v.querySelectorAll('[data-i]').forEach(el => el.oninput = () => { values[el.dataset.i] = el.value; syncChips(el); saveDraft(); });
+  v.querySelectorAll('.chip').forEach(ch => ch.onclick = () => {
+    const el = $(ch.dataset.for);
+    el.value = el.value === ch.dataset.v ? '' : ch.dataset.v;
+    el.dispatchEvent(new Event('input'));
+  });
+  function syncChips(el){ v.querySelectorAll(`.chip[data-for="${el.id}"]`).forEach(c => c.classList.toggle('on', c.dataset.v === el.value)); }
+
+  $('clear').onclick = () => {
+    if (!confirm('この帳票の下書きを消して、入力をやり直しますか？')) return;
+    LS.del(draftKey(sheet)); showForm(sheet);
+  };
+  $('send').onclick = async () => {
+    if (!Object.values(values).some(x => String(x).trim())) { toast('入力がありません'); return; }
+    if (!confirm(`「${sheet}」を送信します。よろしいですか？`)) return;
+    $('overlay').classList.add('on');
+    try {
+      const j = await api({ app:'submit', sheet, data: JSON.stringify(values) });
+      LS.del(draftKey(sheet));
+      toast(j.message || '保存しました', 3500);
+      showHome();
+    } catch (e) {
+      alert('送信できませんでした。\n下書きは残っています。\n\n' + e.message);
+    } finally {
+      $('overlay').classList.remove('on');
+    }
+  };
+}
+
+/* ===== 画面：設定 ===== */
+function showSettings(){
+  $('title').textContent = '設定';
+  $('back').style.visibility = 'visible';
+  $('view').innerHTML = `
+    <div class="field"><label for="url">GAS ウェブアプリURL（…/exec）</label><input id="url" value="${esc(cfg.url)}" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
+    <div class="field"><label for="key">アプリキー（スクリプトプロパティ APP_KEY と同じ値）</label><input id="key" value="${esc(cfg.key)}"></div>
+    <p class="small">URLを空にするとデモ表示に戻ります。設定はこの端末だけに保存されます。</p>
+    <div class="bar"><button class="btn s" id="test">接続テスト</button><button class="btn p" id="save">保存</button></div>`;
+  const read = () => ({ url: $('url').value.trim(), key: $('key').value.trim() });
+  $('save').onclick = () => { cfg = read(); LS.set('fb_cfg', cfg); toast('保存しました'); showHome(); };
+  $('test').onclick = async () => {
+    const old = cfg; cfg = read();
+    try { const j = await api({ app:'ping' }); toast(j.message || '接続OK'); }
+    catch (e) { alert('接続できません：' + e.message); }
+    finally { cfg = old; }
+  };
+}
+
+$('back').onclick = showHome;
+$('gear').onclick = showSettings;
+showHome();
+</script>
+</body>
+</html>
