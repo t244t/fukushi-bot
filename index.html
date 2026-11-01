@@ -232,6 +232,7 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 <header class="top" id="top"><div class="wrap">
   <button class="icon-btn" id="back" aria-label="戻る" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
   <h1 id="title">福祉ボット２</h1>
+  <a class="icon-btn" id="gearBtn" href="#/settings" aria-label="設定" style="color:inherit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></a>
   <button class="icon-btn" id="pinBtn" aria-label="よく使うに追加" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg></button>
 </div><span class="progress" id="prog" hidden><i></i></span></header>
 
@@ -240,9 +241,9 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 <nav class="nav" id="nav"><div class="wrap">
   <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg>記録する</a>
   <a href="#/contact" data-nav="contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg>連絡</a>
+  <a href="#/work" data-nav="work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="1.5"/><path d="M9 7.5V5.5a1 1 0 011-1h4a1 1 0 011 1v2M3.5 12.5h17"/></svg>業務</a>
   <a href="#/info" data-nav="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>情報</a>
   <a href="#/drafts" data-nav="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>履歴<span class="dot" id="draftDot" hidden></span></a>
-  <a href="#/settings" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>設定</a>
 </div></nav>
 
 <div class="scrim" id="scrim"></div>
@@ -424,7 +425,7 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
-  const navKey = ({ history:'drafts', stock:'contact', admin:'contact' })[page] || page || 'home';
+  const navKey = ({ history:'drafts', stock:'work', admin:'work' })[page] || page || 'home';
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -432,6 +433,7 @@ function route(){
   if (page === 'done') return showDone(arg);
   if (page === 'info') return arg ? showView(arg) : showInfo();
   if (page === 'contact') return arg === 'broadcast' ? showBroadcast() : showContact();
+  if (page === 'work') return showWork();
   if (page === 'stock') return showStock(arg);
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
@@ -445,6 +447,7 @@ function setTop({ title, back = false, group = null, pin = null }){
   $('back').hidden = !back;
   $('prog').hidden = !group;
   $('pinBtn').hidden = pin === null;
+  $('gearBtn').hidden = back || pin !== null || title === '設定';
   if (pin !== null) {
     $('pinBtn').setAttribute('aria-pressed', pin ? 'true' : 'false');
     $('pinBtn').querySelector('path').setAttribute('fill', pin ? 'currentColor' : 'none');
@@ -1027,17 +1030,10 @@ async function showContact(){
     html += `<div class="sec-title">安否確認の状況<span class="admin-mark">管理者</span></div><div class="box" id="safetyBox"><div class="small">読み込んでいます…</div></div>`;
   }
   html += `<div class="sec-title">イベント${isAdmin() ? '<span class="admin-mark">管理者</span>' : 'の出欠'}</div><div id="evBox"><div class="box small">読み込んでいます…</div></div>`;
-  html += `<div class="sec-title">やること</div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
-    <div class="sec-title">備品・在庫</div>
-    <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">在庫の確認・入庫・出庫</div><div class="m">QRコードの読み取りにも対応</div></div>${ICON.chev}</a>`;
   if (isAdmin()) {
-    html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
-      <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
-      <a class="list-item" href="#/admin/monthly" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">月別集計</div><div class="m">出勤日数・時間・送迎・有給・欠勤</div></div>${ICON.chev}</a>`;
     html += `<div class="sec-title">スタッフへの連絡<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/contact/broadcast" style="color:inherit;text-decoration:none;--gc:var(--brand)"><div class="main"><div class="t">一斉連絡を送る</div><div class="m">LINE・メールで、選んだスタッフにお知らせ</div></div>${ICON.chev}</a>
-      <div class="sec-title">会議（Google Meet）<span class="admin-mark">管理者</span></div><div id="mtBox"><div class="box small">読み込んでいます…</div></div>
-      <div class="sec-title">現在の出勤状況<span class="admin-mark">管理者</span></div><div id="atBox"><div class="box small">読み込んでいます…</div></div>`;
+      <div class="sec-title">会議（Google Meet）<span class="admin-mark">管理者</span></div><div id="mtBox"><div class="box small">読み込んでいます…</div></div>`;
   }
   v.innerHTML = html;
   v.querySelectorAll('[data-sos]').forEach(b => b.onclick = () => {
@@ -1047,8 +1043,28 @@ async function showContact(){
   });
   const live = () => token === viewToken;
   loadEvents(live);
+  if (isAdmin()) { loadSafety(live); loadMeetings(live); }
+}
+
+/* ================= 業務 ================= */
+function showWork(){
+  setTop({ title:'業務' });
+  const token = viewToken;
+  const v = $('view');
+  if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くか、設定でアプリキーを入力すると使えます。')}</div>`; return; }
+  let html = `<div class="sec-title">やること</div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
+    <div class="sec-title">備品・在庫</div>
+    <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">在庫の確認・入庫・出庫</div><div class="m">QRコードの読み取りにも対応</div></div>${ICON.chev}</a>`;
+  if (isAdmin()) {
+    html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
+      <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/monthly" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">月別集計</div><div class="m">出勤日数・時間・送迎・有給・欠勤</div></div>${ICON.chev}</a>
+      <div class="sec-title">現在の出勤状況<span class="admin-mark">管理者</span></div><div id="atBox"><div class="box small">読み込んでいます…</div></div>`;
+  }
+  v.innerHTML = html;
+  const live = () => token === viewToken;
   loadTasks(live);
-  if (isAdmin()) { loadSafety(live); loadMeetings(live); loadAttendance(live); }
+  if (isAdmin()) loadAttendance(live);
 }
 
 async function loadSafety(live){
@@ -1374,7 +1390,7 @@ async function showBroadcast(){
 
 /* ================= 設定 ================= */
 function showSettings(){
-  setTop({ title:'設定' });
+  setTop({ title:'設定', back:true });
   const lineInfo = ME && ME.userId
     ? `<div class="box"><div><b>${esc(ME.name || '名前未登録')}</b> さん${isAdmin() ? '<span class="admin-mark">管理者</span>' : ''}</div>
        <div class="small">LINEでログインしています。</div>
