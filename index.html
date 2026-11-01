@@ -18,6 +18,9 @@ main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
 .badge{flex-shrink:0;font-size:12px;background:var(--draft);color:var(--warn);border-radius:99px;padding:2px 8px;font-weight:700}
 .field{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
 .field label{display:block;font-size:13px;color:var(--sub);margin-bottom:6px;font-weight:700}
+.req{font-size:11px;background:#fdecea;color:var(--err);border-radius:4px;padding:1px 6px;margin-left:4px}
+.field.miss{border-color:var(--err);box-shadow:0 0 0 2px #fdecea}
+select{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit}
 input,textarea{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit}
 input:focus,textarea:focus{outline:2px solid var(--main);border-color:var(--main)}
 textarea{min-height:100px;resize:vertical}
@@ -104,6 +107,7 @@ async function api(params){
 async function showHome(){
   $('title').textContent = '福祉ボットくん';
   $('back').style.visibility = 'hidden';
+  formToken++;
   const v = $('view');
   let forms = LS.get('fb_forms_' + (isDemo()?'demo':'live'), null);
   const draw = () => {
@@ -122,10 +126,25 @@ async function showHome(){
   try {
     const j = await api({ app:'forms' });
     forms = j.forms; LS.set('fb_forms_' + (isDemo()?'demo':'live'), forms); draw();
+    prefetchFields(forms);
   } catch (e) {
     if (!forms) v.innerHTML = `<div class="note err">${esc(e.message)}</div>`;
     else toast('一覧の更新に失敗：' + e.message);
   }
+}
+
+/* ===== まだ開いたことのない帳票の入力欄を、裏で1つずつ先読み ===== */
+let prefetching = false;
+async function prefetchFields(forms){
+  if (prefetching || isDemo()) return;
+  prefetching = true;
+  try {
+    for (const f of forms) {
+      const key = 'fb_fields_' + f.sheet;
+      if (LS.get(key, null)) continue;
+      try { const j = await api({ app:'fields', sheet: f.sheet }); LS.set(key, j.fields); } catch (e) {}
+    }
+  } finally { prefetching = false; }
 }
 
 /* ===== 画面：入力フォーム（下書き自動保存） ===== */
@@ -134,34 +153,75 @@ async function showForm(sheet){
   $('back').style.visibility = 'visible';
   const v = $('view');
   const cacheKey = 'fb_fields_' + (isDemo()?'demo_':'') + sheet;
-  let fields = LS.get(cacheKey, null);
-  if (!fields) v.innerHTML = '<p class="small">入力欄を読み込み中…</p>';
-  try {
-    const j = await api({ app:'fields', sheet });
-    fields = j.fields; LS.set(cacheKey, fields);
-  } catch (e) {
-    if (!fields) { v.innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
-    toast('入力欄の更新に失敗（前回の形で表示）');
+  const cached = LS.get(cacheKey, null);
+  const token = ++formToken;
+
+  if (cached) {
+    // 前回の形ですぐ表示 → 裏で最新を取得し、変わっていれば入力内容を保ったまま描き直す
+    renderForm(sheet, cached);
+    api({ app:'fields', sheet }).then(j => {
+      LS.set(cacheKey, j.fields);
+      if (token !== formToken) return; // 別の画面に移動済み
+      if (JSON.stringify(j.fields) !== JSON.stringify(cached)) renderForm(sheet, j.fields, currentValues);
+    }).catch(() => {});
+    return;
   }
 
-  const draft = LS.get(draftKey(sheet), null);
-  const values = draft ? { ...draft.values } : {};
-  if (!draft) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = new Date(Date.now()+9*3600e3).toISOString().slice(0,10); }
+  v.innerHTML = '<p class="small">入力欄を読み込み中…（初回のみ少しかかります）</p>';
+  try {
+    const j = await api({ app:'fields', sheet });
+    LS.set(cacheKey, j.fields);
+    if (token !== formToken) return;
+    renderForm(sheet, j.fields);
+  } catch (e) {
+    if (token === formToken) v.innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+  }
+}
+
+let formToken = 0;
+let currentValues = null;
+
+function renderForm(sheet, fields, keepValues){
+  const v = $('view');
+  const draft = keepValues ? null : LS.get(draftKey(sheet), null);
+  const values = keepValues ? keepValues : (draft ? { ...draft.values } : {});
+  currentValues = values;
+  if (!draft && !keepValues) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = new Date(Date.now()+9*3600e3).toISOString().slice(0,10); }
 
   let html = draft ? `<div class="note">前回 ${esc(draft.at)} の下書きを復元しました。</div>` : '';
   html += '<div class="saved" id="saved"></div>';
+  const splitMulti = s => String(s ?? '').split(',').map(x => x.trim()).filter(Boolean);
   fields.filter(f => !f.hidden).forEach(f => {
-    const id = 'f' + f.index, val = esc(values[f.index] ?? '');
+    const opts = f.options || [];
+    const id = 'f' + f.index, raw = values[f.index] ?? '', val = esc(raw);
     let input;
-    if (f.type === 'textarea') input = `<textarea id="${id}" data-i="${f.index}">${val}</textarea>`;
-    else {
+    if (f.multi && opts.length) {
+      // 複数選択：タップでオン／オフ
+      const sel = splitMulti(raw);
+      input = `<input type="hidden" id="${id}" data-i="${f.index}" data-multi="1" value="${val}">` +
+        `<div class="chips">${opts.map(o => `<button type="button" class="chip${sel.includes(o)?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>` +
+        `<div class="small" style="margin-top:6px">複数選べます</div>`;
+    } else if (f.strict && opts.length > 8) {
+      // 選択肢が多い：プルダウン
+      const extra = raw && !opts.includes(raw) ? [raw] : [];
+      input = `<select id="${id}" data-i="${f.index}"><option value="">選んでください</option>` +
+        [...opts, ...extra].map(o => `<option value="${esc(o)}"${o===raw?' selected':''}>${esc(o)}</option>`).join('') + `</select>`;
+    } else if (f.strict && opts.length) {
+      // 選択肢が少ない：ボタンで1つ選ぶ
+      input = `<input type="hidden" id="${id}" data-i="${f.index}" value="${val}">` +
+        `<div class="chips">${opts.map(o => `<button type="button" class="chip${raw===o?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+    } else if (f.type === 'textarea') {
+      input = `<textarea id="${id}" data-i="${f.index}">${val}</textarea>`;
+    } else {
+      // 自由入力（過去の入力を候補として表示）
       const t = { date:'date', time:'time', number:'number' }[f.type] || 'text';
-      const list = f.options.length > 8 ? ` list="dl${f.index}"` : '';
+      const list = opts.length > 8 ? ` list="dl${f.index}"` : '';
       input = `<input id="${id}" data-i="${f.index}" type="${t}" value="${val}"${t==='number'?' inputmode="decimal"':''}${list}>`;
-      if (list) input += `<datalist id="dl${f.index}">${f.options.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
-      if (f.options.length && f.options.length <= 8) input += `<div class="chips">${f.options.map(o => `<button type="button" class="chip${String(values[f.index]??'')===o?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+      if (list) input += `<datalist id="dl${f.index}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
+      if (opts.length && opts.length <= 8) input += `<div class="chips">${opts.map(o => `<button type="button" class="chip${raw===o?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
     }
-    html += `<div class="field"><label for="${id}">${esc(f.label)}</label>${input}</div>`;
+    const req = f.required ? ' <span class="req">必須</span>' : '';
+    html += `<div class="field" id="wrap${f.index}"><label for="${id}">${esc(f.label)}${req}</label>${input}</div>`;
   });
   html += `<div class="bar"><button class="btn s" id="clear">下書きを消す</button><button class="btn p" id="send">送信</button></div>`;
   v.innerHTML = html;
@@ -175,13 +235,24 @@ async function showForm(sheet){
       $('saved').textContent = '下書き保存 ' + at;
     }, 400);
   };
-  v.querySelectorAll('[data-i]').forEach(el => el.oninput = () => { values[el.dataset.i] = el.value; syncChips(el); saveDraft(); });
+  const onChange = el => { values[el.dataset.i] = el.value; syncChips(el); $('wrap' + el.dataset.i)?.classList.remove('miss'); saveDraft(); };
+  v.querySelectorAll('[data-i]').forEach(el => { el.oninput = () => onChange(el); el.onchange = () => onChange(el); });
   v.querySelectorAll('.chip').forEach(ch => ch.onclick = () => {
     const el = $(ch.dataset.for);
-    el.value = el.value === ch.dataset.v ? '' : ch.dataset.v;
-    el.dispatchEvent(new Event('input'));
+    if (el.dataset.multi) {
+      const sel = splitMulti(el.value);
+      const k = sel.indexOf(ch.dataset.v);
+      if (k === -1) sel.push(ch.dataset.v); else sel.splice(k, 1);
+      el.value = sel.join(',');
+    } else {
+      el.value = el.value === ch.dataset.v ? '' : ch.dataset.v;
+    }
+    onChange(el);
   });
-  function syncChips(el){ v.querySelectorAll(`.chip[data-for="${el.id}"]`).forEach(c => c.classList.toggle('on', c.dataset.v === el.value)); }
+  function syncChips(el){
+    const sel = el.dataset.multi ? splitMulti(el.value) : [el.value];
+    v.querySelectorAll(`.chip[data-for="${el.id}"]`).forEach(c => c.classList.toggle('on', sel.includes(c.dataset.v)));
+  }
 
   $('clear').onclick = () => {
     if (!confirm('この帳票の下書きを消して、入力をやり直しますか？')) return;
@@ -189,6 +260,13 @@ async function showForm(sheet){
   };
   $('send').onclick = async () => {
     if (!Object.values(values).some(x => String(x).trim())) { toast('入力がありません'); return; }
+    const missing = fields.filter(f => !f.hidden && f.required && !String(values[f.index] ?? '').trim());
+    if (missing.length) {
+      missing.forEach(f => $('wrap' + f.index)?.classList.add('miss'));
+      $('wrap' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
+      toast('必須の項目が未入力です：' + missing.map(f => f.label).join('、'), 3500);
+      return;
+    }
     if (!confirm(`「${sheet}」を送信します。よろしいですか？`)) return;
     $('overlay').classList.add('on');
     try {
@@ -206,6 +284,7 @@ async function showForm(sheet){
 
 /* ===== 画面：設定 ===== */
 function showSettings(){
+  formToken++;
   $('title').textContent = '設定';
   $('back').style.visibility = 'visible';
   $('view').innerHTML = `
