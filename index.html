@@ -329,7 +329,7 @@ const DEMO_FIELDS = [
 const DEMO_VIEWS = [
   { id:'heat', group:'安全', title:'熱中症予防情報', kind:'heat' }, { id:'heatman', group:'安全', title:'熱中症の対応手順', kind:'steps' },
   { id:'weather', group:'安全', title:'天候・警報メール', kind:'feed' }, { id:'shelter', group:'安全', title:'避難場所', kind:'places' },
-  { id:'livecam', group:'安全', title:'災害ライブカメラ', kind:'links' }, { id:'video', group:'学ぶ', title:'研修動画', kind:'links' },
+  { id:'livecam', group:'安全', title:'災害ライブカメラ', kind:'links' }, { id:'bousai', group:'安全', title:'防災・気象サイト', kind:'links' }, { id:'video', group:'学ぶ', title:'研修動画', kind:'links' },
   { id:'news', group:'お知らせ', title:'福岡市の新着情報', kind:'feed' }
 ];
 const DEMO_VIEW = {
@@ -338,6 +338,7 @@ const DEMO_VIEW = {
   heatman:{ kind:'steps', items:[{ step:'Step0', title:'症状確認', body:'⚠️ 熱中症が疑われる症状がありますか？\n✅ ふらつき・失神・けいれんなど' }, { step:'Step1', title:'作業離脱・身体冷却', body:'💧 涼しい場所に移動し、身体を冷却しましょう。' }] },
   weather:{ kind:'feed', items:[{ date:'2026/03/12 10:30', title:'【福岡地方】注警報メール', body:'■発表日時 令和８年３月１２日１０時２８分 福岡管区気象台 発表\n■概要 福岡地方では、落雷や竜巻などの激しい突風に注意してください。' }] },
   shelter:{ kind:'places', items:[{ area:'糸島市井田', title:'前原東中学校', addr:'糸島市井田658', tag:'指定避難所', geo:'33.5465, 130.2312', reviews:[{ who:'いしどん', text:'水がとどきました。', date:'3/18' }], needs:[{ what:'飲料水', level:'2' }], comments:[] }] },
+  bousai:{ kind:'links', items:[{ title:'気象庁　防災情報', url:'https://www.jma.go.jp/bosai/', reviews:[{ who:'いしどん', title:'', text:'雨雲レーダーが見やすい', date:'11/1' }] }, { title:'yahoo 天気・災害', url:'https://weather.yahoo.co.jp/', reviews:[] }] },
   livecam:{ kind:'links', items:[{ title:'NHKニュースLIVE', sub:'災害情報全般', url:'https://www.youtube.com/watch?v=coYw-eVU' }, { title:'福岡県 河川カメラ', sub:'県内各地の水位状況', url:'https://bousai.pref.fukuoka.jp/' }] },
   video:{ kind:'links', items:[{ title:'共通講義Ⅰ', url:'https://youtu.be/KtUFulk6UJE' }, { title:'共通講義Ⅱ', url:'https://youtu.be/6ypJkcWXUOQ' }] },
   news:{ kind:'feed', items:[{ date:'2026/03/26 10:30', title:'令和８年度福祉タクシー料金助成事業について', url:'https://www.city.fukuoka.lg.jp/' }] }
@@ -364,6 +365,7 @@ async function demoApi(p){
   if (p.app === 'records') return { total:3, hasMore:false, items:[{ row:4, date:'2026/11/01', title:'松川 忠義　出勤', sub:'物販、配送　レジ補助を落ち着いてできた' }, { row:3, date:'2026/10/31', title:'長屋 結衣　出勤', sub:'野菜加工' }, { row:2, date:'2026/10/30', title:'田中 尚樹　欠勤', sub:'体調不良の連絡あり' }].filter(x => !p.q || (x.title + x.sub + x.date).includes(p.q)) };
   if (p.app === 'record') return { row:p.row, hasPdf:true, values:{ 0:'2026-11-01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' },
       display:{ 0:'2026/11/01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' } };
+  if (p.app === 'post') { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）投稿しました' }; }
   if (p.app === 'update') { await new Promise(r => setTimeout(r, 700)); return { message:'（デモ）2項目を修正しました', pdfs:[] }; }
   if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', done:true }] };
   if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', img:'https://drive.google.com/uc?export=view&id=14FGABCFRWZt8ImltKwc40HdHm3ZoGfnl', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
@@ -1048,9 +1050,13 @@ function renderView(id, data){
   } else if (data.kind === 'links') {
     html += items.map(it => {
       const yt = (String(it.url).match(/(?:youtu\.be\/|v=)([\w-]{6,})/) || [])[1];
-      return `<a class="list-item" href="${esc(it.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">
+      const link = `<a class="list-item" href="${esc(it.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none${it.reviews ? ';margin-bottom:0;border-radius:var(--r-m) var(--r-m) 0 0' : ''}">
         ${yt ? `<img class="thumb" src="https://i.ytimg.com/vi/${esc(yt)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : ''}
         <div class="main"><div class="t">${esc(it.title)}</div>${it.sub ? `<div class="m">${esc(it.sub)}</div>` : ''}</div>${ICON.chev}</a>`;
+      if (!it.reviews) return link;
+      return link + `<div class="card place" style="border-radius:0 0 var(--r-m) var(--r-m);margin-top:0">
+        ${it.reviews.length ? `<details><summary>口コミ（${it.reviews.length}件）</summary><ul>${it.reviews.map(r => `<li>${r.title ? '<b>' + esc(r.title) + '</b> ' : ''}${esc(r.text)}<span class="small">　${esc(r.who)} ${esc(r.date)}</span></li>`).join('')}</ul></details>` : ''}
+        <div class="acts"><button class="link" data-post="newsReview" data-target="${esc(it.title)}">口コミを書く</button></div></div>`;
     }).join('');
   } else if (data.kind === 'places') {
     const areas = [...new Set(items.map(it => (String(it.area).match(/^.+?[市町村]/) || [it.area])[0]).filter(Boolean))];
@@ -1067,6 +1073,52 @@ function renderView(id, data){
     const c = $(b.dataset.open); const on = c.classList.toggle('open'); b.textContent = on ? 'たたむ' : '全文を見る';
   });
   if (data.kind === 'places') bindPlaces(items);
+  else bindPosts(id);
+}
+
+const POST_FORMS = {
+  shelterReview: { title:'避難所への口コミ', target:'避難所名', fields:[
+    { k:'タイトル', label:'タイトル（例：探している人、物資）' }, { k:'クチコミ', label:'内容', type:'textarea', req:true }, { k:'ニックネーム', label:'ニックネーム', me:true } ] },
+  shelterNeed: { title:'今必要なものを登録', target:'避難所名', fields:[
+    { k:'必要なもの', label:'必要なもの', type:'textarea', req:true }, { k:'緊急度', label:'緊急度（1 低い 〜 3 高い）', options:['1','2','3'] },
+    { k:'担当者', label:'担当者', me:true }, { k:'電話番号', label:'連絡先の電話番号', type:'tel' } ] },
+  needComment: { title:'届けます・応える', target:'避難場所名', fields:[
+    { k:'コメント', label:'内容（例：お茶を届けます）', type:'textarea', req:true }, { k:'ニックネーム', label:'ニックネーム', me:true }, { k:'連絡先', label:'連絡先', type:'tel' } ] },
+  newsReview: { title:'口コミを書く', target:'ニュースソース', fields:[
+    { k:'タイトル', label:'タイトル' }, { k:'クチコミ', label:'内容', type:'textarea', req:true }, { k:'ニックネーム', label:'ニックネーム', me:true } ] }
+};
+function bindPosts(viewId){
+  $('view').querySelectorAll('[data-post]').forEach(b => b.onclick = () => openPost(b.dataset.post, b.dataset.target, viewId));
+}
+function openPost(kind, target, viewId){
+  const P = POST_FORMS[kind];
+  if (!signedIn()) { toast('LINEから開くか、設定でアプリキーを入力してください'); return; }
+  let photo = null, level = '';
+  const body = `<p class="small" style="margin-top:-4px">${esc(target)}</p>` + P.fields.map(f => {
+    const id = 'pf_' + f.k;
+    if (f.options) return `<div class="field" style="padding:0"><div class="label">${esc(f.label)}</div><div class="chips">${f.options.map(o => `<button type="button" class="chip" data-lv="${o}" aria-pressed="false" style="--gc:var(--brand)">${o}</button>`).join('')}</div></div>`;
+    const v = f.me && ME && ME.name ? esc(ME.name) : '';
+    return `<div class="field" style="padding:0"><label for="${id}">${esc(f.label)}${f.req ? '<span class="req">必須</span>' : ''}</label>${f.type === 'textarea'
+      ? `<textarea class="in" id="${id}" style="min-height:90px"></textarea>` : `<input class="in" id="${id}" type="${f.type || 'text'}" value="${v}">`}</div>`;
+  }).join('') + `<div class="photo" id="pPhoto"><label class="pbtn" style="--gc:var(--brand)">写真を添える（任意）<input type="file" accept="image/*" id="pFile"></label></div>`;
+  openSheet(P.title, body, `<button class="btn s" id="pCancel">やめる</button><button class="btn p" id="pOk" style="--gc:var(--brand)">投稿する</button>`);
+  $('bsBody').querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { level = b.dataset.lv; $('bsBody').querySelectorAll('[data-lv]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  $('pFile').onchange = async e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try { photo = await shrinkImage(file); $('pPhoto').insertAdjacentHTML('afterbegin', `<img src="${photo.dataUrl}" alt="添える写真">`); } catch (err) { toast(err.message); }
+  };
+  $('pCancel').onclick = closeSheet;
+  $('pOk').onclick = () => {
+    const data = { [P.target]: target };
+    for (const f of P.fields) {
+      if (f.options) { data[f.k] = level; continue; }
+      const v = $('pf_' + f.k).value.trim();
+      if (f.req && !v) { toast('「' + f.label.replace(/（.*）/, '') + '」を入れてください'); return; }
+      data[f.k] = v;
+    }
+    const files = photo ? { image:{ b64:photo.b64, mime:photo.mime } } : {};
+    runAction(() => apiPost({ app:'post', kind, data, files }), () => { LS.del(viewKey(viewId)); showView(viewId); });
+  };
 }
 
 function bindPlaces(items){
@@ -1076,13 +1128,19 @@ function bindPlaces(items){
     const list = items.filter(it => (!area || String(it.area).indexOf(area) === 0) && (!q || (it.title + it.addr + it.area + (it.sub || '')).includes(q)));
     $('plist2').innerHTML = list.length ? list.map(it => {
       const map = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((it.geo || '').replace(/\s/g, '') || it.addr || it.title);
-      const needs = it.needs || [], revs = (it.reviews || []).concat(it.comments || []);
+      const needs = it.needs || [], revs = it.reviews || [], coms = it.comments || [];
+      const pic = x => x.img && /^https?:/.test(x.img) ? ` <a class="link" style="padding:0" href="${esc(x.img)}" target="_blank" rel="noopener">写真</a>` : '';
       return `<div class="card place"><div class="t">${esc(it.title)}${it.tag ? `<span class="pill">${esc(it.tag)}</span>` : ''}</div>
         <div class="addr">${esc(it.addr || it.area)}</div>${it.sub ? `<div class="small">対象：${esc(it.sub)}</div>` : ''}
-        ${needs.length ? `<details><summary>今必要なもの（${needs.length}件）</summary><ul>${needs.map(n => `<li>${esc(n.what)}${n.level ? `（緊急度${esc(n.level)}）` : ''}</li>`).join('')}</ul></details>` : ''}
-        ${revs.length ? `<details><summary>現地の声（${revs.length}件）</summary><ul>${revs.map(r => `<li>${esc(r.text)}<span class="small">　${esc(r.who || '')} ${esc(r.date || '')}</span></li>`).join('')}</ul></details>` : ''}
-        <div class="acts"><a class="link" href="${map}" target="_blank" rel="noopener">地図で見る</a></div></div>`;
+        ${needs.length ? `<details open><summary>今必要なもの（${needs.length}件）</summary><ul>${needs.map(n => `<li>${esc(n.what)}${n.level ? `（緊急度${esc(n.level)}）` : ''}${pic(n)}<span class="small">　${esc(n.who || '')} ${esc(n.date || '')}</span></li>`).join('')}</ul></details>` : ''}
+        ${coms.length ? `<details><summary>届けます・応援（${coms.length}件）</summary><ul>${coms.map(r => `<li>${esc(r.text)}${pic(r)}<span class="small">　${esc(r.who || '')} ${esc(r.date || '')}</span></li>`).join('')}</ul></details>` : ''}
+        ${revs.length ? `<details><summary>現地の声（${revs.length}件）</summary><ul>${revs.map(r => `<li>${r.title ? '<b>' + esc(r.title) + '</b> ' : ''}${esc(r.text)}${pic(r)}<span class="small">　${esc(r.who || '')} ${esc(r.date || '')}</span></li>`).join('')}</ul></details>` : ''}
+        <div class="acts"><a class="link" href="${map}" target="_blank" rel="noopener">地図で見る</a>
+          <button class="link" data-post="shelterReview" data-target="${esc(it.title)}">口コミを書く</button>
+          <button class="link" data-post="shelterNeed" data-target="${esc(it.title)}">必要なものを登録</button>
+          ${needs.length ? `<button class="link" data-post="needComment" data-target="${esc(it.title)}">届けます・応える</button>` : ''}</div></div>`;
     }).join('') : '<div class="empty">合う避難場所はありません。</div>';
+    bindPosts('shelter');
   };
   $('pq2').oninput = draw;
   $('view').querySelectorAll('[data-area]').forEach(b => b.onclick = () => {
