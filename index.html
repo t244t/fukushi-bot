@@ -225,6 +225,8 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .place details{margin-top:8px;font-size:14px}
 .place summary{cursor:pointer;color:var(--gc);font-weight:700;padding:4px 0}
 .place ul{margin:6px 0 0;padding-left:18px}
+.lines{list-style:none;margin:8px 0 0;padding:0}.lines li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px dashed var(--rule)}.lines li b{white-space:nowrap}
+.kv{margin:8px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:6px 12px}.kv dt{color:var(--sub);font-size:13px}.kv dd{margin:0;white-space:pre-wrap}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -330,7 +332,9 @@ const DEMO_VIEWS = [
   { id:'heat', group:'安全', title:'熱中症予防情報', kind:'heat' }, { id:'heatman', group:'安全', title:'熱中症の対応手順', kind:'steps' },
   { id:'weather', group:'安全', title:'天候・警報メール', kind:'feed' }, { id:'shelter', group:'安全', title:'避難場所', kind:'places' },
   { id:'livecam', group:'安全', title:'災害ライブカメラ', kind:'links' }, { id:'bousai', group:'安全', title:'防災・気象サイト', kind:'links' }, { id:'video', group:'学ぶ', title:'研修動画', kind:'links' },
-  { id:'news', group:'お知らせ', title:'福岡市の新着情報', kind:'feed' }
+  { id:'news', group:'お知らせ', title:'福岡市の新着情報', kind:'feed' },
+  { id:'ukeoi', group:'業務', title:'請負業務報告', kind:'report', form:'https://docs.google.com/forms/' },
+  { id:'mendan', group:'業務', title:'店舗面談の記録', kind:'report', admin:true, form:'' }
 ];
 const DEMO_VIEW = {
   heat:{ kind:'heat', items:[{ date:'2026/08/12 09:52', title:'前原（福岡）', sub:'2026/08/12 09時', alert:'厳重警戒', wbgt:'29.6', body:'6時 26.1 / 7時 27.0 / 8時 28.4 / 9時 29.6' },
@@ -341,6 +345,12 @@ const DEMO_VIEW = {
   bousai:{ kind:'links', items:[{ title:'気象庁　防災情報', url:'https://www.jma.go.jp/bosai/', reviews:[{ who:'いしどん', title:'', text:'雨雲レーダーが見やすい', date:'11/1' }] }, { title:'yahoo 天気・災害', url:'https://weather.yahoo.co.jp/', reviews:[] }] },
   livecam:{ kind:'links', items:[{ title:'NHKニュースLIVE', sub:'災害情報全般', url:'https://www.youtube.com/watch?v=coYw-eVU' }, { title:'福岡県 河川カメラ', sub:'県内各地の水位状況', url:'https://bousai.pref.fukuoka.jp/' }] },
   video:{ kind:'links', items:[{ title:'共通講義Ⅰ', url:'https://youtu.be/KtUFulk6UJE' }, { title:'共通講義Ⅱ', url:'https://youtu.be/6ypJkcWXUOQ' }] },
+  ukeoi:{ kind:'report', form:'https://docs.google.com/forms/', items:[
+    { date:'2026/11/01', title:'唐泊ストアー', lines:[{ k:'野菜カット提供', v:'5P・1,400円' }, { k:'レモン提供', v:'30個・2,910円' }] },
+    { date:'2026/10/30', title:'伊都国即売会', lines:[{ k:'袋詰め', v:'40袋・4,000円' }] },
+    { date:'2026/10/28', title:'唐泊ストアー', lines:[{ k:'野菜カット提供', v:'8P・2,240円' }] }] },
+  mendan:{ kind:'report', form:'', items:[
+    { date:'2026/10/20', title:'大原', staff:'石橋', fields:[{ k:'主な相談内容', v:'仕事の段取りについて相談' }, { k:'体調・様子', v:'落ち着いていた' }, { k:'今後の対応方針', v:'翌月にもう一度面談' }, { k:'本部対応の要否', v:'該当なし' }] }] },
   news:{ kind:'feed', items:[{ date:'2026/03/26 10:30', title:'令和８年度福祉タクシー料金助成事業について', url:'https://www.city.fukuoka.lg.jp/' }] }
 };
 const DEMO_ALC = [
@@ -431,7 +441,7 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
-  const navKey = ({ history:'drafts', stock:'work', admin:'work', records:'home', record:'home' })[page] || page || 'home';
+  const navKey = page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'work', admin:'work', records:'home', record:'home' })[page] || page || 'home');
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -945,7 +955,8 @@ function showDone(sheet){
 }
 
 /* ================= 情報を見る ================= */
-const VG = { '安全':'gs', '学ぶ':'gl', 'お知らせ':'gn' };
+const VG = { '安全':'gs', '学ぶ':'gl', 'お知らせ':'gn', '業務':'g4' };
+const WORK_VIEWS = { ukeoi:'請負業務報告', mendan:'店舗面談の記録' };
 const WBGT = [
   { min:31, name:'危険', color:'#c62f22', note:'運動は原則中止。外出はなるべく避け、涼しい室内へ。' },
   { min:28, name:'厳重警戒', color:'#e36b12', note:'炎天下を避け、こまめに休憩と水分・塩分補給を。' },
@@ -956,7 +967,7 @@ const WBGT = [
 const wbgtLevel = n => WBGT.find(l => Number(n) >= l.min) || WBGT[WBGT.length - 1];
 const viewKey = id => 'fb_view_' + (isDemo() ? 'demo_' : '') + id;
 const getViews = () => LS.get('fb_views_' + (isDemo() ? 'demo' : 'live'), null);
-const viewGroup = id => (getViews() || []).find(v => v.id === id)?.group || '安全';
+const viewGroup = id => (getViews() || []).find(v => v.id === id)?.group || (WORK_VIEWS[id] ? '業務' : '安全');
 /* Googleドライブの画像URL（uc?export=view など）を、表示できるサムネイルURLに変換 */
 function driveImg(url, size){
   const u = String(url || '').trim();
@@ -1014,7 +1025,7 @@ async function showInfo(){
 
 async function showView(id){
   const meta = (getViews() || []).find(v => v.id === id);
-  setTop({ title: meta ? meta.title : '情報', back:true });
+  setTop({ title: meta ? meta.title : (WORK_VIEWS[id] || '情報'), back:true });
   const token = viewToken;
   const cached = LS.get(viewKey(id), null);
   if (cached) renderView(id, cached); else $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
@@ -1058,6 +1069,13 @@ function renderView(id, data){
         ${it.reviews.length ? `<details><summary>口コミ（${it.reviews.length}件）</summary><ul>${it.reviews.map(r => `<li>${r.title ? '<b>' + esc(r.title) + '</b> ' : ''}${esc(r.text)}<span class="small">　${esc(r.who)} ${esc(r.date)}</span></li>`).join('')}</ul></details>` : ''}
         <div class="acts"><button class="link" data-post="newsReview" data-target="${esc(it.title)}">口コミを書く</button></div></div>`;
     }).join('');
+  } else if (data.kind === 'report') {
+    const tags = [...new Set(items.map(it => it.title).filter(Boolean))];
+    html += `${tags.length > 1 ? `<div class="chips" style="margin:0 0 12px">${tags.slice(0, 12).map(a => `<button class="chip mini" data-tag="${esc(a)}" aria-pressed="false">${esc(a)}</button>`).join('')}</div>` : ''}` +
+      items.map((it, i) => `<div class="card rep" data-t="${esc(it.title)}" id="c${i}"><div class="d">${esc(it.date || '')}${it.staff ? `<span class="pill">面談 ${esc(it.staff)}</span>` : ''}</div>
+      <div class="t">${esc(it.title)}</div>
+      ${(it.lines || []).length ? `<ul class="lines">${it.lines.map(l => `<li><span>${esc(l.k)}</span><b>${esc(l.v)}</b></li>`).join('')}</ul>` : ''}
+      ${(it.fields || []).length ? `<dl class="kv">${it.fields.map(f => `<dt>${esc(f.k)}</dt><dd>${esc(f.v)}</dd>`).join('')}</dl>` : ''}</div>`).join('');
   } else if (data.kind === 'places') {
     const areas = [...new Set(items.map(it => (String(it.area).match(/^.+?[市町村]/) || [it.area])[0]).filter(Boolean))];
     html += `<label class="search" style="margin-top:0">${ICON.search}<input id="pq2" type="search" placeholder="避難場所・住所でさがす" aria-label="避難場所をさがす"></label>
@@ -1074,6 +1092,14 @@ function renderView(id, data){
   });
   if (data.kind === 'places') bindPlaces(items);
   else bindPosts(id);
+  if (data.kind === 'report') {
+    if (data.form) $('view').insertAdjacentHTML('afterbegin', `<a class="btn p wide" style="display:grid;place-items:center;text-decoration:none;margin:14px 0 4px;--gc:var(--g4)" href="${esc(data.form)}" target="_blank" rel="noopener">フォームで報告する</a>`);
+    $('view').querySelectorAll('[data-tag]').forEach(b => b.onclick = () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      $('view').querySelectorAll('[data-tag]').forEach(x => x.setAttribute('aria-pressed', x === b && on));
+      $('view').querySelectorAll('.rep').forEach(c => c.hidden = on && c.dataset.t !== b.dataset.tag);
+    });
+  }
 }
 
 const POST_FORMS = {
@@ -1234,7 +1260,8 @@ function showWork(){
   if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くか、設定でアプリキーを入力すると使えます。')}</div>`; return; }
   let html = `<div class="sec-title">やること</div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
     <div class="sec-title">備品・在庫</div>
-    <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">在庫の確認・入庫・出庫</div><div class="m">QRコードの読み取りにも対応</div></div>${ICON.chev}</a>`;
+    <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">在庫の確認・入庫・出庫</div><div class="m">QRコードの読み取りにも対応</div></div>${ICON.chev}</a>
+    <div class="sec-title">報告</div><div id="rpBox">${workReports()}</div>`;
   if (isAdmin()) {
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
@@ -1245,6 +1272,18 @@ function showWork(){
   const live = () => token === viewToken;
   loadTasks(live);
   if (isAdmin()) loadAttendance(live);
+  api({ app:'views' }).then(j => { LS.set('fb_views_' + (isDemo() ? 'demo' : 'live'), j.views); if (live() && $('rpBox')) $('rpBox').innerHTML = workReports(); }).catch(() => {});
+}
+
+function workReports(){
+  const vs = getViews() || [];
+  const meta = id => vs.find(v => v.id === id) || {};
+  const sub = { ukeoi:'店舗ごとの請負内容・数量・金額', mendan:'相談内容・様子・今後の方針' };
+  return Object.keys(WORK_VIEWS).filter(id => !meta(id).admin || isAdmin()).filter(id => !vs.length || vs.some(v => v.id === id)).map(id => {
+    const f = meta(id).form;
+    return `<div class="list-item" style="--gc:var(--g4)"><a class="main" href="#/info/${id}" style="color:inherit;text-decoration:none"><div class="t">${esc(WORK_VIEWS[id])}${meta(id).admin ? '<span class="admin-mark">管理者</span>' : ''}</div><div class="m">${sub[id]}</div></a>
+      ${f ? `<a class="btn s" style="text-decoration:none;color:inherit;white-space:nowrap;display:grid;place-items:center;padding:0 12px;min-height:40px" href="${esc(f)}" target="_blank" rel="noopener">フォーム</a>` : ''}<a href="#/info/${id}" aria-label="記録を見る" style="color:inherit">${ICON.chev}</a></div>`;
+  }).join('');
 }
 
 async function loadSafety(live){
