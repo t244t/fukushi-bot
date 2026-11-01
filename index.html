@@ -187,6 +187,7 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 .dl{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0}
 .dl .d{font-variant-numeric:tabular-nums;white-space:nowrap}
 .red{color:var(--err);font-weight:700}.amber{color:var(--warn);font-weight:700}
+.sthumb{width:56px;height:56px;flex:0 0 auto;border-radius:var(--r-s);object-fit:cover;background:var(--soft)}
 .stock-n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:56px;text-align:right}
 .stepper{display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0}
 .stepper button{width:56px;height:56px;border-radius:50%;border:1px solid var(--rule);background:var(--soft);font-size:26px}
@@ -360,7 +361,7 @@ async function demoApi(p){
   if (p.app === 'attendanceNow') return { rows:[{ name:'石橋 強', group:'利用者', log:'出勤', time:'11/1 08:55' }, { name:'大原 里奈', group:'スタッフ', log:'退勤', time:'10/31 17:02' }] };
   if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true}] };
   if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', done:true }] };
-  if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
+  if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', img:'https://drive.google.com/uc?export=view&id=14FGABCFRWZt8ImltKwc40HdHm3ZoGfnl', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
   if (p.app === 'stockMove') { await new Promise(r => setTimeout(r, 500)); return { message:'（デモ）記録しました', stock:4 }; }
   if (p.app === 'deadlines' || p.app === 'deadlineSync') return { message:'（デモ）更新しました', people:[{ name:'山田 太郎', office:'あごら', staff:'神田', soon:2, items:[{ name:'受給者証支給終了', date:'2026/11/12', days:11 }, { name:'計画更新月', date:'2026/11/28', days:27 }, { name:'手帳有効期限', date:'2027/5/13', days:193 }] }, { name:'佐藤 花子', office:'木の実', staff:'松下', soon:0, items:[{ name:'暫定終了日', date:'2026/10/20', days:-12 }] }] };
   if (p.app === 'monthly') return { month:p.month, exists:true, head:['氏名','出勤日数','出勤時間','送迎回数','有給回数','欠勤回数','合計日数','合計出勤時間'], rows:[['石橋 強','18','72','20','1','0','18','72'],['長屋 結衣','15','60','12','0','2','15','60']], total:{ users:'33', hours:'132' }, message:'（デモ）集計しました' };
@@ -829,6 +830,13 @@ const wbgtLevel = n => WBGT.find(l => Number(n) >= l.min) || WBGT[WBGT.length - 
 const viewKey = id => 'fb_view_' + (isDemo() ? 'demo_' : '') + id;
 const getViews = () => LS.get('fb_views_' + (isDemo() ? 'demo' : 'live'), null);
 const viewGroup = id => (getViews() || []).find(v => v.id === id)?.group || '安全';
+/* Googleドライブの画像URL（uc?export=view など）を、表示できるサムネイルURLに変換 */
+function driveImg(url, size){
+  const u = String(url || '').trim();
+  const id = (u.match(/[?&]id=([\w-]{10,})/) || u.match(/\/d\/([\w-]{10,})/) || [])[1];
+  if (id && /drive\.google|googleusercontent/.test(u)) return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w' + (size || 600);
+  return u;
+}
 const openLink = (url, label) => url ? `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>` : '';
 
 function heatCard(it){
@@ -910,7 +918,7 @@ function renderView(id, data){
     items.forEach((it, i) => {
       if (it.cat && it.cat !== cat) { cat = it.cat; html += `<div class="sec-title">${esc(cat)}</div>`; }
       html += `<div class="step"><div class="n">${i + 1}</div><div><div class="t" style="font-weight:700;font-size:17px">${esc(it.title)}</div>
-        <div class="b">${esc(it.body)}</div>${it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div></div>`;
+        <div class="b">${esc(it.body)}</div>${it.img ? `<img src="${esc(driveImg(it.img, 800))}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div></div>`;
     });
   } else if (data.kind === 'links') {
     html += items.map(it => {
@@ -1213,6 +1221,7 @@ async function showStock(){
       const q = ($('sq').value || '').trim();
       const xs = items.filter(x => (!q || x.name.includes(q)) && (!expOnly || x.expSoon));
       $('slist').innerHTML = STOCK ? (xs.length ? xs.map(x => `<button class="list-item" data-it="${esc(x.name)}" style="width:100%;border:0;text-align:left;font:inherit;color:inherit;cursor:pointer">
+        ${x.img && /^https?:/.test(x.img) ? `<img class="sthumb" src="${esc(driveImg(x.img, 200))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span class="sthumb"></span>'}
         <div class="main"><div class="t" style="font-weight:400">${esc(x.name)}</div>
         <div class="m">${x.exp ? `期限 <span class="${x.expSoon ? 'red' : ''}">${esc(x.exp)}</span>` : ''}</div></div>
         <span class="stock-n${x.stock <= 0 ? ' red' : ''}">${x.stock}</span></button>`).join('') : '<div class="empty">該当する品目はありません。</div>') : '';
@@ -1243,7 +1252,7 @@ function openMove(name, dir){
   const it = ((STOCK && STOCK.items) || []).find(x => x.name === name.replace(/\s+/g, ' ').trim());
   if (!it) { toast('在庫が見つかりません：' + name); return; }
   let d = dir || 'out', n = 1;
-  openSheet(it.name, `<div class="small">今の在庫 <b style="font-size:18px;color:var(--ink)">${it.stock}</b>${it.exp ? '　期限 ' + esc(it.exp) : ''}</div>
+  openSheet(it.name, `${it.img && /^https?:/.test(it.img) ? `<img src="${esc(driveImg(it.img, 800))}" alt="" style="width:100%;max-height:200px;object-fit:contain;border-radius:var(--r-s);background:var(--soft);margin-bottom:10px" onerror="this.remove()">` : ''}<div class="small">今の在庫 <b style="font-size:18px;color:var(--ink)">${it.stock}</b>${it.exp ? '　期限 ' + esc(it.exp) : ''}</div>
     <div class="chips" style="margin-top:12px"><button class="chip" data-d="in" style="--gc:var(--g1)">入庫（増やす）</button><button class="chip" data-d="out" style="--gc:var(--g4)">出庫（使う）</button></div>
     <div class="stepper"><button type="button" id="mMinus" aria-label="1つ減らす">−</button><input id="mQty" type="number" inputmode="numeric" min="1" value="1" aria-label="数量"><button type="button" id="mPlus" aria-label="1つ増やす">＋</button></div>`,
     `<button class="btn s" id="mvCancel">やめる</button><button class="btn p" id="mvOk" style="--gc:var(--brand)">記録する</button>`, 'g3');
