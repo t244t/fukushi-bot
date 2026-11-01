@@ -227,6 +227,8 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .place ul{margin:6px 0 0;padding-left:18px}
 .lines{list-style:none;margin:8px 0 0;padding:0}.lines li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px dashed var(--rule)}.lines li b{white-space:nowrap}
 .kv{margin:8px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:6px 12px}.kv dt{color:var(--sub);font-size:13px}.kv dd{margin:0;white-space:pre-wrap}
+.hf-path{font-size:13px;color:var(--sub);margin:0 0 10px}.hf-now{background:var(--paper);border-radius:var(--r-m);padding:14px;box-shadow:var(--shadow)}
+.hf-ans{display:grid;gap:10px}.hf-call{display:grid;place-items:center;text-decoration:none;margin:12px 0;--gc:var(--err);font-size:18px}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -339,7 +341,13 @@ const DEMO_VIEWS = [
 const DEMO_VIEW = {
   heat:{ kind:'heat', items:[{ date:'2026/08/12 09:52', title:'前原（福岡）', sub:'2026/08/12 09時', alert:'厳重警戒', wbgt:'29.6', body:'6時 26.1 / 7時 27.0 / 8時 28.4 / 9時 29.6' },
     { date:'2026/08/12 07:07', title:'福岡（福岡）', sub:'2026/08/12 06時', alert:'警戒', wbgt:'27.0', body:'' }] },
-  heatman:{ kind:'steps', items:[{ step:'Step0', title:'症状確認', body:'⚠️ 熱中症が疑われる症状がありますか？\n✅ ふらつき・失神・けいれんなど' }, { step:'Step1', title:'作業離脱・身体冷却', body:'💧 涼しい場所に移動し、身体を冷却しましょう。' }] },
+  heatman:{ kind:'steps', items:[{ step:'Step0', title:'症状確認', cond:'症状確認', body:'⚠️ 熱中症が疑われる症状がありますか？\n\n✅ 他覚：ふらつき・失神・痙攣など\n✅ 自覚：めまい・吐き気・体温上昇など' },
+    { step:'Step1', title:'作業離脱・身体冷却', cond:'作業離脱・身体冷却', body:'💧 涼しい場所に移動し、身体を冷却しましょう。\n✅ 日陰・エアコンの効いた場所へ移動\n✅ 上着を脱がせ、扇風機・冷却剤などで冷却\n\n➡️ 意識はありますか？' },
+    { step:'Step2', title:'意識異常 → 救急要請', cond:'意識異常', body:'🚨 意識に異常があるため、すぐに119番通報をしてください。' },
+    { step:'Step2', title:'意識正常 → 水分摂取', cond:'意識正常', body:'🧠 意識は正常です。ゆっくり水分補給し、涼しい場所で休みましょう。' },
+    { step:'Step3', title:'経過観察', cond:'経過観察', body:'👀 引き続き様子を見てください。\n\n➡️ 回復しましたか？' },
+    { step:'Step4', title:'回復', cond:'回復', body:'😊 よかったです。引き続き安静にしてください。' },
+    { step:'Step4', title:'回復しない／症状悪化 → 搬送', cond:'医療機関搬送', body:'🚑 回復しない場合、または悪化した場合は医療機関へ搬送を検討してください。' }] },
   weather:{ kind:'feed', items:[{ date:'2026/03/12 10:30', title:'【福岡地方】注警報メール', body:'■発表日時 令和８年３月１２日１０時２８分 福岡管区気象台 発表\n■概要 福岡地方では、落雷や竜巻などの激しい突風に注意してください。' }] },
   shelter:{ kind:'places', items:[{ area:'糸島市井田', title:'前原東中学校', addr:'糸島市井田658', tag:'指定避難所', geo:'33.5465, 130.2312', reviews:[{ who:'いしどん', text:'水がとどきました。', date:'3/18' }], needs:[{ what:'飲料水', level:'2' }], comments:[] }] },
   bousai:{ kind:'links', items:[{ title:'気象庁　防災情報', url:'https://www.jma.go.jp/bosai/', reviews:[{ who:'いしどん', title:'', text:'雨雲レーダーが見やすい', date:'11/1' }] }, { title:'yahoo 天気・災害', url:'https://weather.yahoo.co.jp/', reviews:[] }] },
@@ -1024,6 +1032,7 @@ async function showInfo(){
 }
 
 async function showView(id){
+  heatAll = false;
   const meta = (getViews() || []).find(v => v.id === id);
   setTop({ title: meta ? meta.title : (WORK_VIEWS[id] || '情報'), back:true });
   const token = viewToken;
@@ -1051,7 +1060,10 @@ function renderView(id, data){
         <div><div class="t" style="margin:0">${esc(it.title)}<span class="pill" style="--gbg:transparent;--gc:${lv.color}">${esc(it.alert || lv.name)}</span></div>
         <div class="d">計測 ${esc(it.sub || it.date)}</div></div></div>${it.body ? `<div class="small" style="margin-top:6px">${esc(it.body)}</div>` : ''}</div>`;
     }).join('');
+  } else if (data.kind === 'steps' && heatFlowOk(items) && !heatAll) {
+    html += '<div id="hfBox"></div>';
   } else if (data.kind === 'steps') {
+    if (heatFlowOk(items)) html += `<button class="btn s wide" id="hfBack" style="margin-bottom:12px">状態に合わせて進める表示にもどす</button>`;
     let cat = '';
     items.forEach((it, i) => {
       if (it.cat && it.cat !== cat) { cat = it.cat; html += `<div class="sec-title">${esc(cat)}</div>`; }
@@ -1092,6 +1104,8 @@ function renderView(id, data){
   });
   if (data.kind === 'places') bindPlaces(items);
   else bindPosts(id);
+  if ($('hfBox')) heatFlow(items, 'start', [], id, data);
+  if ($('hfBack')) $('hfBack').onclick = () => { heatAll = false; renderView(id, data); };
   if (data.kind === 'report') {
     if (data.form) $('view').insertAdjacentHTML('afterbegin', `<a class="btn p wide" style="display:grid;place-items:center;text-decoration:none;margin:14px 0 4px;--gc:var(--g4)" href="${esc(data.form)}" target="_blank" rel="noopener">フォームで報告する</a>`);
     $('view').querySelectorAll('[data-tag]').forEach(b => b.onclick = () => {
@@ -1100,6 +1114,38 @@ function renderView(id, data){
       $('view').querySelectorAll('.rep').forEach(c => c.hidden = on && c.dataset.t !== b.dataset.tag);
     });
   }
+}
+
+/* 熱中症の対応手順：いまの状態を選ぶと、次にやることだけを出す */
+let heatAll = false;
+const HEAT_FLOW = {
+  start:              { cond:'症状確認', q:'熱中症が疑われる症状はありますか？', a:[['症状あり', '作業離脱・身体冷却', 'warn'], ['症状なし', 'none']] },
+  '作業離脱・身体冷却': { cond:'作業離脱・身体冷却', q:'冷やしながら確認：意識ははっきりしていますか？', a:[['意識正常（受け答えできる）', '意識正常'], ['意識異常（反応がおかしい・ない）', '意識異常', 'err']] },
+  '意識異常':          { cond:'意識異常', call:true, a:[['救急車を待つ間：冷却を続ける', '作業離脱・身体冷却']] },
+  '意識正常':          { cond:'意識正常', q:'自分で水分をとれましたか？', a:[['とれた → 様子を見る', '経過観察'], ['とれない・吐いてしまう', '医療機関搬送', 'err']] },
+  '経過観察':          { cond:'経過観察', q:'回復しましたか？', a:[['回復した', '回復'], ['変化なし', '医療機関搬送', 'warn'], ['症状悪化', '医療機関搬送', 'err']] },
+  '回復':              { cond:'回復', end:true },
+  '医療機関搬送':       { cond:'医療機関搬送', call:true, end:true },
+  none:               { msg:'症状がなければ、こまめな休憩と水分・塩分補給を続けましょう。', end:true }
+};
+const heatFlowOk = items => items.some(it => it.cond === '症状確認');
+function heatFlow(items, key, path, viewId, data){
+  const st = HEAT_FLOW[key]; const it = items.find(x => x.cond === st.cond);
+  const box = $('hfBox'); if (!box) return;
+  const crumbs = path.map(k => HEAT_FLOW[k].cond || '').filter(Boolean);
+  let h = `<div class="hf-path">${['はじめ', ...crumbs.slice(1), st.cond || ''].filter(Boolean).map(esc).join(' › ')}</div>`;
+  if (it) h += `<div class="step hf-now"><div class="n">${esc(String(it.step || '').replace(/\D/g, '') || '・')}</div><div><div class="t" style="font-weight:700;font-size:18px">${esc(it.title)}</div>
+    <div class="b">${esc(it.body)}</div>${it.img ? `<img src="${esc(driveImg(it.img, 800))}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div></div>`;
+  else if (st.msg) h += `<div class="card"><div class="b">${esc(st.msg)}</div></div>`;
+  if (st.call) h += `<a class="btn p wide hf-call" href="tel:119">📞 119番に電話する</a>`;
+  if (st.q) h += `<div class="sec-title">${esc(st.q)}</div>`;
+  h += `<div class="hf-ans">${(st.a || []).map((a, i) => `<button class="btn ${a[2] ? 'p' : 's'} wide" data-go="${i}"${a[2] ? ` style="--gc:var(--${a[2]})"` : ''}>${esc(a[0])}</button>`).join('')}</div>
+    <div class="row2" style="margin-top:14px">${path.length ? '<button class="btn s" id="hfPrev">ひとつ戻る</button><button class="btn s" id="hfReset">最初から</button>' : ''}<button class="btn s" id="hfAll">手順を全部見る</button></div>`;
+  box.innerHTML = h;
+  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { heatFlow(items, st.a[b.dataset.go][1], [...path, key], viewId, data); window.scrollTo(0, 0); });
+  if ($('hfPrev')) $('hfPrev').onclick = () => heatFlow(items, path[path.length - 1], path.slice(0, -1), viewId, data);
+  if ($('hfReset')) $('hfReset').onclick = () => heatFlow(items, 'start', [], viewId, data);
+  $('hfAll').onclick = () => { heatAll = true; renderView(viewId, data); };
 }
 
 const POST_FORMS = {
