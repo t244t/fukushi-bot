@@ -361,6 +361,10 @@ async function demoApi(p){
   if (p.app === 'meetings') return { meetings:[{ row:5, title:'ケース会議', date:'11/5（水）', time:'14:00', minutes:60, url:'https://meet.google.com/' }] };
   if (p.app === 'attendanceNow') return { rows:[{ name:'石橋 強', group:'利用者', log:'出勤', time:'11/1 08:55' }, { name:'大原 里奈', group:'スタッフ', log:'退勤', time:'10/31 17:02' }] };
   if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true}] };
+  if (p.app === 'records') return { total:3, hasMore:false, items:[{ row:4, date:'2026/11/01', title:'松川 忠義　出勤', sub:'物販、配送　レジ補助を落ち着いてできた' }, { row:3, date:'2026/10/31', title:'長屋 結衣　出勤', sub:'野菜加工' }, { row:2, date:'2026/10/30', title:'田中 尚樹　欠勤', sub:'体調不良の連絡あり' }].filter(x => !p.q || (x.title + x.sub + x.date).includes(p.q)) };
+  if (p.app === 'record') return { row:p.row, hasPdf:true, values:{ 0:'2026-11-01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' },
+      display:{ 0:'2026/11/01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' } };
+  if (p.app === 'update') { await new Promise(r => setTimeout(r, 700)); return { message:'（デモ）2項目を修正しました', pdfs:[] }; }
   if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', done:true }] };
   if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', img:'https://drive.google.com/uc?export=view&id=14FGABCFRWZt8ImltKwc40HdHm3ZoGfnl', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
   if (p.app === 'stockMove') { await new Promise(r => setTimeout(r, 500)); return { message:'（デモ）記録しました', stock:4 }; }
@@ -425,11 +429,13 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
-  const navKey = ({ history:'drafts', stock:'work', admin:'work' })[page] || page || 'home';
+  const navKey = ({ history:'drafts', stock:'work', admin:'work', records:'home', record:'home' })[page] || page || 'home';
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
-  $('nav').hidden = page === 'form' || page === 'done' || (page === 'contact' && arg === 'broadcast');
+  $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
   if (page === 'form') return showForm(arg);
+  if (page === 'records') return showRecords(arg);
+  if (page === 'record' || page === 'edit') { const k = arg.lastIndexOf('/'); return (page === 'record' ? showRecord : showEdit)(arg.slice(0, k), Number(arg.slice(k + 1))); }
   if (page === 'done') return showDone(arg);
   if (page === 'info') return arg ? showView(arg) : showInfo();
   if (page === 'contact') return arg === 'broadcast' ? showBroadcast() : showContact();
@@ -581,21 +587,25 @@ async function showForm(sheet){
   }
 }
 
-function renderForm(sheet, fields, keepValues){
+function renderForm(sheet, fields, keepValues, edit){
   const group = groupOf(sheet);
   const draft = keepValues ? null : LS.get(draftKey(sheet), null);
   const values = keepValues || (draft ? { ...draft.values } : {});
   if (!draft && !keepValues) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = ymd(); }
   const files = (F && F.sheet === sheet && keepValues) ? F.files : {};
-  F = { sheet, fields, values, group, files };
+  F = { sheet, fields, values, group, files, edit: edit || null };
   const vis = fields.filter(f => !f.hidden);
 
   let html = `<div class="${gClass(group)}">`;
-  if (draft && draft.at) html += `<div class="note">${esc(draft.at)} の下書きから続けています。</div>`;
+  if (edit) html += `<div class="note">記録を修正しています（${esc(edit.label || '')}）。保存すると元の記録が書き換わります。</div>`;
+  else {
+    html += `<a class="list-item" href="#/records/${encodeURIComponent(sheet)}" style="color:inherit;text-decoration:none;margin-top:12px"><div class="main"><div class="t" style="font-weight:400">これまでの記録を見る</div><div class="m">さがす・修正する</div></div>${ICON.chev}</a>`;
+    if (draft && draft.at) html += `<div class="note">${esc(draft.at)} の下書きから続けています。</div>`;
+  }
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
   vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); });
-  html += `<div class="bar"><span class="saved" id="saved">${draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
-    <button class="btn p" id="send">内容を確認</button></div></div>`;
+  html += `<div class="bar"><span class="saved" id="saved">${edit ? '' : draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
+    <button class="btn p" id="send">${edit ? '修正内容を確認' : '内容を確認'}</button></div></div>`;
   $('view').innerHTML = html;
   bindForm();
   updateProgress();
@@ -618,7 +628,8 @@ function fieldHtml(f, raw){
     body = `<div class="chips" role="radiogroup" aria-labelledby="${id}l">${opts.map(o =>
       `<button type="button" class="chip" data-f="${f.index}" data-v="${esc(o)}" data-mode="one" aria-pressed="${raw === o}">${esc(o)}</button>`).join('')}</div>`;
   } else if (f.type === 'image') {
-    const ph = F.files[f.index];
+    const cur = F.files[f.index] ? null : (/^https?:/.test(String(raw)) ? { dataUrl: driveImg(raw, 400) } : null);
+    const ph = F.files[f.index] || cur;
     label = `<div class="label">${esc(f.label)}${req}<span class="hint">写真は下書きに残りません</span></div>`;
     body = `<div class="photo">${ph ? `<img src="${ph.dataUrl}" alt="選んだ写真">` : ''}
       <label class="pbtn">${ph ? '撮り直す' : '写真を撮る・選ぶ'}<input type="file" accept="image/*" data-photo="${f.index}"></label>
@@ -640,7 +651,7 @@ function fieldHtml(f, raw){
     else if (opts.length && opts.length <= 8) body += `<div class="chips after">${opts.map(o =>
       `<button type="button" class="chip mini" data-f="${f.index}" data-v="${esc(o)}" data-mode="fill">${esc(o)}</button>`).join('')}</div>`;
   }
-  const has = f.type === 'image' ? !!F.files[f.index] : !!String(raw).trim();
+  const has = f.type === 'image' ? !!(F.files[f.index] || String(raw).trim()) : !!String(raw).trim();
   return `<div class="field${has ? ' filled' : ''}" id="w${f.index}">${label}${body}</div>`;
 }
 
@@ -654,7 +665,7 @@ let saveTimer;
 function saveDraft(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    if (!F) return;
+    if (!F || F.edit) return;
     const at = fmtTime(Date.now());
     LS.set(draftKey(F.sheet), { values:F.values, at, ts:Date.now() });
     const s = $('saved'); if (s) s.textContent = '下書き保存 ' + at.split(' ').pop();
@@ -663,7 +674,7 @@ function saveDraft(){
 }
 function updateProgress(){
   const vis = F.fields.filter(f => !f.hidden);
-  const done = vis.filter(f => f.type === 'image' ? F.files[f.index] : String(F.values[f.index] ?? '').trim()).length;
+  const done = vis.filter(f => f.type === 'image' ? (F.files[f.index] || String(F.values[f.index] ?? '').trim()) : String(F.values[f.index] ?? '').trim()).length;
   const c = $('count'); if (c) c.textContent = `記入 ${done} / ${vis.length}`;
   const bar = $('prog').querySelector('i'); bar.style.width = (vis.length ? done / vis.length * 100 : 0) + '%';
 }
@@ -702,7 +713,7 @@ function bindForm(){
     try { F.files[i] = await shrinkImage(file); } catch (e) { toast(e.message); return; }
     redrawField(i);
   });
-  v.querySelectorAll('[data-unphoto]').forEach(b => b.onclick = () => { delete F.files[b.dataset.unphoto]; redrawField(b.dataset.unphoto); });
+  v.querySelectorAll('[data-unphoto]').forEach(b => b.onclick = () => { const i = b.dataset.unphoto; if (F.files[i]) delete F.files[i]; else F.values[i] = ''; redrawField(i); });
   v.querySelectorAll('.picker').forEach(p => p.onclick = () => openPicker(F.fields.find(f => String(f.index) === p.dataset.f)));
   $('send').onclick = openReview;
 }
@@ -762,9 +773,9 @@ function openReview(){
     toast('必須の項目が空いています：' + missing.map(f => f.label).join('、'), 3600);
     return;
   }
-  const filled = vis.filter(f => f.type === 'image' ? F.files[f.index] : String(F.values[f.index] ?? '').trim());
+  const filled = vis.filter(f => f.type === 'image' ? (F.files[f.index] || String(F.values[f.index] ?? '').trim()) : String(F.values[f.index] ?? '').trim());
   const show = f => {
-    if (f.type === 'image') return `<img src="${F.files[f.index].dataUrl}" alt="" style="width:120px;border-radius:8px">`;
+    if (f.type === 'image') return `<img src="${F.files[f.index] ? F.files[f.index].dataUrl : esc(driveImg(F.values[f.index], 400))}" alt="" style="width:120px;border-radius:8px">`;
     const v = F.values[f.index];
     if (f.type === 'check') return String(v).toUpperCase() === 'TRUE' ? 'はい' : 'いいえ';
     if (f.type === 'datetime') return esc(String(v).replace('T', ' '));
@@ -772,6 +783,20 @@ function openReview(){
   };
   const rows = filled.map(f => `<dt>${esc(f.label)}</dt><dd>${show(f)}</dd>`).join('');
   const blanks = vis.length - filled.length;
+  if (F.edit) {
+    const o = F.edit.orig || {};
+    const changed = vis.filter(f => F.files[f.index] || String(F.values[f.index] ?? '') !== String(o[f.index] ?? ''));
+    const was = f => { const v = o[f.index]; return v === '' || v == null ? '（空欄）' : f.type === 'image' ? '（前の写真）' : f.type === 'check' ? (String(v).toUpperCase() === 'TRUE' ? 'はい' : 'いいえ') : esc(f.multi ? splitMulti(v).join('、') : String(v).replace('T', ' ')); };
+    const now = f => (f.type === 'image' ? (F.files[f.index] || String(F.values[f.index] ?? '').trim()) : String(F.values[f.index] ?? '').trim()) ? show(f) : '（空欄）';
+    const crow = changed.map(f => `<dt>${esc(f.label)}</dt><dd><span class="small" style="text-decoration:line-through">${was(f)}</span><br>${now(f)}</dd>`).join('');
+    if (!changed.length && !F.edit.hasPdf) { toast('変更されていません'); return; }
+    openSheet(changed.length ? `${changed.length}項目を修正しますか？` : '変更はありません',
+      `${changed.length ? `<dl class="review">${crow}</dl>` : '<p class="small">項目は変わっていません。PDFだけ作り直すこともできます。</p>'}${F.edit.hasPdf ? `<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:14px"><input type="checkbox" id="rvRegen" checked style="width:20px;height:20px">修正した内容でPDFも作り直す</label>` : ''}`,
+      `<button class="btn s" id="rvBack">戻って直す</button><button class="btn p" id="rvSend">修正を保存</button>`, gClass(F.group));
+    $('rvBack').onclick = closeSheet;
+    $('rvSend').onclick = submitEdit;
+    return;
+  }
   openSheet('この内容で送信しますか？',
     `<dl class="review">${rows}</dl>${blanks ? `<p class="small" style="margin-top:14px">未記入の項目が ${blanks} 件あります。そのまま送信できます。</p>` : ''}`,
     `<button class="btn s" id="rvBack">戻って直す</button><button class="btn p" id="rvSend">送信する</button>`, gClass(F.group));
@@ -799,6 +824,103 @@ async function submitForm(){
   } finally {
     $('busy').classList.remove('on');
   }
+}
+
+async function submitEdit(){
+  const regen = !!($('rvRegen') && $('rvRegen').checked);
+  closeSheet();
+  $('busy').classList.add('on');
+  const { sheet, values } = F, row = F.edit.row;
+  try {
+    const files = {};
+    Object.keys(F.files).forEach(i => { files[i] = { b64:F.files[i].b64, mime:F.files[i].mime }; });
+    const j = await apiPost({ app:'update', sheet, row, data: values, files, regen });
+    LS.del('fb_rec_' + sheet + '_' + row);
+    toast(j.message || '修正しました', 3500);
+    const pdf = j.pdfs && j.pdfs[j.pdfs.length - 1];
+    if (pdf) LS.set('fb_lastpdf', pdf);
+    F = null;
+    location.replace('#/record/' + encodeURIComponent(sheet) + '/' + row);
+  } catch (e) {
+    msgSheet('修正できませんでした', e.message);
+  } finally {
+    $('busy').classList.remove('on');
+  }
+}
+
+/* ================= これまでの記録 ================= */
+async function showRecords(sheet){
+  const group = groupOf(sheet);
+  setTop({ title: sheet, back:true });
+  const token = viewToken;
+  let q = '', page = 0, items = [];
+  $('view').innerHTML = `<div class="${gClass(group)}" style="padding-top:12px">
+    <label class="search" style="margin-top:0">${ICON.search}<input id="rq" type="search" placeholder="名前・日付・言葉でさがす" aria-label="記録をさがす"></label>
+    <div class="small" id="rcount" style="margin:8px 0"></div><div id="rlist"><div class="empty">読み込んでいます…</div></div>
+    <div id="rmore"></div></div>`;
+  const load = async reset => {
+    if (reset) { page = 0; items = []; }
+    try {
+      const j = await api({ app:'records', sheet, q, page });
+      if (token !== viewToken) return;
+      items = items.concat(j.items || []);
+      $('rcount').textContent = q ? `「${q}」で ${j.total}件` : `全 ${j.total}件（新しい順）`;
+      $('rlist').innerHTML = items.length ? items.map(it => `<a class="card" href="#/record/${encodeURIComponent(sheet)}/${it.row}" style="display:block;color:inherit;text-decoration:none">
+        <div class="d">${esc(it.date || '')}</div><div class="t">${esc(it.title)}</div>${it.sub ? `<div class="small">${esc(it.sub)}</div>` : ''}</a>`).join('')
+        : `<div class="empty">${q ? '見つかりませんでした。' : 'まだ記録はありません。'}</div>`;
+      $('rmore').innerHTML = j.hasMore ? '<button class="btn s wide" id="rmoreBtn" style="margin-bottom:20px">もっと見る</button>' : '';
+      if (j.hasMore) $('rmoreBtn').onclick = () => { page++; load(false); };
+    } catch (e) { if (token === viewToken) $('rlist').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+  };
+  let t;
+  $('rq').oninput = e => { clearTimeout(t); t = setTimeout(() => { q = e.target.value.trim(); load(true); }, 450); };
+  load(true);
+}
+
+async function getFields(sheet){
+  let fields = LS.get(fieldsKey(sheet), null);
+  if (!fields) { const j = await api({ app:'fields', sheet }); fields = j.fields; LS.set(fieldsKey(sheet), fields); }
+  return fields;
+}
+
+async function showRecord(sheet, row){
+  const group = groupOf(sheet);
+  setTop({ title: sheet, back:true });
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const [fields, rec] = await Promise.all([getFields(sheet), api({ app:'record', sheet, row })]);
+    if (token !== viewToken) return;
+    LS.set('fb_rec_' + sheet + '_' + row, rec);
+    const vis = fields.filter(f => !f.hidden);
+    const filled = vis.filter(f => String(rec.display[f.index] ?? '').trim());
+    const val = f => {
+      const d = rec.display[f.index];
+      if (f.type === 'image' && /^https?:/.test(d)) return `<a href="${esc(d)}" target="_blank" rel="noopener"><img src="${esc(driveImg(d, 600))}" alt="" style="max-width:100%;max-height:220px;border-radius:8px" onerror="this.replaceWith(document.createTextNode('写真を開く'))"></a>`;
+      if (/^https?:\/\/\S+$/.test(d)) return `<a class="link" style="padding:0" href="${esc(d)}" target="_blank" rel="noopener">リンクを開く</a>`;
+      return esc(f.multi ? splitMulti(d).join('、') : d);
+    };
+    const lastPdf = LS.get('fb_lastpdf', null); LS.del('fb_lastpdf');
+    $('view').innerHTML = `<div class="${gClass(group)}" style="padding-top:12px">
+      <div class="small" style="margin-bottom:8px">スプレッドシートの ${row} 行目</div>
+      ${lastPdf ? `<a class="btn s wide" href="${esc(lastPdf.url)}" target="_blank" rel="noopener" style="display:grid;place-items:center;text-decoration:none;color:inherit;margin-bottom:10px">作り直したPDFを開く</a>` : ''}
+      <div class="box"><dl class="review" style="margin:0">${filled.map(f => `<dt>${esc(f.label)}</dt><dd>${val(f)}</dd>`).join('')}</dl>
+      ${vis.length > filled.length ? `<p class="small" style="margin:12px 0 0">未記入 ${vis.length - filled.length}項目</p>` : ''}</div>
+      <div class="bar"><a class="btn p wide" href="#/edit/${encodeURIComponent(sheet)}/${row}" style="display:grid;place-items:center;text-decoration:none">この記録を修正する</a></div></div>`;
+  } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+async function showEdit(sheet, row){
+  setTop({ title: sheet + '（修正）', back:true, group: groupOf(sheet) });
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const fields = await getFields(sheet);
+    const rec = LS.get('fb_rec_' + sheet + '_' + row, null) || await api({ app:'record', sheet, row });
+    if (token !== viewToken) return;
+    F = null;
+    renderForm(sheet, fields, { ...rec.values }, { row, hasPdf: rec.hasPdf, label: row + '行目', orig: { ...rec.values } });
+  } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 
 /* ================= 送信完了 ================= */
