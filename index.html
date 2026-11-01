@@ -55,9 +55,10 @@ const LS = {
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyrtRt3p7kBtgZHkOSfwa06ciMve2R4Vm1A_X7ooPGguONzdl8oECafAoA06tSoWpcW/exec';
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyPznpZt8AAQ5-K1ZGfDol4YUTaJ323lp7aHeaj2RfM08fEyIEBq-qgUgTfqrsFGDEF/exec';
 let cfg = LS.get('fb_cfg', { url: DEFAULT_URL, key:'' });
-if (!cfg.url) cfg.url = DEFAULT_URL;
+// URL未設定、または前のURLが保存されている端末は新しいURLに切り替え
+if (!cfg.url || cfg.url.indexOf('AKfycbyrtRt3p7kBtgZHkOSfwa06') !== -1) cfg.url = DEFAULT_URL;
 const isDemo = () => !cfg.url;
 const draftKey = s => 'fb_draft_' + s;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
