@@ -160,6 +160,23 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 .g3{--gc:var(--g3);--gbg:var(--g3-bg)} .g4{--gc:var(--g4);--gbg:var(--g4-bg)}
 .small{font-size:13px;color:var(--sub)}
 
+/* ===== 連絡 ===== */
+.sos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sos button{min-height:64px;border:0;border-radius:var(--r-m);color:#fff;font-size:17px;font-weight:700}
+.st-ok{background:#3c8a5a}.st-hurt{background:#c62f22}.st-evac{background:#c98a00}.st-lost{background:#7a4a8a}.st-none{background:#7d8a83}
+.counts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
+.counts div{border-radius:var(--r-s);padding:8px 2px;text-align:center;color:#fff}
+.counts b{display:block;font-size:22px;line-height:1.2;font-variant-numeric:tabular-nums}
+.counts span{font-size:11px}
+.box{background:var(--paper);border-radius:var(--r-m);padding:14px 16px;margin-bottom:10px}
+.box h3{margin:0 0 4px;font-size:16px}
+.box .row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.box .row2 .btn{flex:1 1 140px;min-height:46px;font-size:15px;padding:0 12px}
+.who{font-size:13px;color:var(--sub);margin-top:4px;line-height:1.7}
+.evt .meta{font-size:13px;color:var(--sub)}
+.evt .chips{margin-top:10px}
+.admin-mark{font-size:11px;font-weight:700;color:var(--brand);border:1px solid var(--brand);border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:2px}
+
 /* ===== 情報を見る ===== */
 .heat{display:block;color:inherit;text-decoration:none;background:var(--paper);border-radius:var(--r-l);padding:18px 18px 16px;margin-top:16px;border-top:6px solid var(--lv)}
 .heat .row1{display:flex;align-items:baseline;gap:12px}
@@ -201,9 +218,9 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 
 <nav class="nav" id="nav"><div class="wrap">
   <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg>記録する</a>
+  <a href="#/contact" data-nav="contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg>連絡</a>
   <a href="#/info" data-nav="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>情報</a>
-  <a href="#/drafts" data-nav="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>下書き<span class="dot" id="draftDot" hidden></span></a>
-  <a href="#/history" data-nav="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>送信済み</a>
+  <a href="#/drafts" data-nav="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>履歴<span class="dot" id="draftDot" hidden></span></a>
   <a href="#/settings" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>設定</a>
 </div></nav>
 
@@ -214,6 +231,7 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 <div class="busy" id="busy"><div><div class="spin"></div><b>送信しています</b><p class="small">記録・PDF作成・通知まで少しかかります。<br>画面を閉じずにお待ちください。</p></div></div>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js" charset="utf-8"></script>
 <script>
 /* ================= 設定・保存 ================= */
 const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyPznpZt8AAQ5-K1ZGfDol4YUTaJ323lp7aHeaj2RfM08fEyIEBq-qgUgTfqrsFGDEF/exec';
@@ -226,6 +244,24 @@ const LS = {
 let cfg = LS.get('fb_cfg', { url: DEFAULT_URL, key:'' });
 if (!cfg.url || cfg.url.indexOf('AKfycbyrtRt3p7kBtgZHkOSfwa06') !== -1) cfg.url = DEFAULT_URL;
 const isDemo = () => /[?&]demo/.test(location.search);
+const LIFF_ID = '2012317109-NntFQtKE';
+let idToken = '';
+let ME = null;          // { name, role, userId, via }
+let authError = '';
+const isAdmin = () => !!ME && ME.role === 'admin';
+const signedIn = () => isDemo() || !!idToken || !!cfg.key;
+const liffReady = () => !!(window.liff && liff.id);
+async function initAuth(){
+  if (isDemo()) { ME = { name:'石橋 強', role: /admin/.test(location.search) ? 'admin' : 'staff', userId:'Udemo', via:'line' }; return; }
+  if (window.liff) {
+    try { await liff.init({ liffId: LIFF_ID }); if (liff.isLoggedIn()) idToken = liff.getIDToken() || ''; }
+    catch (e) { console.warn('LIFF', e); }
+  }
+  if (!signedIn()) return;
+  try { ME = await api({ app:'me' }); LS.set('fb_me', ME); authError = ''; }
+  catch (e) { ME = null; authError = e.message; }
+}
+function lineLogin(){ if (window.liff && liff.id) liff.login({ redirectUri: location.href.split('#')[0] }); }
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const draftKey = s => 'fb_draft_' + s;
@@ -296,6 +332,14 @@ async function demoApi(p){
   await new Promise(r => setTimeout(r, 250));
   if (p.app === 'forms') return { forms: DEMO_FORMS };
   if (p.app === 'views') return { views: DEMO_VIEWS };
+  if (p.app === 'me') return { name:'石橋 強', role:'admin', userId:'Udemo', via:'line' };
+  if (p.app === 'safety') return { lastSend:'2026/11/01 09:00', total:8, groups:{ '無事です':[{name:'石橋 強'},{name:'大原 里奈'},{name:'坂東 麻衣子'},{name:'大鶴 猛'}], '怪我あり':[{name:'平山 菜々',time:'11/1 09:12'}], '避難中':[{name:'福田',time:'11/1 09:20'}], '連絡不可':[], '未回答':[{name:'重富'},{name:'河津 さち子'}] } };
+  if (p.app === 'events') return { events:[{ id:'EV1', name:'秋の避難訓練', date:'2026/11/10', time:'10:00', place:'伊都国即売会', memo:'動きやすい服装で', upcoming:true, isTarget:true, my:'出席', targetCount:8,
+      counts:{ '出席':['石橋 強','大原 里奈','大鶴 猛'], '遅刻':['福田'], '未定':[], '欠席':['重富'], '未回答':['河津 さち子','坂東 麻衣子','平山 菜々'] } }].map(e => /admin/.test(location.search) ? e : { ...e, counts:undefined }) };
+  if (p.app === 'meetings') return { meetings:[{ row:5, title:'ケース会議', date:'11/5（水）', time:'14:00', minutes:60, url:'https://meet.google.com/' }] };
+  if (p.app === 'attendanceNow') return { rows:[{ name:'石橋 強', group:'利用者', log:'出勤', time:'11/1 08:55' }, { name:'大原 里奈', group:'スタッフ', log:'退勤', time:'10/31 17:02' }] };
+  if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true}] };
+  if (['safetySend','safetyResend','safetyNotify','safetyReport','eventAnswer','eventSend','eventCreate','broadcast','meetingCreate','meetingCancel'].includes(p.app)) { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）完了しました' }; }
   if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
@@ -306,7 +350,8 @@ async function demoApi(p){
 async function api(params, override){
   if (isDemo()) return demoApi(params);
   const c = override || cfg;
-  const url = c.url + '?' + new URLSearchParams({ ...params, key: c.key });
+  const auth = idToken && !override ? { idt:idToken } : { key:c.key };
+  const url = c.url + '?' + new URLSearchParams({ ...params, ...auth });
   if (url.length > 7500) throw new Error('文章が長すぎて一度に送れません（約' + url.length + '文字）。長い欄を少し短くしてください。');
   let r;
   try { r = await fetch(url); } catch (e) { throw new Error('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
@@ -318,7 +363,8 @@ async function api(params, override){
 async function apiPost(body){
   if (isDemo()) return demoApi(body);
   let r;
-  try { r = await fetch(cfg.url, { method:'POST', body: JSON.stringify({ ...body, key: cfg.key }) }); }
+  const auth = idToken ? { idt:idToken } : { key:cfg.key };
+  try { r = await fetch(cfg.url, { method:'POST', body: JSON.stringify({ ...body, ...auth }) }); }
   catch (e) { throw new Error('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
   const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした。少し待ってからもう一度お試しください。'); });
   if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
@@ -352,14 +398,15 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
-  document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === (page || 'home') ? 'page' : 'false'));
-  $('nav').hidden = page === 'form' || page === 'done';
+  const navKey = ({ history:'drafts' })[page] || page || 'home';
+  document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
+  $('nav').hidden = page === 'form' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
   if (page === 'form') return showForm(arg);
   if (page === 'done') return showDone(arg);
   if (page === 'info') return arg ? showView(arg) : showInfo();
-  if (page === 'drafts') return showDrafts();
-  if (page === 'history') return showHistory();
+  if (page === 'contact') return arg === 'broadcast' ? showBroadcast() : showContact();
+  if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
   return showHome();
 }
@@ -407,7 +454,9 @@ async function showHome(){
     const week = '日月火水木金土'[d.getUTCDay()];
     let html = `<div class="today"><div class="date">${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${week}）</div>
       <div class="stat">今日の送信 ${todayCount}件　下書き ${drafts.length}件</div></div>`;
-    if (!isDemo() && !cfg.key) html += `<div class="note">はじめに、設定でアプリキーを入力してください。<br><a class="link" style="padding:0" href="#/settings">設定を開く</a></div>`;
+    if (authError) html += `<div class="note err">${esc(authError)}</div>`;
+    else if (!signedIn()) html += `<div class="note">LINEから開くと、そのまま使えます。<br>パソコンなどでは${liffReady() ? '<button class="link" style="padding:0" onclick="lineLogin()">LINEでログイン</button>するか、' : ''}<a class="link" style="padding:0" href="#/settings">設定</a>でアプリキーを入力してください。</div>`;
+    else if (ME && ME.name) html = html.replace('<div class="stat">', `<div class="stat">${esc(ME.name)} さん${isAdmin() ? '<span class="admin-mark">管理者</span>' : ''}<br>`);
     if (isDemo()) html += `<div class="note">デモ表示です。入力しても記録はされません。</div>`;
     html += `<label class="search">${ICON.search}<input id="q" type="search" placeholder="帳票をさがす（例：欠席、面談）" aria-label="帳票をさがす"></label>`;
     if (!forms) { v.innerHTML = html + '<div class="empty">帳票の一覧を読み込んでいます…</div>'; return; }
@@ -442,7 +491,7 @@ async function showHome(){
     v.querySelectorAll('.tab').forEach(t => t.onclick = () => { homeTab = t.dataset.tab; LS.set('fb_tab', homeTab); draw(); });
   };
   draw(); updateDraftDot();
-  if (!isDemo() && !cfg.key) return;
+  if (!signedIn()) return;
   try {
     const j = await api({ app:'forms' });
     LS.set('fb_forms_' + (isDemo() ? 'demo' : 'live'), j.forms);
@@ -791,7 +840,7 @@ async function showInfo(){
   };
   let views = getViews(), heat = LS.get(viewKey('heat'), null);
   draw(views, heat);
-  if (!isDemo() && !cfg.key) { $('view').insertAdjacentHTML('afterbegin', '<div class="note">設定でアプリキーを入力すると表示されます。</div>'); return; }
+  if (!signedIn()) { $('view').insertAdjacentHTML('afterbegin', '<div class="note">LINEから開くか、設定でアプリキーを入力すると表示されます。</div>'); return; }
   try {
     const j = await api({ app:'views' });
     views = j.views; LS.set('fb_views_' + (isDemo() ? 'demo' : 'live'), views); draw(views, heat);
@@ -884,40 +933,259 @@ function bindPlaces(items){
   draw();
 }
 
-/* ================= 下書き ================= */
-function showDrafts(){
-  setTop({ title:'下書き' });
+/* ================= 履歴（下書き＋送信済み） ================= */
+function showLog(){
+  setTop({ title:'履歴' });
   const drafts = listDrafts();
-  $('view').innerHTML = `<div class="sec-title">入力途中の帳票</div>` + (drafts.length ? drafts.map(d => {
+  const hist = getHistory();
+  let html = `<div class="sec-title">入力途中（下書き）</div>` + (drafts.length ? drafts.map(d => {
     const n = Object.values(d.values).filter(v => String(v).trim()).length;
     return `<div class="list-item ${gClass(groupOf(d.sheet))}"><div class="main"><div class="t">${esc(d.sheet)}</div>
       <div class="m">${esc(d.at || '')}　${n}項目 記入済み</div></div>
       <a class="link" href="#/form/${encodeURIComponent(d.sheet)}">続ける</a>
       <button class="link" style="color:var(--sub)" data-del="${esc(d.sheet)}">削除</button></div>`;
-  }).join('') : '<div class="empty">下書きはありません。<br>入力中の内容は自動でここに残ります。</div>');
+  }).join('') : '<div class="empty">下書きはありません。入力中の内容は自動でここに残ります。</div>');
+  html += `<div class="sec-title">この端末から送った記録（最新50件）</div>` + (hist.length ? hist.map(h => {
+    const pdf = h.pdfs && h.pdfs[h.pdfs.length - 1];
+    return `<div class="list-item ${gClass(groupOf(h.sheet))}"><div class="main"><div class="t">${esc(h.sheet)}</div>
+      <div class="m">${fmtTime(h.ts)}${h.who ? '　' + esc(h.who) : ''}${h.note ? '　' + esc(h.note) : ''}</div></div>
+      ${pdf ? `<a class="link" href="${esc(pdf.url)}" target="_blank" rel="noopener">PDF</a>` : ''}</div>`;
+  }).join('') : '<div class="empty">まだ送信した記録はありません。</div>');
+  $('view').innerHTML = html;
   $('view').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if (!confirm(`「${b.dataset.del}」の下書きを削除しますか？`)) return;
-    LS.del(draftKey(b.dataset.del)); updateDraftDot(); showDrafts(); toast('下書きを削除しました');
+    LS.del(draftKey(b.dataset.del)); updateDraftDot(); showLog(); toast('下書きを削除しました');
   });
   updateDraftDot();
 }
 
-/* ================= 送信済み ================= */
-function showHistory(){
-  setTop({ title:'送信済み' });
-  const hist = getHistory();
-  $('view').innerHTML = `<div class="sec-title">この端末から送った記録（最新50件）</div>` + (hist.length ? hist.map(h => {
-    const pdf = h.pdfs && h.pdfs[h.pdfs.length - 1];
-    return `<div class="list-item ${gClass(groupOf(h.sheet))}"><div class="main"><div class="t">${esc(h.sheet)}</div>
-      <div class="m">${fmtTime(h.ts)}${h.who ? '　' + esc(h.who) : ''}</div></div>
-      ${pdf ? `<a class="link" href="${esc(pdf.url)}" target="_blank" rel="noopener">PDF</a>` : ''}</div>`;
-  }).join('') : '<div class="empty">まだ送信した記録はありません。</div>');
+/* ================= 連絡 ================= */
+const ST_CLASS = { '無事です':'st-ok', '怪我あり':'st-hurt', '避難中':'st-evac', '連絡不可':'st-lost', '未回答':'st-none' };
+const AT_CLASS = { '出席':'st-ok', '遅刻':'st-evac', '未定':'st-lost', '欠席':'st-hurt', '未回答':'st-none' };
+function msgSheet(title, text){ openSheet(title, `<p>${esc(text)}</p>`, '<button class="btn p wide" id="mOk" style="--gc:var(--brand)">閉じる</button>'); $('mOk').onclick = closeSheet; }
+function confirmSheet(title, text, okLabel, onOk, danger){
+  openSheet(title, `<p>${esc(text)}</p>`, `<button class="btn s" id="cNo">やめる</button><button class="btn p" id="cOk" style="--gc:${danger ? 'var(--err)' : 'var(--brand)'}">${esc(okLabel)}</button>`);
+  $('cNo').onclick = closeSheet;
+  $('cOk').onclick = async () => { $('cOk').disabled = true; try { await onOk(); } finally { const b = $('cOk'); if (b) b.disabled = false; } };
+}
+async function runAction(fn, after){
+  $('busy').classList.add('on');
+  try { const j = await fn(); closeSheet(); toast(j.message || '完了しました', 3200); if (after) after(j); }
+  catch (e) { closeSheet(); msgSheet('できませんでした', e.message); }
+  finally { $('busy').classList.remove('on'); }
+}
+
+async function showContact(){
+  setTop({ title:'連絡' });
+  const token = viewToken;
+  const v = $('view');
+  if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くと、安否の報告やイベントの出欠ができます。')}</div>`; return; }
+  const viaLine = ME && ME.userId;
+  let html = '<div style="padding-top:12px"></div>';
+  if (viaLine) {
+    html += `<div class="sec-title">安否を報告する</div><div class="box"><div class="small" style="margin-bottom:10px">災害時などに、今の状況を管理者へ知らせます。</div>
+      <div class="sos">${['無事です','怪我あり','避難中','連絡不可'].map(o => `<button class="${ST_CLASS[o]}" data-sos="${o}">${o}</button>`).join('')}</div></div>`;
+  } else {
+    html += `<div class="note">安否の報告とイベントの出欠は、LINEから開いたときに使えます。${liffReady() ? '<br><button class="link" style="padding:0" onclick="lineLogin()">LINEでログイン</button>' : ''}</div>`;
+  }
+  if (isAdmin()) {
+    html += `<div class="sec-title">安否確認の状況<span class="admin-mark">管理者</span></div><div class="box" id="safetyBox"><div class="small">読み込んでいます…</div></div>`;
+  }
+  html += `<div class="sec-title">イベント${isAdmin() ? '<span class="admin-mark">管理者</span>' : 'の出欠'}</div><div id="evBox"><div class="box small">読み込んでいます…</div></div>`;
+  if (isAdmin()) {
+    html += `<div class="sec-title">スタッフへの連絡<span class="admin-mark">管理者</span></div>
+      <a class="list-item" href="#/contact/broadcast" style="color:inherit;text-decoration:none;--gc:var(--brand)"><div class="main"><div class="t">一斉連絡を送る</div><div class="m">LINE・メールで、選んだスタッフにお知らせ</div></div>${ICON.chev}</a>
+      <div class="sec-title">会議（Google Meet）<span class="admin-mark">管理者</span></div><div id="mtBox"><div class="box small">読み込んでいます…</div></div>
+      <div class="sec-title">現在の出勤状況<span class="admin-mark">管理者</span></div><div id="atBox"><div class="box small">読み込んでいます…</div></div>`;
+  }
+  v.innerHTML = html;
+  v.querySelectorAll('[data-sos]').forEach(b => b.onclick = () => {
+    const st = b.dataset.sos;
+    confirmSheet('安否の報告', `「${st}」で報告します。よろしいですか？`, '報告する', () =>
+      runAction(() => api({ app:'safetyReport', status:st })), st === '怪我あり');
+  });
+  const live = () => token === viewToken;
+  loadEvents(live);
+  if (isAdmin()) { loadSafety(live); loadMeetings(live); loadAttendance(live); }
+}
+
+async function loadSafety(live){
+  try {
+    const j = await api({ app:'safety' });
+    if (!live()) return;
+    const g = j.groups || {};
+    const keys = ['無事です','怪我あり','避難中','連絡不可','未回答'];
+    $('safetyBox').innerHTML = `<div class="small">${j.lastSend ? '最後の一斉送信：' + esc(j.lastSend) : 'まだ一斉送信していません'}　対象 ${j.total}名</div>
+      <div class="counts">${keys.map(k => `<div class="${ST_CLASS[k]}"><b>${(g[k] || []).length}</b><span>${k.replace('です','')}</span></div>`).join('')}</div>
+      ${keys.filter(k => k !== '無事です' && (g[k] || []).length).map(k => `<div class="who"><b>${k}</b>：${g[k].map(x => esc(x.name) + (x.time ? `（${esc(x.time)}）` : '')).join('、')}</div>`).join('')}
+      <div class="row2">
+        <button class="btn p" style="--gc:var(--brand)" id="sfSend">全員に送る</button>
+        <button class="btn s" id="sfResend" ${(g['未回答'] || []).length && j.lastSend ? '' : 'disabled'}>未回答の人に再送</button>
+        <button class="btn s" id="sfNotify" ${(g['怪我あり'] || []).length ? '' : 'disabled'}>怪我ありを管理者に通知</button>
+      </div>`;
+    const reload = () => loadSafety(live);
+    $('sfSend').onclick = () => confirmSheet('安否確認の一斉送信', `メンバー全員（${j.total}名）のLINEに安否確認を送ります。`, '送信する', () => runAction(() => api({ app:'safetySend' }), reload));
+    $('sfResend').onclick = () => confirmSheet('未回答の人に再送', `まだ回答していない ${(g['未回答'] || []).length}名に、もう一度送ります。`, '再送する', () => runAction(() => api({ app:'safetyResend' }), reload));
+    $('sfNotify').onclick = () => runAction(() => api({ app:'safetyNotify' }));
+  } catch (e) { if (live()) $('safetyBox').innerHTML = `<div class="note err" style="margin:0">${esc(e.message)}</div>`; }
+}
+
+async function loadEvents(live){
+  try {
+    const j = await api({ app:'events' });
+    if (!live()) return;
+    const evs = j.events || [];
+    let html = isAdmin() ? `<button class="btn s wide" id="evNew" style="margin-bottom:10px">＋ 新しいイベントを作る</button>` : '';
+    if (!evs.length) html += `<div class="box small">${isAdmin() ? 'イベントはまだありません。' : 'あなたが対象のイベントはありません。'}</div>`;
+    html += evs.map(e => {
+      const ans = ME && ME.userId && e.isTarget ? `<div class="chips">${['出席','遅刻','未定','欠席'].map(o =>
+        `<button class="chip" data-ev="${esc(e.id)}" data-at="${o}" aria-pressed="${e.my === o}" style="--gc:var(--brand)">${o}</button>`).join('')}</div>` : '';
+      const cnt = e.counts ? `<div class="counts">${['出席','遅刻','未定','欠席','未回答'].map(k => `<div class="${AT_CLASS[k]}"><b>${e.counts[k].length}</b><span>${k}</span></div>`).join('')}</div>
+        ${['欠席','未回答'].filter(k => e.counts[k].length).map(k => `<div class="who"><b>${k}</b>：${e.counts[k].map(esc).join('、')}</div>`).join('')}
+        ${e.upcoming ? `<div class="row2"><button class="btn s" data-evsend="${esc(e.id)}" data-evname="${esc(e.name)}" data-n="${e.targetCount}">出欠確認をLINEで送る</button></div>` : ''}` : '';
+      return `<div class="box evt"${e.upcoming ? '' : ' style="opacity:.7"'}><h3>${esc(e.name)}${e.upcoming ? '' : '<span class="pill" style="--gbg:var(--soft);--gc:var(--sub)">終了</span>'}</h3>
+        <div class="meta">${esc(e.date)} ${esc(e.time)}${e.place ? '　' + esc(e.place) : ''}</div>${e.memo ? `<div class="small">${esc(e.memo)}</div>` : ''}${ans}${cnt}</div>`;
+    }).join('');
+    $('evBox').innerHTML = html;
+    const reload = () => loadEvents(live);
+    $('evBox').querySelectorAll('[data-at]').forEach(b => b.onclick = () =>
+      runAction(() => api({ app:'eventAnswer', eventId:b.dataset.ev, status:b.dataset.at }), reload));
+    $('evBox').querySelectorAll('[data-evsend]').forEach(b => b.onclick = () =>
+      confirmSheet('出欠確認を送る', `「${b.dataset.evname}」の出欠確認を、対象の${b.dataset.n}名のLINEに送ります。`, '送信する',
+        () => runAction(() => api({ app:'eventSend', eventId:b.dataset.evsend }))));
+    if ($('evNew')) $('evNew').onclick = () => openEventForm(reload);
+  } catch (e) { if (live()) $('evBox').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+function openEventForm(reload){
+  openSheet('新しいイベント', `
+    <div class="field" style="padding:0"><label for="evName">イベント名</label><input class="in" id="evName"></div>
+    <div class="field" style="padding:0"><label for="evDate">開催日</label><input class="in" id="evDate" type="date" value="${ymd()}"></div>
+    <div class="field" style="padding:0"><label for="evTime">開始時刻</label><input class="in" id="evTime" type="time"></div>
+    <div class="field" style="padding:0"><label for="evPlace">場所</label><input class="in" id="evPlace"></div>
+    <div class="field" style="padding:0"><label for="evMemo">メモ</label><textarea class="in" id="evMemo" style="min-height:80px"></textarea></div>
+    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="evSend" checked style="width:20px;height:20px">作成と同時に、LINEに登録している全員へ出欠確認を送る</label>`,
+    `<button class="btn s" id="evCancel">やめる</button><button class="btn p" id="evOk" style="--gc:var(--brand)">作成する</button>`);
+  $('evCancel').onclick = closeSheet;
+  $('evOk').onclick = () => {
+    const ev = { name:$('evName').value.trim(), date:$('evDate').value, time:$('evTime').value, place:$('evPlace').value.trim(), memo:$('evMemo').value.trim(), target:'all', send:$('evSend').checked };
+    if (!ev.name || !ev.date) { toast('イベント名と開催日を入れてください'); return; }
+    runAction(() => apiPost({ app:'eventCreate', event:ev }), reload);
+  };
+}
+
+async function loadMeetings(live){
+  try {
+    const j = await api({ app:'meetings' });
+    if (!live()) return;
+    const ms = j.meetings || [];
+    $('mtBox').innerHTML = `<button class="btn s wide" id="mtNew" style="margin-bottom:10px">＋ 新しい会議を作る</button>` +
+      (ms.length ? ms.map(m => `<div class="list-item" style="--gc:var(--g2)"><div class="main"><div class="t">${esc(m.title)}</div>
+        <div class="m">${esc(m.date)} ${esc(m.time)}　${esc(m.minutes)}分</div></div>
+        ${m.url && /^https?:/.test(m.url) ? `<a class="link" href="${esc(m.url)}" target="_blank" rel="noopener">参加</a>` : ''}
+        <button class="link" style="color:var(--err)" data-mtc="${m.row}" data-t="${esc(m.title)}">取消</button></div>`).join('')
+        : '<div class="box small">予定している会議はありません。</div>');
+    const reload = () => loadMeetings(live);
+    $('mtNew').onclick = () => openMeetingForm(reload);
+    $('mtBox').querySelectorAll('[data-mtc]').forEach(b => b.onclick = () =>
+      confirmSheet('会議の取り消し', `「${b.dataset.t}」を取り消し、参加者に連絡します。`, '取り消す',
+        () => runAction(() => api({ app:'meetingCancel', row:b.dataset.mtc }), reload), true));
+  } catch (e) { if (live()) $('mtBox').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+function openMeetingForm(reload){
+  const staff = LS.get('fb_staff', null);
+  openSheet('新しい会議', `
+    <div class="field" style="padding:0"><label for="mtTitle">会議名</label><input class="in" id="mtTitle"></div>
+    <div class="field" style="padding:0"><label for="mtDate">日付</label><input class="in" id="mtDate" type="date" value="${ymd()}"></div>
+    <div class="field" style="padding:0"><label for="mtTime">開始時間</label><input class="in" id="mtTime" type="time" value="10:00"></div>
+    <div class="field" style="padding:0"><label>会議の長さ</label><div class="chips">${[30,60,90].map(n => `<button type="button" class="chip mini" data-min="${n}" aria-pressed="${n === 60}" style="--gc:var(--brand)">${n}分</button>`).join('')}</div></div>
+    <div class="field" style="padding:0"><label for="mtMails">参加者のメールアドレス（カンマ区切り）</label><textarea class="in" id="mtMails" style="min-height:70px" placeholder="example@f-advance.net, ..."></textarea></div>
+    <p class="small">Google Meet のURLを作り、参加者にメール、LINEグループにお知らせします。</p>`,
+    `<button class="btn s" id="mtCancel">やめる</button><button class="btn p" id="mtOk" style="--gc:var(--brand)">作成する</button>`);
+  let minutes = 60;
+  $('bsBody').querySelectorAll('[data-min]').forEach(b => b.onclick = () => {
+    minutes = Number(b.dataset.min);
+    $('bsBody').querySelectorAll('[data-min]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+  $('mtCancel').onclick = closeSheet;
+  $('mtOk').onclick = () => {
+    const m = { title:$('mtTitle').value.trim(), date:$('mtDate').value, time:$('mtTime').value, minutes, emails:$('mtMails').value };
+    if (!m.title || !m.date || !m.time) { toast('会議名・日付・開始時間を入れてください'); return; }
+    runAction(() => apiPost({ app:'meetingCreate', meeting:m }), reload);
+  };
+}
+
+async function loadAttendance(live){
+  try {
+    const j = await api({ app:'attendanceNow' });
+    if (!live()) return;
+    const rows = j.rows || [];
+    $('atBox').innerHTML = rows.length ? `<div class="box">${rows.map(r =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule)"><span>${esc(r.name)}<span class="small">　${esc(r.group)}</span></span>
+       <span class="small">${esc(r.log || '－')} ${esc(r.time)}</span></div>`).join('')}</div>` : '<div class="box small">出勤の記録はありません。</div>';
+  } catch (e) { if (live()) $('atBox').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+/* ===== 一斉連絡 ===== */
+async function showBroadcast(){
+  setTop({ title:'一斉連絡', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">この画面は管理者だけが使えます。</div>'; return; }
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">スタッフの一覧を読み込んでいます…</div>';
+  let data;
+  try { data = await api({ app:'staffList' }); LS.set('fb_staff', data); }
+  catch (e) { data = LS.get('fb_staff', null); if (!data) { $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; } }
+  if (token !== viewToken) return;
+  const sel = new Set();
+  let store = '', method = 'LINE';
+  const draft = LS.get('fb_bc_draft', {});
+  $('view').innerHTML = `<div style="--gc:var(--brand);padding-top:12px">
+    <div class="field"><div class="label">送り方</div><div class="chips">${['LINE','メール','両方'].map(m => `<button type="button" class="chip" data-m="${m}" aria-pressed="${m === method}">${m}</button>`).join('')}</div></div>
+    <div class="field"><div class="label">送る相手<span class="hint" id="selN">0名を選択中</span></div>
+      ${data.stores.length > 1 ? `<div class="chips" style="margin-bottom:10px"><button type="button" class="chip mini" data-st="" aria-pressed="true">すべての店舗</button>${data.stores.map(st => `<button type="button" class="chip mini" data-st="${esc(st)}" aria-pressed="false">${esc(st)}</button>`).join('')}</div>` : ''}
+      <div class="chips" style="margin-bottom:10px"><button type="button" class="chip mini" id="allOn">表示中を全員選ぶ</button><button type="button" class="chip mini" id="allOff">選択を外す</button></div>
+      <div class="chips" id="people"></div></div>
+    <div class="field"><label for="bcSub">件名</label><input class="in" id="bcSub" value="${esc(draft.subject || '')}"></div>
+    <div class="field"><label for="bcMsg">内容</label><textarea class="in" id="bcMsg">${esc(draft.message || '')}</textarea></div>
+    <div class="bar"><span class="saved"></span><button class="btn p" id="bcSend">送信内容を確認</button></div></div>`;
+  const visible = () => data.staff.filter(x => !store || x.store === store);
+  const usable = x => method === 'LINE' ? x.line : method === 'メール' ? x.mail : (x.line || x.mail);
+  const drawPeople = () => {
+    $('people').innerHTML = visible().map(x => `<button type="button" class="chip" data-id="${esc(x.id)}" aria-pressed="${sel.has(x.id)}" ${usable(x) ? '' : 'disabled style="opacity:.45"'}>${esc(x.name)}<span class="small" style="color:inherit;opacity:.75">　${esc(x.kind)}</span></button>`).join('');
+    $('people').querySelectorAll('[data-id]').forEach(b => b.onclick = () => { sel.has(b.dataset.id) ? sel.delete(b.dataset.id) : sel.add(b.dataset.id); drawPeople(); });
+    $('selN').textContent = sel.size + '名を選択中';
+  };
+  $('view').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { method = b.dataset.m; $('view').querySelectorAll('[data-m]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawPeople(); });
+  $('view').querySelectorAll('[data-st]').forEach(b => b.onclick = () => { store = b.dataset.st; $('view').querySelectorAll('[data-st]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawPeople(); });
+  $('allOn').onclick = () => { visible().filter(usable).forEach(x => sel.add(x.id)); drawPeople(); };
+  $('allOff').onclick = () => { sel.clear(); drawPeople(); };
+  ['bcSub','bcMsg'].forEach(id => $(id).oninput = () => LS.set('fb_bc_draft', { subject:$('bcSub').value, message:$('bcMsg').value }));
+  drawPeople();
+  $('bcSend').onclick = () => {
+    const msg = { ids:[...sel], subject:$('bcSub').value.trim(), message:$('bcMsg').value.trim(), method, store };
+    if (!msg.ids.length) { toast('送る相手を選んでください'); return; }
+    if (!msg.subject || !msg.message) { toast('件名と内容を入れてください'); return; }
+    const names = data.staff.filter(x => sel.has(x.id)).map(x => x.name);
+    openSheet('この内容で送りますか？', `<dl class="review"><dt>送り方</dt><dd>${esc(method)}</dd><dt>相手（${names.length}名）</dt><dd>${esc(names.join('、'))}</dd>
+      <dt>件名</dt><dd>${esc(msg.subject)}</dd><dt>内容</dt><dd>${esc(msg.message)}</dd></dl>`,
+      `<button class="btn s" id="bcBack">戻って直す</button><button class="btn p" id="bcOk" style="--gc:var(--brand)">送信する</button>`);
+    $('bcBack').onclick = closeSheet;
+    $('bcOk').onclick = () => runAction(() => apiPost({ app:'broadcast', msg }), () => { LS.del('fb_bc_draft'); location.hash = '#/contact'; });
+  };
 }
 
 /* ================= 設定 ================= */
 function showSettings(){
   setTop({ title:'設定' });
-  $('view').innerHTML = `<div class="sec-title">接続</div>
+  const lineInfo = ME && ME.userId
+    ? `<div class="box"><div><b>${esc(ME.name || '名前未登録')}</b> さん${isAdmin() ? '<span class="admin-mark">管理者</span>' : ''}</div>
+       <div class="small">LINEでログインしています。</div>
+       <div class="small" style="margin-top:8px">あなたのLINE ID：<code id="myId" style="word-break:break-all">${esc(ME.userId)}</code></div>
+       <button class="btn s wide" id="copyId" style="margin-top:8px;min-height:44px">IDをコピー（登録の依頼用）</button></div>`
+    : `<div class="box"><div class="small">${authError ? esc(authError) : 'LINEにはログインしていません。'}</div>${liffReady() && !idToken ? '<button class="btn s wide" style="margin-top:8px" onclick="lineLogin()">LINEでログイン</button>' : ''}</div>`;
+  $('view').innerHTML = `<div class="sec-title">LINEのログイン</div>${lineInfo}
+    <div class="sec-title">アプリキー（LINE以外で使うとき）</div>
     <div class="field"><label for="sKey">アプリキー</label>
       <input class="in" id="sKey" value="${esc(cfg.key)}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="管理者から聞いたキー">
       <p class="small" style="margin:8px 0 0">この端末にだけ保存されます。</p></div>
@@ -934,9 +1202,12 @@ function showSettings(){
     const next = { url: ($('sUrl').value.trim() || DEFAULT_URL), key: $('sKey').value.trim() };
     if (!next.key) { toast('アプリキーを入力してください'); return; }
     $('sSave').disabled = true;
-    try { await api({ app:'ping' }, next); cfg = next; LS.set('fb_cfg', cfg); toast('つながりました'); location.hash = '#/'; }
+    try { await api({ app:'ping' }, next); cfg = next; LS.set('fb_cfg', cfg); toast('つながりました'); if (!idToken) { try { ME = await api({ app:'me' }); authError = ''; } catch (e) {} } location.hash = '#/'; }
     catch (e) { openSheet('接続できませんでした', `<p>${esc(e.message)}</p>`, '<button class="btn p wide" id="eOk">閉じる</button>'); $('eOk').onclick = closeSheet; }
     finally { $('sSave').disabled = false; }
+  };
+  if ($('copyId')) $('copyId').onclick = async () => {
+    try { await navigator.clipboard.writeText(ME.userId); toast('コピーしました'); } catch (e) { toast('コピーできませんでした。長押しで選択してください'); }
   };
   $('sRefresh').onclick = () => {
     LS.keys().filter(k => k.indexOf('fb_fields_') === 0 || k.indexOf('fb_forms_') === 0).forEach(k => LS.del(k));
@@ -944,7 +1215,8 @@ function showSettings(){
   };
 }
 
-route();
+$('view').innerHTML = '<div class="empty">準備しています…</div>';
+initAuth().then(route);
 </script>
 </body>
 </html>
