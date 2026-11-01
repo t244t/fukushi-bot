@@ -74,7 +74,7 @@ body.no-nav main.wrap{padding-bottom:0}
 .row:active{background:var(--soft)}
 .row .name{flex:1;font-size:16px}
 .row .grp{display:block;font-size:12px;color:var(--sub)}
-.row .chev{width:18px;height:18px;color:var(--sub);flex:0 0 auto}
+.chev{width:18px;height:18px;color:var(--sub);flex:0 0 auto}
 .tag{flex:0 0 auto;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--warn-bg);color:var(--warn)}
 .empty{padding:28px 16px;text-align:center;color:var(--sub)}
 
@@ -137,7 +137,7 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 
 /* ===== 下部ナビ ===== */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--paper);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
-.nav .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.nav .wrap{display:grid;grid-template-columns:repeat(5,1fr)}
 .nav a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:var(--sub);text-decoration:none;font-size:11px;position:relative}
 .nav a svg{width:24px;height:24px}
 .nav a[aria-current="page"]{color:var(--brand);font-weight:700}
@@ -159,6 +159,35 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 .g1{--gc:var(--g1);--gbg:var(--g1-bg)} .g2{--gc:var(--g2);--gbg:var(--g2-bg)}
 .g3{--gc:var(--g3);--gbg:var(--g3-bg)} .g4{--gc:var(--g4);--gbg:var(--g4-bg)}
 .small{font-size:13px;color:var(--sub)}
+
+/* ===== 情報を見る ===== */
+.heat{display:block;color:inherit;text-decoration:none;background:var(--paper);border-radius:var(--r-l);padding:18px 18px 16px;margin-top:16px;border-top:6px solid var(--lv)}
+.heat .row1{display:flex;align-items:baseline;gap:12px}
+.heat .num{font-size:52px;font-weight:700;line-height:1;color:var(--lv);font-variant-numeric:tabular-nums}
+.heat .lvname{font-size:20px;font-weight:700}
+.heat .meta{color:var(--sub);font-size:13px;margin-top:6px}
+.scale{display:grid;grid-template-columns:21fr 4fr 3fr 3fr 4fr;gap:2px;margin-top:14px}
+.scale span{height:8px;border-radius:2px;opacity:.35}
+.scale span.on{opacity:1;height:12px;margin-top:-2px}
+.scale-l{display:grid;grid-template-columns:21fr 4fr 3fr 3fr 4fr;gap:2px;font-size:11px;color:var(--sub);margin-top:4px}
+.card{background:var(--paper);border-radius:var(--r-m);padding:14px 16px;margin-bottom:10px;border-left:5px solid var(--gc)}
+.card .d{font-size:12px;color:var(--sub)}
+.card .t{font-weight:700;margin:2px 0 4px;line-height:1.5}
+.card .b{white-space:pre-wrap;word-break:break-word;font-size:14px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card.open .b{display:block}
+.card .acts{display:flex;gap:4px;margin:6px -8px -6px;flex-wrap:wrap}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:99px;padding:1px 9px;background:var(--gbg);color:var(--gc);margin-left:6px;vertical-align:2px}
+.wb{display:inline-block;min-width:52px;text-align:center;font-weight:700;color:#fff;border-radius:var(--r-s);padding:4px 8px;margin-right:10px;font-variant-numeric:tabular-nums}
+.thumb{width:112px;height:63px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:var(--soft)}
+.step{display:grid;grid-template-columns:40px 1fr;gap:12px;background:var(--paper);border-radius:var(--r-m);padding:14px;margin-bottom:10px}
+.step .n{width:36px;height:36px;border-radius:50%;background:var(--gc);color:#fff;display:grid;place-items:center;font-weight:700}
+.step img{width:100%;max-height:240px;object-fit:contain;border-radius:var(--r-s);margin-top:8px;background:var(--soft)}
+.step .b{white-space:pre-wrap;font-size:15px;margin-top:4px}
+.place .addr{font-size:14px;color:var(--sub)}
+.place details{margin-top:8px;font-size:14px}
+.place summary{cursor:pointer;color:var(--gc);font-weight:700;padding:4px 0}
+.place ul{margin:6px 0 0;padding-left:18px}
+.gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
 <body>
@@ -172,6 +201,7 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 
 <nav class="nav" id="nav"><div class="wrap">
   <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg>記録する</a>
+  <a href="#/info" data-nav="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>情報</a>
   <a href="#/drafts" data-nav="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>下書き<span class="dot" id="draftDot" hidden></span></a>
   <a href="#/history" data-nav="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>送信済み</a>
   <a href="#/settings" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>設定</a>
@@ -238,6 +268,22 @@ const DEMO_FIELDS = [
   { label:'送迎の有無', type:'text', options:['有り','無し'], strict:true },
   { label:'≪備考≫', type:'textarea' }
 ].map((f, i) => ({ index:i, options:[], hidden:false, auto:false, strict:false, multi:false, required:false, ...f }));
+const DEMO_VIEWS = [
+  { id:'heat', group:'安全', title:'熱中症予防情報', kind:'heat' }, { id:'heatman', group:'安全', title:'熱中症の対応手順', kind:'steps' },
+  { id:'weather', group:'安全', title:'天候・警報メール', kind:'feed' }, { id:'shelter', group:'安全', title:'避難場所', kind:'places' },
+  { id:'livecam', group:'安全', title:'災害ライブカメラ', kind:'links' }, { id:'video', group:'学ぶ', title:'研修動画', kind:'links' },
+  { id:'news', group:'お知らせ', title:'福岡市の新着情報', kind:'feed' }
+];
+const DEMO_VIEW = {
+  heat:{ kind:'heat', items:[{ date:'2026/08/12 09:52', title:'前原（福岡）', sub:'2026/08/12 09時', alert:'厳重警戒', wbgt:'29.6', body:'6時 26.1 / 7時 27.0 / 8時 28.4 / 9時 29.6' },
+    { date:'2026/08/12 07:07', title:'福岡（福岡）', sub:'2026/08/12 06時', alert:'警戒', wbgt:'27.0', body:'' }] },
+  heatman:{ kind:'steps', items:[{ step:'Step0', title:'症状確認', body:'⚠️ 熱中症が疑われる症状がありますか？\n✅ ふらつき・失神・けいれんなど' }, { step:'Step1', title:'作業離脱・身体冷却', body:'💧 涼しい場所に移動し、身体を冷却しましょう。' }] },
+  weather:{ kind:'feed', items:[{ date:'2026/03/12 10:30', title:'【福岡地方】注警報メール', body:'■発表日時 令和８年３月１２日１０時２８分 福岡管区気象台 発表\n■概要 福岡地方では、落雷や竜巻などの激しい突風に注意してください。' }] },
+  shelter:{ kind:'places', items:[{ area:'糸島市井田', title:'前原東中学校', addr:'糸島市井田658', tag:'指定避難所', geo:'33.5465, 130.2312', reviews:[{ who:'いしどん', text:'水がとどきました。', date:'3/18' }], needs:[{ what:'飲料水', level:'2' }], comments:[] }] },
+  livecam:{ kind:'links', items:[{ title:'NHKニュースLIVE', sub:'災害情報全般', url:'https://www.youtube.com/watch?v=coYw-eVU' }, { title:'福岡県 河川カメラ', sub:'県内各地の水位状況', url:'https://bousai.pref.fukuoka.jp/' }] },
+  video:{ kind:'links', items:[{ title:'共通講義Ⅰ', url:'https://youtu.be/KtUFulk6UJE' }, { title:'共通講義Ⅱ', url:'https://youtu.be/6ypJkcWXUOQ' }] },
+  news:{ kind:'feed', items:[{ date:'2026/03/26 10:30', title:'令和８年度福祉タクシー料金助成事業について', url:'https://www.city.fukuoka.lg.jp/' }] }
+};
 const DEMO_ALC = [
   { label:'確認日時', type:'datetime', required:true },
   { label:'運転者', type:'text', options:['石橋','大鶴','吉澤','平山'], strict:true },
@@ -249,6 +295,8 @@ const DEMO_ALC = [
 async function demoApi(p){
   await new Promise(r => setTimeout(r, 250));
   if (p.app === 'forms') return { forms: DEMO_FORMS };
+  if (p.app === 'views') return { views: DEMO_VIEWS };
+  if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
   if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[], note: p.sheet === '検温管理' ? '36.8℃：発熱無し 🟢' : '' }; }
@@ -309,6 +357,7 @@ function route(){
   document.body.classList.toggle('no-nav', $('nav').hidden);
   if (page === 'form') return showForm(arg);
   if (page === 'done') return showDone(arg);
+  if (page === 'info') return arg ? showView(arg) : showInfo();
   if (page === 'drafts') return showDrafts();
   if (page === 'history') return showHistory();
   if (page === 'settings') return showSettings();
@@ -689,6 +738,150 @@ function showDone(sheet){
       <a class="btn s wide" style="display:grid;place-items:center;text-decoration:none;color:inherit" href="#/">ホームに戻る</a>
     </div></div>`;
   updateDraftDot();
+}
+
+/* ================= 情報を見る ================= */
+const VG = { '安全':'gs', '学ぶ':'gl', 'お知らせ':'gn' };
+const WBGT = [
+  { min:31, name:'危険', color:'#c62f22', note:'運動は原則中止。外出はなるべく避け、涼しい室内へ。' },
+  { min:28, name:'厳重警戒', color:'#e36b12', note:'炎天下を避け、こまめに休憩と水分・塩分補給を。' },
+  { min:25, name:'警戒', color:'#d49a00', note:'積極的に休憩を取り、水分・塩分を補給しましょう。' },
+  { min:21, name:'注意', color:'#3b8fc4', note:'激しい作業の合間は水分補給を。' },
+  { min:-99, name:'ほぼ安全', color:'#2f6fb0', note:'適宜、水分を補給しましょう。' }
+];
+const wbgtLevel = n => WBGT.find(l => Number(n) >= l.min) || WBGT[WBGT.length - 1];
+const viewKey = id => 'fb_view_' + (isDemo() ? 'demo_' : '') + id;
+const getViews = () => LS.get('fb_views_' + (isDemo() ? 'demo' : 'live'), null);
+const viewGroup = id => (getViews() || []).find(v => v.id === id)?.group || '安全';
+const openLink = (url, label) => url ? `<a class="link" href="${esc(url)}" target="_blank" rel="noopener">${label}</a>` : '';
+
+function heatCard(it){
+  const lv = wbgtLevel(it.wbgt);
+  const idx = WBGT.indexOf(lv);
+  const seg = [...WBGT].reverse();
+  return `<a class="heat" href="#/info/heat" style="--lv:${lv.color}">
+    <div class="small">暑さ指数（WBGT）の最新</div>
+    <div class="row1"><span class="num">${esc(it.wbgt || '－')}</span><span><span class="lvname">${esc(it.alert || lv.name)}</span><br><span class="small">${esc(it.title)}</span></span></div>
+    <div class="scale">${seg.map(l => `<span class="${l === lv ? 'on' : ''}" style="background:${l.color}"></span>`).join('')}</div>
+    <div class="scale-l"><span>〜21</span><span>注意</span><span>警戒</span><span>厳重</span><span>危険</span></div>
+    <div class="meta">${esc(lv.note)}<br>計測 ${esc(it.sub || it.date)}</div></a>`;
+}
+
+async function loadView(id){
+  const cached = LS.get(viewKey(id), null);
+  const fresh = api({ app:'view', id }).then(j => { LS.set(viewKey(id), j); return j; });
+  return { cached, fresh };
+}
+
+async function showInfo(){
+  setTop({ title:'情報' });
+  const token = viewToken;
+  const draw = (views, heat) => {
+    if (token !== viewToken) return;
+    let html = '';
+    if (heat && heat.items && heat.items[0]) html += heatCard(heat.items[0]);
+    if (!views) { $('view').innerHTML = html + '<div class="empty">情報の一覧を読み込んでいます…</div>'; return; }
+    ['安全','学ぶ','お知らせ'].forEach(g => {
+      const list = views.filter(v => v.group === g);
+      if (!list.length) return;
+      html += `<div class="sec-title">${esc(g)}</div><div class="sheet ${VG[g]}" style="border-radius:var(--r-m)">${list.map(v =>
+        `<a class="row" href="#/info/${encodeURIComponent(v.id)}" style="color:inherit;text-decoration:none"><span class="name">${esc(v.title)}</span>${ICON.chev}</a>`).join('')}</div>`;
+    });
+    $('view').innerHTML = html;
+  };
+  let views = getViews(), heat = LS.get(viewKey('heat'), null);
+  draw(views, heat);
+  if (!isDemo() && !cfg.key) { $('view').insertAdjacentHTML('afterbegin', '<div class="note">設定でアプリキーを入力すると表示されます。</div>'); return; }
+  try {
+    const j = await api({ app:'views' });
+    views = j.views; LS.set('fb_views_' + (isDemo() ? 'demo' : 'live'), views); draw(views, heat);
+    if (views.some(v => v.id === 'heat')) { heat = await api({ app:'view', id:'heat' }); LS.set(viewKey('heat'), heat); draw(views, heat); }
+  } catch (e) {
+    if (token === viewToken && !views) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+  }
+}
+
+async function showView(id){
+  const meta = (getViews() || []).find(v => v.id === id);
+  setTop({ title: meta ? meta.title : '情報', back:true });
+  const token = viewToken;
+  const cached = LS.get(viewKey(id), null);
+  if (cached) renderView(id, cached); else $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const j = await api({ app:'view', id });
+    LS.set(viewKey(id), j);
+    if (token === viewToken && JSON.stringify(j) !== JSON.stringify(cached)) renderView(id, j);
+  } catch (e) {
+    if (token === viewToken && !cached) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+  }
+}
+
+function renderView(id, data){
+  const g = VG[viewGroup(id)] || 'gs';
+  const items = data.items || [];
+  let html = `<div class="${g}" style="padding-top:14px">`;
+  if (!items.length) html += '<div class="empty">まだ情報はありません。</div>';
+  else if (data.kind === 'heat') {
+    html += heatCard(items[0]).replace('href="#/info/heat"', 'href="#/info/heat" onclick="return false"');
+    html += `<div class="sec-title">これまでの計測</div>` + items.map(it => {
+      const lv = wbgtLevel(it.wbgt);
+      return `<div class="card" style="--gc:${lv.color}"><div style="display:flex;align-items:center"><span class="wb" style="background:${lv.color}">${esc(it.wbgt)}</span>
+        <div><div class="t" style="margin:0">${esc(it.title)}<span class="pill" style="--gbg:transparent;--gc:${lv.color}">${esc(it.alert || lv.name)}</span></div>
+        <div class="d">計測 ${esc(it.sub || it.date)}</div></div></div>${it.body ? `<div class="small" style="margin-top:6px">${esc(it.body)}</div>` : ''}</div>`;
+    }).join('');
+  } else if (data.kind === 'steps') {
+    let cat = '';
+    items.forEach((it, i) => {
+      if (it.cat && it.cat !== cat) { cat = it.cat; html += `<div class="sec-title">${esc(cat)}</div>`; }
+      html += `<div class="step"><div class="n">${i + 1}</div><div><div class="t" style="font-weight:700;font-size:17px">${esc(it.title)}</div>
+        <div class="b">${esc(it.body)}</div>${it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div></div>`;
+    });
+  } else if (data.kind === 'links') {
+    html += items.map(it => {
+      const yt = (String(it.url).match(/(?:youtu\.be\/|v=)([\w-]{6,})/) || [])[1];
+      return `<a class="list-item" href="${esc(it.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">
+        ${yt ? `<img class="thumb" src="https://i.ytimg.com/vi/${esc(yt)}/mqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">` : ''}
+        <div class="main"><div class="t">${esc(it.title)}</div>${it.sub ? `<div class="m">${esc(it.sub)}</div>` : ''}</div>${ICON.chev}</a>`;
+    }).join('');
+  } else if (data.kind === 'places') {
+    const areas = [...new Set(items.map(it => (String(it.area).match(/^.+?[市町村]/) || [it.area])[0]).filter(Boolean))];
+    html += `<label class="search" style="margin-top:0">${ICON.search}<input id="pq2" type="search" placeholder="避難場所・住所でさがす" aria-label="避難場所をさがす"></label>
+      ${areas.length > 1 ? `<div class="chips" style="margin:8px 0 12px">${areas.map(a => `<button class="chip mini" data-area="${esc(a)}" aria-pressed="false">${esc(a)}</button>`).join('')}</div>` : ''}<div id="plist2"></div>`;
+  } else {
+    html += items.map((it, i) => `<div class="card" id="c${i}"><div class="d">${esc(it.date || '')}${it.tag && it.tag !== '不明' ? `<span class="pill">${esc(it.tag)}</span>` : ''}</div>
+      <div class="t">${esc(it.title)}</div>${it.body ? `<div class="b">${esc(it.body)}</div>` : ''}
+      <div class="acts">${it.body && (it.body.length > 40 || it.body.includes('\n')) ? `<button class="link" data-open="c${i}">全文を見る</button>` : ''}${openLink(it.url, 'ページを開く')}</div></div>`).join('');
+  }
+  html += '</div>';
+  $('view').innerHTML = html;
+  $('view').querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
+    const c = $(b.dataset.open); const on = c.classList.toggle('open'); b.textContent = on ? 'たたむ' : '全文を見る';
+  });
+  if (data.kind === 'places') bindPlaces(items);
+}
+
+function bindPlaces(items){
+  let area = '';
+  const draw = () => {
+    const q = ($('pq2').value || '').trim();
+    const list = items.filter(it => (!area || String(it.area).indexOf(area) === 0) && (!q || (it.title + it.addr + it.area + (it.sub || '')).includes(q)));
+    $('plist2').innerHTML = list.length ? list.map(it => {
+      const map = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((it.geo || '').replace(/\s/g, '') || it.addr || it.title);
+      const needs = it.needs || [], revs = (it.reviews || []).concat(it.comments || []);
+      return `<div class="card place"><div class="t">${esc(it.title)}${it.tag ? `<span class="pill">${esc(it.tag)}</span>` : ''}</div>
+        <div class="addr">${esc(it.addr || it.area)}</div>${it.sub ? `<div class="small">対象：${esc(it.sub)}</div>` : ''}
+        ${needs.length ? `<details><summary>今必要なもの（${needs.length}件）</summary><ul>${needs.map(n => `<li>${esc(n.what)}${n.level ? `（緊急度${esc(n.level)}）` : ''}</li>`).join('')}</ul></details>` : ''}
+        ${revs.length ? `<details><summary>現地の声（${revs.length}件）</summary><ul>${revs.map(r => `<li>${esc(r.text)}<span class="small">　${esc(r.who || '')} ${esc(r.date || '')}</span></li>`).join('')}</ul></details>` : ''}
+        <div class="acts"><a class="link" href="${map}" target="_blank" rel="noopener">地図で見る</a></div></div>`;
+    }).join('') : '<div class="empty">合う避難場所はありません。</div>';
+  };
+  $('pq2').oninput = draw;
+  $('view').querySelectorAll('[data-area]').forEach(b => b.onclick = () => {
+    area = area === b.dataset.area ? '' : b.dataset.area;
+    $('view').querySelectorAll('[data-area]').forEach(x => x.setAttribute('aria-pressed', x.dataset.area === area));
+    draw();
+  });
+  draw();
 }
 
 /* ================= 下書き ================= */
