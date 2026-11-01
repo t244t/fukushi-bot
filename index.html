@@ -3,308 +3,673 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>福祉ボットくん 入力</title>
+<meta name="theme-color" content="#2f6b4f">
+<title>福祉ボット２</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f4f7f6;--card:#fff;--ink:#1f2d2b;--sub:#5f716d;--line:#dde6e3;--main:#2e8b75;--main-d:#246f5d;--warn:#b5651d;--err:#c0392b;--draft:#fff4e0}
+/* ===== 色とかたち ===== */
+:root{
+  --bg:#edf1eb; --paper:#ffffff; --ink:#1f2a24; --sub:#5b6a61; --rule:#d7dfd6; --soft:#f5f8f4;
+  --brand:#2f6b4f; --brand-ink:#ffffff;
+  --g1:#3c8a5a; --g1-bg:#e4f1e8;   /* 日々の記録：若竹 */
+  --g2:#2e5b88; --g2-bg:#e2ebf4;   /* 支援計画・会議：藍 */
+  --g3:#a9741a; --g3-bg:#f6ecd8;   /* アセスメント・採用：山吹 */
+  --g4:#8a4767; --g4-bg:#f3e4ec;   /* 届出・報告：葡萄 */
+  --warn:#9a5b10; --warn-bg:#fdf1de; --err:#b3352b; --err-bg:#fbe7e5;
+  --r-s:8px; --r-m:12px; --r-l:18px;
+  --shadow:0 1px 0 var(--rule);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121815; --paper:#1a221e; --ink:#e4ebe6; --sub:#9aa9a0; --rule:#2b3630; --soft:#202a25;
+    --brand:#4f9a75;
+    --g1:#6cc08b; --g1-bg:#1e3328; --g2:#7fa9d6; --g2-bg:#1c2836;
+    --g3:#e0ab4f; --g3-bg:#33291a; --g4:#d390b1; --g4-bg:#33222b;
+    --warn:#e7b066; --warn-bg:#33281a; --err:#ef8a80; --err-bg:#3a201d;
+    color-scheme:dark;
+  }
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;-webkit-text-size-adjust:100%}
-header{position:sticky;top:0;background:var(--main);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:8px;z-index:5}
-header h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header button{background:transparent;border:0;color:#fff;font-size:20px;padding:4px 8px;cursor:pointer}
-main{max-width:640px;margin:0 auto;padding:16px 16px 40px}
-.group{margin:20px 0 8px;font-size:13px;color:var(--sub);font-weight:700}
-.item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer}
-.item:active{background:#eef5f3}
-.badge{flex-shrink:0;font-size:12px;background:var(--draft);color:var(--warn);border-radius:99px;padding:2px 8px;font-weight:700}
-.field{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
-.field label{display:block;font-size:13px;color:var(--sub);margin-bottom:6px;font-weight:700}
-.req{font-size:11px;background:#fdecea;color:var(--err);border-radius:4px;padding:1px 6px;margin-left:4px}
-.field.miss{border-color:var(--err);box-shadow:0 0 0 2px #fdecea}
-select{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit}
-input,textarea{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit}
-input:focus,textarea:focus{outline:2px solid var(--main);border-color:var(--main)}
-textarea{min-height:100px;resize:vertical}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{border:1px solid var(--line);background:#f8fbfa;border-radius:99px;padding:6px 12px;font-size:14px;cursor:pointer;color:var(--ink)}
-.chip.on{background:var(--main);border-color:var(--main);color:#fff}
-.bar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 calc(12px + env(safe-area-inset-bottom));display:flex;gap:8px}
-.btn{flex:1;border:0;border-radius:10px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
-.btn.p{background:var(--main);color:#fff}.btn.p:active{background:var(--main-d)}
-.btn.s{background:#fff;border:1px solid var(--line);color:var(--ink)}
-.note{background:var(--draft);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px;line-height:1.6}
-.note.err{background:#fdecea;color:var(--err)}
-.saved{font-size:12px;color:var(--sub);text-align:right;margin:0 0 8px;min-height:16px}
-.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#1f2d2b;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%;z-index:30}
-.toast.on{opacity:1}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:700;text-align:center;padding:24px}
-.overlay.on{display:flex}
-.small{font-size:13px;color:var(--sub);line-height:1.6}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif;font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:6px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px}
+main.wrap{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+body.no-nav main.wrap{padding-bottom:0}
+
+/* ===== 上部バー ===== */
+.top{position:sticky;top:0;z-index:10;background:var(--brand);color:var(--brand-ink);padding-top:env(safe-area-inset-top)}
+.top .wrap{display:flex;align-items:center;gap:8px;height:56px}
+.top h1{flex:1;margin:0;font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{display:grid;place-items:center;width:44px;height:44px;margin:0 -6px;border:0;background:transparent;color:inherit;border-radius:50%}
+.icon-btn svg{width:24px;height:24px}
+.top.group{background:var(--paper);color:var(--ink);border-bottom:1px solid var(--rule)}
+.top.group .band{position:absolute;left:0;right:0;bottom:-1px;height:4px;background:var(--gc)}
+.progress{height:4px;background:var(--rule);position:absolute;left:0;right:0;bottom:-1px}
+.progress i{display:block;height:100%;width:0;background:var(--gc);transition:width .25s}
+
+/* ===== ホーム ===== */
+.today{padding:18px 0 6px}
+.today .date{font-size:26px;font-weight:700;letter-spacing:.02em}
+.today .stat{color:var(--sub);font-size:14px;margin-top:2px}
+.search{position:relative;display:block;margin:12px 0 4px}
+.search input{width:100%;height:48px;padding:0 14px 0 44px;border:1px solid var(--rule);border-radius:var(--r-m);background:var(--paper);color:var(--ink);font:inherit}
+.search svg{position:absolute;left:14px;top:13px;width:22px;height:22px;color:var(--sub)}
+.sec-title{font-size:14px;color:var(--sub);font-weight:700;margin:20px 0 8px}
+.pins{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.pin{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--paper);border:1px solid var(--rule);border-left:5px solid var(--gc);border-radius:var(--r-s);font-weight:700;font-size:15px}
+
+/* 見出しタブ（バインダーのインデックス） */
+.tabs{display:flex;gap:4px;margin-top:20px;overflow-x:auto;scrollbar-width:none}
+.tab{flex:1 0 auto;border:0;padding:10px 8px 9px;border-radius:var(--r-m) var(--r-m) 0 0;background:var(--soft);color:var(--sub);font-weight:700;font-size:13px;border-top:4px solid transparent}
+.tab[aria-selected="true"]{background:var(--paper);color:var(--ink);border-top-color:var(--gc)}
+.sheet{background:var(--paper);border-radius:0 var(--r-m) var(--r-m) var(--r-m);border-top:4px solid var(--gc);margin-bottom:24px}
+.row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;border:0;background:transparent;text-align:left;border-bottom:1px solid var(--rule)}
+.row:last-child{border-bottom:0}
+.row:active{background:var(--soft)}
+.row .name{flex:1;font-size:16px}
+.row .grp{display:block;font-size:12px;color:var(--sub)}
+.row .chev{width:18px;height:18px;color:var(--sub);flex:0 0 auto}
+.tag{flex:0 0 auto;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--warn-bg);color:var(--warn)}
+.empty{padding:28px 16px;text-align:center;color:var(--sub)}
+
+/* ===== 入力フォーム ===== */
+.form-head{display:flex;justify-content:space-between;align-items:center;padding:14px 0 6px;color:var(--sub);font-size:14px}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:var(--r-s);padding:10px 12px;font-size:14px;margin:10px 0}
+.note.err{background:var(--err-bg);color:var(--err)}
+.field{background:var(--paper);border-radius:var(--r-m);padding:14px;margin-bottom:10px;border:2px solid transparent}
+.field.filled{box-shadow:inset 4px 0 0 var(--gc)}
+.field.miss{border-color:var(--err)}
+.field>label,.field>.label{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;margin-bottom:8px}
+.req{font-size:11px;font-weight:700;color:var(--err);background:var(--err-bg);border-radius:4px;padding:1px 6px}
+.hint{font-size:12px;color:var(--sub);font-weight:400;margin-left:auto}
+.in,select.in,textarea.in{width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--soft);color:var(--ink);font:inherit}
+textarea.in{min-height:120px;resize:vertical;line-height:1.7}
+.in:focus{border-color:var(--gc);background:var(--paper);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--gc) 25%,transparent)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.after{margin-top:8px}
+.chip{min-height:44px;padding:8px 14px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--soft);font-size:15px;text-align:left}
+.chip[aria-pressed="true"]{background:var(--gc);border-color:var(--gc);color:#fff;font-weight:700}
+.chip.mini{min-height:36px;padding:4px 12px;font-size:14px}
+.picker{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--soft);text-align:left}
+.picker .ph{color:var(--sub)}
+.picker svg{width:18px;height:18px;color:var(--sub);flex:0 0 auto}
+
+.bar{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 70%,transparent);display:flex;gap:10px;align-items:center}
+.saved{font-size:12px;color:var(--sub);flex:1}
+.btn{border:0;border-radius:var(--r-m);min-height:52px;padding:0 22px;font-size:16px;font-weight:700}
+.btn.p{background:var(--gc,var(--brand));color:#fff}
+.btn.s{background:var(--paper);border:1px solid var(--rule)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.5}
+
+/* ===== 下から出るシート ===== */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none}
+.scrim.on{display:block}
+.bsheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--paper);border-radius:var(--r-l) var(--r-l) 0 0;max-height:82vh;display:flex;flex-direction:column;transform:translateY(105%);transition:transform .22s ease-out;padding-bottom:env(safe-area-inset-bottom)}
+.bsheet.on{transform:none}
+.bsheet .grab{width:40px;height:4px;border-radius:2px;background:var(--rule);margin:8px auto 4px}
+.bsheet h2{font-size:17px;margin:4px 16px 10px}
+.bsheet .body{overflow:auto;padding:0 16px 12px}
+.bsheet .foot{display:flex;gap:10px;padding:10px 16px 14px;border-top:1px solid var(--rule)}
+.bsheet .foot .btn{flex:1}
+.opt{display:block;width:100%;min-height:52px;padding:12px 8px;border:0;border-bottom:1px solid var(--rule);background:transparent;text-align:left;font-size:16px}
+.opt[aria-selected="true"]{font-weight:700;color:var(--gc)}
+.review dt{font-size:13px;color:var(--sub);margin-top:10px}
+.review dd{margin:2px 0 0;white-space:pre-wrap;word-break:break-word}
+
+/* ===== 送信完了 ===== */
+.done{text-align:center;padding:48px 0 24px}
+.done .mark{width:84px;height:84px;margin:0 auto 16px;border-radius:50%;background:var(--gc);display:grid;place-items:center;color:#fff}
+.done .mark svg{width:46px;height:46px}
+.done h2{margin:0 0 4px;font-size:24px}
+.done p{margin:0;color:var(--sub)}
+.stack{display:grid;gap:10px;margin-top:24px}
+
+/* ===== 下部ナビ ===== */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:9;background:var(--paper);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
+.nav .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
+.nav a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;color:var(--sub);text-decoration:none;font-size:11px;position:relative}
+.nav a svg{width:24px;height:24px}
+.nav a[aria-current="page"]{color:var(--brand);font-weight:700}
+.nav .dot{position:absolute;top:4px;left:calc(50% + 8px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:11px;line-height:18px;text-align:center}
+
+.list-item{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:var(--r-m);padding:14px;margin-bottom:8px;border-left:5px solid var(--gc)}
+.list-item .main{flex:1;min-width:0}
+.list-item .t{font-weight:700}
+.list-item .m{font-size:13px;color:var(--sub)}
+.link{border:0;background:transparent;color:var(--gc);font-weight:700;padding:8px;text-decoration:none}
+
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:var(--r-m);font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90%}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.busy{position:fixed;inset:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);display:none;place-items:center;text-align:center;padding:24px}
+.busy.on{display:grid}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid var(--rule);border-top-color:var(--brand);margin:0 auto 14px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.g1{--gc:var(--g1);--gbg:var(--g1-bg)} .g2{--gc:var(--g2);--gbg:var(--g2-bg)}
+.g3{--gc:var(--g3);--gbg:var(--g3-bg)} .g4{--gc:var(--g4);--gbg:var(--g4-bg)}
+.small{font-size:13px;color:var(--sub)}
 </style>
 </head>
 <body>
-<header>
-  <button id="back" aria-label="戻る" style="visibility:hidden">←</button>
-  <h1 id="title">福祉ボットくん</h1>
-  <button id="gear" aria-label="設定">⚙</button>
-</header>
-<main id="view"></main>
-<div class="toast" id="toast"></div>
-<div class="overlay" id="overlay"><div>送信中…<br><span style="font-weight:400;font-size:14px">転記・PDF作成・通知まで少しかかります</span></div></div>
+<header class="top" id="top"><div class="wrap">
+  <button class="icon-btn" id="back" aria-label="戻る" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <h1 id="title">福祉ボット２</h1>
+  <button class="icon-btn" id="pinBtn" aria-label="よく使うに追加" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg></button>
+</div><span class="progress" id="prog" hidden><i></i></span></header>
+
+<main class="wrap" id="view"></main>
+
+<nav class="nav" id="nav"><div class="wrap">
+  <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg>記録する</a>
+  <a href="#/drafts" data-nav="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>下書き<span class="dot" id="draftDot" hidden></span></a>
+  <a href="#/history" data-nav="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>送信済み</a>
+  <a href="#/settings" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>設定</a>
+</div></nav>
+
+<div class="scrim" id="scrim"></div>
+<section class="bsheet" id="bsheet" role="dialog" aria-modal="true" aria-labelledby="bsTitle">
+  <div class="grab"></div><h2 id="bsTitle"></h2><div class="body" id="bsBody"></div><div class="foot" id="bsFoot"></div>
+</section>
+<div class="busy" id="busy"><div><div class="spin"></div><b>送信しています</b><p class="small">記録・PDF作成・通知まで少しかかります。<br>画面を閉じずにお待ちください。</p></div></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
-/* ===== 保存（localStorage が使えない環境でも動くように） ===== */
+/* ================= 設定・保存 ================= */
+const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyPznpZt8AAQ5-K1ZGfDol4YUTaJ323lp7aHeaj2RfM08fEyIEBq-qgUgTfqrsFGDEF/exec';
 const LS = {
   get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} },
-  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} },
+  keys(){ try{ return Object.keys(localStorage); }catch(e){ return []; } }
 };
-const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyPznpZt8AAQ5-K1ZGfDol4YUTaJ323lp7aHeaj2RfM08fEyIEBq-qgUgTfqrsFGDEF/exec';
 let cfg = LS.get('fb_cfg', { url: DEFAULT_URL, key:'' });
-// URL未設定、または前のURLが保存されている端末は新しいURLに切り替え
 if (!cfg.url || cfg.url.indexOf('AKfycbyrtRt3p7kBtgZHkOSfwa06') !== -1) cfg.url = DEFAULT_URL;
-const isDemo = () => !cfg.url;
-const draftKey = s => 'fb_draft_' + s;
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isDemo = () => /[?&]demo/.test(location.search);
 const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const draftKey = s => 'fb_draft_' + s;
+const fieldsKey = s => 'fb_fields_' + (isDemo() ? 'demo_' : '') + s;
+const splitMulti = s => String(s ?? '').split(',').map(x => x.trim()).filter(Boolean);
+const GROUPS = ['日々の記録','支援計画・会議','アセスメント・採用','届出・報告'];
+const TAB_LABEL = { '日々の記録':'日々の記録', '支援計画・会議':'計画・会議', 'アセスメント・採用':'アセス・採用', '届出・報告':'届出・報告' };
+const gClass = g => 'g' + (GROUPS.indexOf(g) + 1 || 1);
+const jst = (d = new Date()) => new Date(d.getTime() + 9 * 3600e3);
+const ymd = d => jst(d).toISOString().slice(0, 10);
+const fmtTime = t => new Date(t).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
 
-function toast(msg, ms=2500){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'), ms); }
+const ICON = {
+  chev:'<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+};
 
-/* ===== デモ用データ（GAS URL 未設定のとき） ===== */
+function toast(msg, ms = 2600){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms); }
+
+/* ================= デモ用データ（URL に ?demo を付けたとき） ================= */
 const DEMO_FORMS = [
   ['日々の記録',['支援経過記録','相談記録表','ヒヤリハット報告書','感染症報告','欠席時対応(加算)記録表','施設外実績記録表','研修受講報告書']],
   ['支援計画・会議',['個別支援計画書','個別支援計画の作成に係るアセスメント表','支援計画作成面談表','個別支援計画モニタリング面談記録','個別支援会議録','モニタリング会議録','会議録','他機関連携記録','個人の強みと課題表']],
   ['アセスメント・採用',['就労アセスメント','アセスメントシート暫定時','利用者スキルシート','面接シート']],
-  ['届出・報告',['賃金工賃実績報告調査表','基－３基本報酬算定区分']]
+  ['届出・報告',['賃金工賃実績報告調査表','基－３基本報酬算定区分','【加－41】送迎加算に関する届出書']]
 ].flatMap(([g, list]) => list.map(s => ({ group:g, sheet:s })));
+const DEMO_NAMES = ['峰 恭子','稼木 敏明','松川 忠義','田中 尚樹','佐々木 勇斗','木村 圭吾','仲西 大介','中村 啓志郎','帯田 真','井上 俊二','佐藤 史佳','長屋 結衣'];
 const DEMO_FIELDS = [
-  { label:'日付', type:'date' }, { label:'名前', type:'text', options:['利用者A','利用者B','利用者C'] },
-  { label:'出勤状況', type:'text', options:['出勤','欠勤','遅刻','早退'] },
+  { label:'日付', type:'date', required:true },
+  { label:'名前', type:'text', options:DEMO_NAMES, strict:true, required:true },
+  { label:'出勤状況', type:'text', options:['出勤','欠勤','公休','在宅勤務'], strict:true, required:true },
   { label:'利用開始時間', type:'time' }, { label:'利用終了時間', type:'time' },
-  { label:'休憩（分）', type:'number' }, { label:'作業内容', type:'textarea' },
-  { label:'本人の様子', type:'textarea' }, { label:'支援員対応', type:'textarea' },
-  { label:'保存用名前', type:'text', hidden:true, auto:true }
-].map((f,i) => ({ index:i, options:[], hidden:false, auto:false, ...f }));
+  { label:'休憩', type:'number' },
+  { label:'勤務時間', type:'text', options:['0.5h','1.0h','1.5h','2.0h','2.5h','3.0h','3.5h','4.0h','4.5h','5.0h','5.5h','6.0h'], strict:true },
+  { label:'遅刻・早退', type:'text', options:['遅刻','早退','無し'], strict:true },
+  { label:'作業内容', type:'text', options:['物販','集荷','配送','清掃','野菜加工','ハウス管理','その他'], strict:true, multi:true },
+  { label:'支援員対応', type:'textarea' },
+  { label:'送迎の有無', type:'text', options:['有り','無し'], strict:true },
+  { label:'≪備考≫', type:'textarea' }
+].map((f, i) => ({ index:i, options:[], hidden:false, auto:false, strict:false, multi:false, required:false, ...f }));
 async function demoApi(p){
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 250));
   if (p.app === 'forms') return { forms: DEMO_FORMS };
   if (p.app === 'fields') return { sheet:p.sheet, fields: DEMO_FIELDS };
-  if (p.app === 'submit') { await new Promise(r => setTimeout(r, 900)); return { message:'（デモ）保存しました。実際には転記→PDF→LINE通知まで行います' }; }
-  if (p.app === 'ping') return { message:'デモモードです' };
+  if (p.app === 'ping') return { message:'デモ表示です' };
+  if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[] }; }
 }
 
-/* ===== GAS 呼び出し（GETのみ） ===== */
-async function api(params){
+/* ================= サーバー呼び出し（GETのみ） ================= */
+async function api(params, override){
   if (isDemo()) return demoApi(params);
-  const url = cfg.url + '?' + new URLSearchParams({ ...params, key: cfg.key });
-  if (url.length > 7500) throw new Error('入力量が多すぎて一度に送れません（約' + url.length + '文字）。長文を短くしてください。');
-  const r = await fetch(url);
-  const j = await r.json();
+  const c = override || cfg;
+  const url = c.url + '?' + new URLSearchParams({ ...params, key: c.key });
+  if (url.length > 7500) throw new Error('文章が長すぎて一度に送れません（約' + url.length + '文字）。長い欄を少し短くしてください。');
+  let r;
+  try { r = await fetch(url); } catch (e) { throw new Error('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
+  const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした。設定のURLを確認してください。'); });
   if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
   return j;
 }
 
-/* ===== 画面：ホーム ===== */
+/* ================= 画面の切り替え（#/…） ================= */
+let viewToken = 0;
+function route(){
+  viewToken++;
+  closeSheet();
+  const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
+  const [page, ...rest] = h.split('/');
+  const arg = rest.join('/');
+  document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === (page || 'home') ? 'page' : 'false'));
+  $('nav').hidden = page === 'form' || page === 'done';
+  document.body.classList.toggle('no-nav', $('nav').hidden);
+  if (page === 'form') return showForm(arg);
+  if (page === 'done') return showDone(arg);
+  if (page === 'drafts') return showDrafts();
+  if (page === 'history') return showHistory();
+  if (page === 'settings') return showSettings();
+  return showHome();
+}
+function setTop({ title, back = false, group = null, pin = null }){
+  const top = $('top');
+  top.className = 'top' + (group ? ' group ' + gClass(group) : '');
+  $('title').textContent = title;
+  $('back').hidden = !back;
+  $('prog').hidden = !group;
+  $('pinBtn').hidden = pin === null;
+  if (pin !== null) {
+    $('pinBtn').setAttribute('aria-pressed', pin ? 'true' : 'false');
+    $('pinBtn').querySelector('path').setAttribute('fill', pin ? 'currentColor' : 'none');
+    $('pinBtn').setAttribute('aria-label', pin ? 'よく使うから外す' : 'よく使うに追加');
+  }
+  document.title = title === '福祉ボット２' ? title : title + '｜福祉ボット２';
+}
+$('back').onclick = () => { if (history.length > 1) history.back(); else location.hash = '#/'; };
+window.addEventListener('hashchange', route);
+
+/* ================= 共通データ ================= */
+const getForms = () => LS.get('fb_forms_' + (isDemo() ? 'demo' : 'live'), null);
+const groupOf = sheet => (getForms() || []).find(f => f.sheet === sheet)?.group || GROUPS[0];
+const getPins = () => LS.get('fb_pins', []);
+const getHistory = () => LS.get('fb_history', []);
+function listDrafts(){
+  return LS.keys().filter(k => k.indexOf('fb_draft_') === 0)
+    .map(k => ({ sheet: k.slice(9), ...LS.get(k, {}) }))
+    .filter(d => d.values && Object.values(d.values).some(v => String(v).trim()))
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+function updateDraftDot(){ const n = listDrafts().length; const d = $('draftDot'); d.hidden = !n; d.textContent = n; }
+
+/* ================= ホーム ================= */
+let homeTab = LS.get('fb_tab', GROUPS[0]);
 async function showHome(){
-  $('title').textContent = '福祉ボットくん';
-  $('back').style.visibility = 'hidden';
-  formToken++;
+  setTop({ title:'福祉ボット２' });
+  const token = viewToken;
   const v = $('view');
-  let forms = LS.get('fb_forms_' + (isDemo()?'demo':'live'), null);
   const draw = () => {
-    let html = isDemo() ? '<div class="note">デモ表示中です。⚙ 設定で GAS の URL とアプリキーを入れると、複製したスプレッドシートにつながります。</div>' : '';
-    if (!forms) { v.innerHTML = html + '<p class="small">読み込み中…</p>'; return; }
-    let g = '';
-    forms.forEach(f => {
-      if (f.group !== g) { g = f.group; html += `<div class="group">${esc(g)}</div>`; }
-      const d = LS.get(draftKey(f.sheet), null);
-      html += `<div class="item" data-sheet="${esc(f.sheet)}"><span>${esc(f.sheet)}</span>${d ? '<span class="badge">下書きあり</span>' : ''}</div>`;
-    });
+    const forms = getForms();
+    const drafts = listDrafts();
+    const todayCount = getHistory().filter(h => ymd(new Date(h.ts)) === ymd()).length;
+    const d = jst();
+    const week = '日月火水木金土'[d.getUTCDay()];
+    let html = `<div class="today"><div class="date">${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${week}）</div>
+      <div class="stat">今日の送信 ${todayCount}件　下書き ${drafts.length}件</div></div>`;
+    if (!isDemo() && !cfg.key) html += `<div class="note">はじめに、設定でアプリキーを入力してください。<br><a class="link" style="padding:0" href="#/settings">設定を開く</a></div>`;
+    if (isDemo()) html += `<div class="note">デモ表示です。入力しても記録はされません。</div>`;
+    html += `<label class="search">${ICON.search}<input id="q" type="search" placeholder="帳票をさがす（例：欠席、面談）" aria-label="帳票をさがす"></label>`;
+    if (!forms) { v.innerHTML = html + '<div class="empty">帳票の一覧を読み込んでいます…</div>'; return; }
+
+    const pins = getPins().filter(p => forms.some(f => f.sheet === p));
+    if (pins.length) {
+      html += `<div class="sec-title">よく使う</div><div class="pins">${pins.map(p =>
+        `<a class="pin ${gClass(groupOf(p))}" href="#/form/${encodeURIComponent(p)}" style="color:inherit;text-decoration:none">${esc(p)}</a>`).join('')}</div>`;
+    }
+    const groups = GROUPS.filter(g => forms.some(f => f.group === g));
+    if (!groups.includes(homeTab)) homeTab = groups[0];
+    html += `<div class="tabs" role="tablist">${groups.map(g =>
+      `<button class="tab ${gClass(g)}" role="tab" aria-selected="${g === homeTab}" data-tab="${esc(g)}">${esc(TAB_LABEL[g] || g)}</button>`).join('')}</div>`;
+    html += `<div class="sheet ${gClass(homeTab)}" id="list"></div>`;
     v.innerHTML = html;
-    v.querySelectorAll('.item').forEach(el => el.onclick = () => showForm(el.dataset.sheet));
+
+    const renderList = q => {
+      const list = $('list');
+      const items = q ? forms.filter(f => f.sheet.includes(q)) : forms.filter(f => f.group === homeTab);
+      list.className = 'sheet ' + gClass(q ? GROUPS[0] : homeTab);
+      document.querySelector('.tabs').style.display = q ? 'none' : '';
+      if (q) list.style.borderTopLeftRadius = 'var(--r-m)'; else list.style.borderTopLeftRadius = '';
+      list.innerHTML = items.length ? items.map(f => {
+        const hasDraft = drafts.some(d => d.sheet === f.sheet);
+        return `<a class="row ${gClass(f.group)}" href="#/form/${encodeURIComponent(f.sheet)}" style="color:inherit;text-decoration:none">
+          <span class="name">${esc(f.sheet)}${q ? `<span class="grp">${esc(f.group)}</span>` : ''}</span>
+          ${hasDraft ? '<span class="tag">下書きあり</span>' : ''}${ICON.chev}</a>`;
+      }).join('') : `<div class="empty">「${esc(q)}」に合う帳票はありません。</div>`;
+    };
+    renderList('');
+    $('q').oninput = e => renderList(e.target.value.trim());
+    v.querySelectorAll('.tab').forEach(t => t.onclick = () => { homeTab = t.dataset.tab; LS.set('fb_tab', homeTab); draw(); });
   };
-  draw();
+  draw(); updateDraftDot();
+  if (!isDemo() && !cfg.key) return;
   try {
     const j = await api({ app:'forms' });
-    forms = j.forms; LS.set('fb_forms_' + (isDemo()?'demo':'live'), forms); draw();
-    prefetchFields(forms);
+    LS.set('fb_forms_' + (isDemo() ? 'demo' : 'live'), j.forms);
+    if (token === viewToken) { const q = $('q')?.value; draw(); if (q) { $('q').value = q; $('q').dispatchEvent(new Event('input')); } }
+    prefetchFields(j.forms);
   } catch (e) {
-    if (!forms) v.innerHTML = `<div class="note err">${esc(e.message)}</div>`;
-    else toast('一覧の更新に失敗：' + e.message);
+    if (token !== viewToken) return;
+    if (!getForms()) $('view').insertAdjacentHTML('beforeend', `<div class="note err">${esc(e.message)}</div>`);
+    else toast('一覧を更新できませんでした（前回の一覧を表示中）');
   }
 }
 
-/* ===== まだ開いたことのない帳票の入力欄を、裏で1つずつ先読み ===== */
+/* まだ開いていない帳票の入力欄を裏で先読み */
 let prefetching = false;
 async function prefetchFields(forms){
   if (prefetching || isDemo()) return;
   prefetching = true;
   try {
     for (const f of forms) {
-      const key = 'fb_fields_' + f.sheet;
-      if (LS.get(key, null)) continue;
-      try { const j = await api({ app:'fields', sheet: f.sheet }); LS.set(key, j.fields); } catch (e) {}
+      if (LS.get(fieldsKey(f.sheet), null)) continue;
+      try { const j = await api({ app:'fields', sheet:f.sheet }); LS.set(fieldsKey(f.sheet), j.fields); } catch (e) {}
     }
   } finally { prefetching = false; }
 }
 
-/* ===== 画面：入力フォーム（下書き自動保存） ===== */
+/* ================= 入力フォーム ================= */
+let F = null; // 今開いているフォームの状態 { sheet, fields, values }
 async function showForm(sheet){
-  $('title').textContent = sheet;
-  $('back').style.visibility = 'visible';
-  const v = $('view');
-  const cacheKey = 'fb_fields_' + (isDemo()?'demo_':'') + sheet;
-  const cached = LS.get(cacheKey, null);
-  const token = ++formToken;
-
+  const group = groupOf(sheet);
+  setTop({ title:sheet, back:true, group, pin:getPins().includes(sheet) });
+  $('pinBtn').onclick = () => {
+    let pins = getPins();
+    const on = !pins.includes(sheet);
+    pins = on ? [sheet, ...pins] : pins.filter(p => p !== sheet);
+    LS.set('fb_pins', pins.slice(0, 8));
+    setTop({ title:sheet, back:true, group, pin:on });
+    toast(on ? 'よく使うに追加しました' : 'よく使うから外しました');
+  };
+  const token = viewToken;
+  const cached = LS.get(fieldsKey(sheet), null);
   if (cached) {
-    // 前回の形ですぐ表示 → 裏で最新を取得し、変わっていれば入力内容を保ったまま描き直す
     renderForm(sheet, cached);
     api({ app:'fields', sheet }).then(j => {
-      LS.set(cacheKey, j.fields);
-      if (token !== formToken) return; // 別の画面に移動済み
-      if (JSON.stringify(j.fields) !== JSON.stringify(cached)) renderForm(sheet, j.fields, currentValues);
+      LS.set(fieldsKey(sheet), j.fields);
+      if (token === viewToken && JSON.stringify(j.fields) !== JSON.stringify(cached)) renderForm(sheet, j.fields, F.values);
     }).catch(() => {});
     return;
   }
-
-  v.innerHTML = '<p class="small">入力欄を読み込み中…（初回のみ少しかかります）</p>';
+  $('view').innerHTML = '<div class="empty">入力欄を準備しています…<br><span class="small">はじめて開く帳票は少し時間がかかります。</span></div>';
   try {
     const j = await api({ app:'fields', sheet });
-    LS.set(cacheKey, j.fields);
-    if (token !== formToken) return;
-    renderForm(sheet, j.fields);
+    LS.set(fieldsKey(sheet), j.fields);
+    if (token === viewToken) renderForm(sheet, j.fields);
   } catch (e) {
-    if (token === formToken) v.innerHTML = `<div class="note err">${esc(e.message)}</div>`;
+    if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div><button class="btn s wide" onclick="route()">もう一度読み込む</button>`;
   }
 }
-
-let formToken = 0;
-let currentValues = null;
 
 function renderForm(sheet, fields, keepValues){
-  const v = $('view');
+  const group = groupOf(sheet);
   const draft = keepValues ? null : LS.get(draftKey(sheet), null);
-  const values = keepValues ? keepValues : (draft ? { ...draft.values } : {});
-  currentValues = values;
-  if (!draft && !keepValues) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = new Date(Date.now()+9*3600e3).toISOString().slice(0,10); }
+  const values = keepValues || (draft ? { ...draft.values } : {});
+  if (!draft && !keepValues) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = ymd(); }
+  F = { sheet, fields, values, group };
+  const vis = fields.filter(f => !f.hidden);
 
-  let html = draft ? `<div class="note">前回 ${esc(draft.at)} の下書きを復元しました。</div>` : '';
-  html += '<div class="saved" id="saved"></div>';
-  const splitMulti = s => String(s ?? '').split(',').map(x => x.trim()).filter(Boolean);
-  fields.filter(f => !f.hidden).forEach(f => {
-    const opts = f.options || [];
-    const id = 'f' + f.index, raw = values[f.index] ?? '', val = esc(raw);
-    let input;
-    if (f.multi && opts.length) {
-      // 複数選択：タップでオン／オフ
-      const sel = splitMulti(raw);
-      input = `<input type="hidden" id="${id}" data-i="${f.index}" data-multi="1" value="${val}">` +
-        `<div class="chips">${opts.map(o => `<button type="button" class="chip${sel.includes(o)?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>` +
-        `<div class="small" style="margin-top:6px">複数選べます</div>`;
-    } else if (f.strict && opts.length > 8) {
-      // 選択肢が多い：プルダウン
-      const extra = raw && !opts.includes(raw) ? [raw] : [];
-      input = `<select id="${id}" data-i="${f.index}"><option value="">選んでください</option>` +
-        [...opts, ...extra].map(o => `<option value="${esc(o)}"${o===raw?' selected':''}>${esc(o)}</option>`).join('') + `</select>`;
-    } else if (f.strict && opts.length) {
-      // 選択肢が少ない：ボタンで1つ選ぶ
-      input = `<input type="hidden" id="${id}" data-i="${f.index}" value="${val}">` +
-        `<div class="chips">${opts.map(o => `<button type="button" class="chip${raw===o?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
-    } else if (f.type === 'textarea') {
-      input = `<textarea id="${id}" data-i="${f.index}">${val}</textarea>`;
-    } else {
-      // 自由入力（過去の入力を候補として表示）
-      const t = { date:'date', time:'time', number:'number' }[f.type] || 'text';
-      const list = opts.length > 8 ? ` list="dl${f.index}"` : '';
-      input = `<input id="${id}" data-i="${f.index}" type="${t}" value="${val}"${t==='number'?' inputmode="decimal"':''}${list}>`;
-      if (list) input += `<datalist id="dl${f.index}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
-      if (opts.length && opts.length <= 8) input += `<div class="chips">${opts.map(o => `<button type="button" class="chip${raw===o?' on':''}" data-for="${id}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
-    }
-    const req = f.required ? ' <span class="req">必須</span>' : '';
-    html += `<div class="field" id="wrap${f.index}"><label for="${id}">${esc(f.label)}${req}</label>${input}</div>`;
-  });
-  html += `<div class="bar"><button class="btn s" id="clear">下書きを消す</button><button class="btn p" id="send">送信</button></div>`;
-  v.innerHTML = html;
+  let html = `<div class="${gClass(group)}">`;
+  if (draft && draft.at) html += `<div class="note">${esc(draft.at)} の下書きから続けています。</div>`;
+  html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
+  vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); });
+  html += `<div class="bar"><span class="saved" id="saved">${draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
+    <button class="btn p" id="send">内容を確認</button></div></div>`;
+  $('view').innerHTML = html;
+  bindForm();
+  updateProgress();
+}
 
-  let timer;
-  const saveDraft = () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      const at = new Date().toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
-      LS.set(draftKey(sheet), { values, at });
-      $('saved').textContent = '下書き保存 ' + at;
-    }, 400);
-  };
-  const onChange = el => { values[el.dataset.i] = el.value; syncChips(el); $('wrap' + el.dataset.i)?.classList.remove('miss'); saveDraft(); };
-  v.querySelectorAll('[data-i]').forEach(el => { el.oninput = () => onChange(el); el.onchange = () => onChange(el); });
-  v.querySelectorAll('.chip').forEach(ch => ch.onclick = () => {
-    const el = $(ch.dataset.for);
-    if (el.dataset.multi) {
-      const sel = splitMulti(el.value);
-      const k = sel.indexOf(ch.dataset.v);
-      if (k === -1) sel.push(ch.dataset.v); else sel.splice(k, 1);
-      el.value = sel.join(',');
-    } else {
-      el.value = el.value === ch.dataset.v ? '' : ch.dataset.v;
-    }
-    onChange(el);
-  });
-  function syncChips(el){
-    const sel = el.dataset.multi ? splitMulti(el.value) : [el.value];
-    v.querySelectorAll(`.chip[data-for="${el.id}"]`).forEach(c => c.classList.toggle('on', sel.includes(c.dataset.v)));
+function fieldHtml(f, raw){
+  const id = 'f' + f.index, val = esc(raw), opts = f.options || [];
+  const req = f.required ? '<span class="req">必須</span>' : '';
+  let label = `<label for="${id}">${esc(f.label)}${req}</label>`;
+  let body;
+  if (f.multi && opts.length) {
+    const sel = splitMulti(raw);
+    label = `<div class="label" id="${id}l">${esc(f.label)}${req}<span class="hint">いくつでも選べます</span></div>`;
+    body = `<div class="chips" role="group" aria-labelledby="${id}l">${opts.map(o =>
+      `<button type="button" class="chip" data-f="${f.index}" data-v="${esc(o)}" data-mode="multi" aria-pressed="${sel.includes(o)}">${esc(o)}</button>`).join('')}</div>`;
+  } else if (f.strict && opts.length > 8) {
+    body = `<button type="button" class="picker" id="${id}" data-f="${f.index}" data-mode="pick">${raw ? `<span>${val}</span>` : '<span class="ph">選んでください</span>'}${ICON.down}</button>`;
+  } else if (f.strict && opts.length) {
+    label = `<div class="label" id="${id}l">${esc(f.label)}${req}</div>`;
+    body = `<div class="chips" role="radiogroup" aria-labelledby="${id}l">${opts.map(o =>
+      `<button type="button" class="chip" data-f="${f.index}" data-v="${esc(o)}" data-mode="one" aria-pressed="${raw === o}">${esc(o)}</button>`).join('')}</div>`;
+  } else if (f.type === 'textarea') {
+    body = `<textarea class="in" id="${id}" data-f="${f.index}">${val}</textarea>`;
+  } else {
+    const t = { date:'date', time:'time', number:'number' }[f.type] || 'text';
+    const list = opts.length > 8 ? ` list="dl${f.index}"` : '';
+    body = `<input class="in" id="${id}" data-f="${f.index}" type="${t}" value="${val}"${t === 'number' ? ' inputmode="decimal"' : ''}${list}>`;
+    if (list) body += `<datalist id="dl${f.index}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
+    if (t === 'date') body += `<div class="chips after"><button type="button" class="chip mini" data-date="0" data-f="${f.index}">今日</button><button type="button" class="chip mini" data-date="-1" data-f="${f.index}">昨日</button></div>`;
+    else if (opts.length && opts.length <= 8) body += `<div class="chips after">${opts.map(o =>
+      `<button type="button" class="chip mini" data-f="${f.index}" data-v="${esc(o)}" data-mode="fill">${esc(o)}</button>`).join('')}</div>`;
   }
-
-  $('clear').onclick = () => {
-    if (!confirm('この帳票の下書きを消して、入力をやり直しますか？')) return;
-    LS.del(draftKey(sheet)); showForm(sheet);
-  };
-  $('send').onclick = async () => {
-    if (!Object.values(values).some(x => String(x).trim())) { toast('入力がありません'); return; }
-    const missing = fields.filter(f => !f.hidden && f.required && !String(values[f.index] ?? '').trim());
-    if (missing.length) {
-      missing.forEach(f => $('wrap' + f.index)?.classList.add('miss'));
-      $('wrap' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
-      toast('必須の項目が未入力です：' + missing.map(f => f.label).join('、'), 3500);
-      return;
-    }
-    if (!confirm(`「${sheet}」を送信します。よろしいですか？`)) return;
-    $('overlay').classList.add('on');
-    try {
-      const j = await api({ app:'submit', sheet, data: JSON.stringify(values) });
-      LS.del(draftKey(sheet));
-      toast(j.message || '保存しました', 3500);
-      showHome();
-    } catch (e) {
-      alert('送信できませんでした。\n下書きは残っています。\n\n' + e.message);
-    } finally {
-      $('overlay').classList.remove('on');
-    }
-  };
+  return `<div class="field${String(raw).trim() ? ' filled' : ''}" id="w${f.index}">${label}${body}</div>`;
 }
 
-/* ===== 画面：設定 ===== */
+function setValue(i, v){
+  F.values[i] = v;
+  const w = $('w' + i);
+  if (w) { w.classList.toggle('filled', !!String(v).trim()); w.classList.remove('miss'); }
+  saveDraft(); updateProgress();
+}
+let saveTimer;
+function saveDraft(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (!F) return;
+    const at = fmtTime(Date.now());
+    LS.set(draftKey(F.sheet), { values:F.values, at, ts:Date.now() });
+    const s = $('saved'); if (s) s.textContent = '下書き保存 ' + at.split(' ').pop();
+    updateDraftDot();
+  }, 400);
+}
+function updateProgress(){
+  const vis = F.fields.filter(f => !f.hidden);
+  const done = vis.filter(f => String(F.values[f.index] ?? '').trim()).length;
+  const c = $('count'); if (c) c.textContent = `記入 ${done} / ${vis.length}`;
+  const bar = $('prog').querySelector('i'); bar.style.width = (vis.length ? done / vis.length * 100 : 0) + '%';
+}
+
+function bindForm(){
+  const v = $('view');
+  v.querySelectorAll('input.in, textarea.in').forEach(el => {
+    el.oninput = () => setValue(el.dataset.f, el.value);
+    el.onchange = el.oninput;
+  });
+  v.querySelectorAll('.chip[data-mode]').forEach(ch => ch.onclick = () => {
+    const i = ch.dataset.f, o = ch.dataset.v, mode = ch.dataset.mode;
+    if (mode === 'multi') {
+      const sel = splitMulti(F.values[i]);
+      const k = sel.indexOf(o); if (k === -1) sel.push(o); else sel.splice(k, 1);
+      ch.setAttribute('aria-pressed', k === -1);
+      setValue(i, sel.join(','));
+    } else if (mode === 'one') {
+      const next = F.values[i] === o ? '' : o;
+      v.querySelectorAll(`.chip[data-f="${i}"]`).forEach(c => c.setAttribute('aria-pressed', c.dataset.v === next));
+      setValue(i, next);
+    } else {
+      const el = $('f' + i); el.value = o; setValue(i, o);
+    }
+  });
+  v.querySelectorAll('.chip[data-date]').forEach(ch => ch.onclick = () => {
+    const d = new Date(Date.now() + Number(ch.dataset.date) * 864e5);
+    const el = $('f' + ch.dataset.f); el.value = ymd(d); setValue(ch.dataset.f, el.value);
+  });
+  v.querySelectorAll('.picker').forEach(p => p.onclick = () => openPicker(F.fields.find(f => String(f.index) === p.dataset.f)));
+  $('send').onclick = openReview;
+}
+
+/* ===== 下から出るシート ===== */
+function openSheet(title, body, foot, cls){
+  $('bsTitle').textContent = title;
+  $('bsBody').innerHTML = body;
+  $('bsFoot').innerHTML = foot || '';
+  $('bsheet').className = 'bsheet on ' + (cls || '');
+  $('scrim').classList.add('on');
+  setTimeout(() => ($('bsheet').querySelector('input,button') || $('bsheet')).focus(), 60);
+}
+function closeSheet(){ $('bsheet').classList.remove('on'); $('scrim').classList.remove('on'); }
+$('scrim').onclick = closeSheet;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+function openPicker(f){
+  const opts = f.options || [];
+  const cur = F.values[f.index] ?? '';
+  const search = opts.length > 12 ? `<label class="search" style="margin-top:0">${ICON.search}<input id="pq" type="search" placeholder="名前の一部で絞り込み" aria-label="絞り込み"></label>` : '';
+  openSheet(f.label, search + '<div id="plist"></div>',
+    `<button class="btn s" id="pclear">選択をはずす</button><button class="btn s" id="pclose">閉じる</button>`, gClass(F.group));
+  const draw = q => {
+    const items = opts.filter(o => !q || o.includes(q));
+    $('plist').innerHTML = items.length ? items.map(o =>
+      `<button class="opt" data-v="${esc(o)}" aria-selected="${o === cur}">${esc(o)}</button>`).join('') : '<div class="empty">見つかりません</div>';
+    $('plist').querySelectorAll('.opt').forEach(b => b.onclick = () => choose(b.dataset.v));
+  };
+  const choose = val => {
+    setValue(f.index, val);
+    const p = $('f' + f.index);
+    p.innerHTML = (val ? `<span>${esc(val)}</span>` : '<span class="ph">選んでください</span>') + ICON.down;
+    closeSheet(); p.focus();
+  };
+  draw('');
+  if ($('pq')) $('pq').oninput = e => draw(e.target.value.trim());
+  $('pclear').onclick = () => choose('');
+  $('pclose').onclick = closeSheet;
+}
+
+/* ===== 送信前の確認 ===== */
+function openReview(){
+  const vis = F.fields.filter(f => !f.hidden);
+  if (!vis.some(f => String(F.values[f.index] ?? '').trim())) { toast('まだ何も入力されていません'); return; }
+  const missing = vis.filter(f => f.required && !String(F.values[f.index] ?? '').trim());
+  if (missing.length) {
+    missing.forEach(f => $('w' + f.index)?.classList.add('miss'));
+    $('w' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
+    toast('必須の項目が空いています：' + missing.map(f => f.label).join('、'), 3600);
+    return;
+  }
+  const filled = vis.filter(f => String(F.values[f.index] ?? '').trim());
+  const rows = filled.map(f => `<dt>${esc(f.label)}</dt><dd>${esc(f.multi ? splitMulti(F.values[f.index]).join('、') : F.values[f.index])}</dd>`).join('');
+  const blanks = vis.length - filled.length;
+  openSheet('この内容で送信しますか？',
+    `<dl class="review">${rows}</dl>${blanks ? `<p class="small" style="margin-top:14px">未記入の項目が ${blanks} 件あります。そのまま送信できます。</p>` : ''}`,
+    `<button class="btn s" id="rvBack">戻って直す</button><button class="btn p" id="rvSend">送信する</button>`, gClass(F.group));
+  $('rvBack').onclick = closeSheet;
+  $('rvSend').onclick = submitForm;
+}
+
+async function submitForm(){
+  closeSheet();
+  $('busy').classList.add('on');
+  const { sheet, values } = F;
+  try {
+    const j = await api({ app:'submit', sheet, data: JSON.stringify(values) });
+    LS.del(draftKey(sheet));
+    const rec = { sheet, ts:Date.now(), pdfs:j.pdfs || [], who: values[F.fields.find(f => !f.hidden && f.strict && (f.options || []).length > 8)?.index] || '' };
+    LS.set('fb_history', [rec, ...getHistory()].slice(0, 50));
+    F = null;
+    location.replace('#/done/' + encodeURIComponent(sheet));
+  } catch (e) {
+    openSheet('送信できませんでした', `<p>${esc(e.message)}</p><p class="small">入力内容は下書きに残っています。</p>`,
+      `<button class="btn p wide" id="errOk">閉じる</button>`);
+    $('errOk').onclick = closeSheet;
+  } finally {
+    $('busy').classList.remove('on');
+  }
+}
+
+/* ================= 送信完了 ================= */
+function showDone(sheet){
+  const group = groupOf(sheet);
+  setTop({ title:'送信完了' });
+  const rec = getHistory()[0];
+  const pdf = rec && rec.sheet === sheet && rec.pdfs && rec.pdfs[rec.pdfs.length - 1];
+  $('view').innerHTML = `<div class="${gClass(group)}"><div class="done">
+    <div class="mark">${ICON.check}</div><h2>記録しました</h2>
+    <p>${esc(sheet)}${rec && rec.who ? '（' + esc(rec.who) + '）' : ''}</p>
+    <p class="small">${rec ? fmtTime(rec.ts) : ''}　PDFを作成しました</p></div>
+    <div class="stack">
+      ${pdf ? `<a class="btn s wide" style="display:grid;place-items:center;text-decoration:none;color:inherit" href="${esc(pdf.url)}" target="_blank" rel="noopener">PDFを開く</a>` : ''}
+      <a class="btn p wide" style="display:grid;place-items:center;text-decoration:none" href="#/form/${encodeURIComponent(sheet)}">続けてもう1件入力する</a>
+      <a class="btn s wide" style="display:grid;place-items:center;text-decoration:none;color:inherit" href="#/">ホームに戻る</a>
+    </div></div>`;
+  updateDraftDot();
+}
+
+/* ================= 下書き ================= */
+function showDrafts(){
+  setTop({ title:'下書き' });
+  const drafts = listDrafts();
+  $('view').innerHTML = `<div class="sec-title">入力途中の帳票</div>` + (drafts.length ? drafts.map(d => {
+    const n = Object.values(d.values).filter(v => String(v).trim()).length;
+    return `<div class="list-item ${gClass(groupOf(d.sheet))}"><div class="main"><div class="t">${esc(d.sheet)}</div>
+      <div class="m">${esc(d.at || '')}　${n}項目 記入済み</div></div>
+      <a class="link" href="#/form/${encodeURIComponent(d.sheet)}">続ける</a>
+      <button class="link" style="color:var(--sub)" data-del="${esc(d.sheet)}">削除</button></div>`;
+  }).join('') : '<div class="empty">下書きはありません。<br>入力中の内容は自動でここに残ります。</div>');
+  $('view').querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm(`「${b.dataset.del}」の下書きを削除しますか？`)) return;
+    LS.del(draftKey(b.dataset.del)); updateDraftDot(); showDrafts(); toast('下書きを削除しました');
+  });
+  updateDraftDot();
+}
+
+/* ================= 送信済み ================= */
+function showHistory(){
+  setTop({ title:'送信済み' });
+  const hist = getHistory();
+  $('view').innerHTML = `<div class="sec-title">この端末から送った記録（最新50件）</div>` + (hist.length ? hist.map(h => {
+    const pdf = h.pdfs && h.pdfs[h.pdfs.length - 1];
+    return `<div class="list-item ${gClass(groupOf(h.sheet))}"><div class="main"><div class="t">${esc(h.sheet)}</div>
+      <div class="m">${fmtTime(h.ts)}${h.who ? '　' + esc(h.who) : ''}</div></div>
+      ${pdf ? `<a class="link" href="${esc(pdf.url)}" target="_blank" rel="noopener">PDF</a>` : ''}</div>`;
+  }).join('') : '<div class="empty">まだ送信した記録はありません。</div>');
+}
+
+/* ================= 設定 ================= */
 function showSettings(){
-  formToken++;
-  $('title').textContent = '設定';
-  $('back').style.visibility = 'visible';
-  $('view').innerHTML = `
-    <div class="field"><label for="url">GAS ウェブアプリURL（…/exec）</label><input id="url" value="${esc(cfg.url)}" placeholder="https://script.google.com/macros/s/xxxx/exec"></div>
-    <div class="field"><label for="key">アプリキー（スクリプトプロパティ APP_KEY と同じ値）</label><input id="key" value="${esc(cfg.key)}"></div>
-    <p class="small">URLは最初から入っています。アプリキーだけ入力して保存してください。設定はこの端末だけに保存されます。</p>
-    <div class="bar"><button class="btn s" id="test">接続テスト</button><button class="btn p" id="save">保存</button></div>`;
-  const read = () => ({ url: $('url').value.trim(), key: $('key').value.trim() });
-  $('save').onclick = () => { cfg = read(); LS.set('fb_cfg', cfg); toast('保存しました'); showHome(); };
-  $('test').onclick = async () => {
-    const old = cfg; cfg = read();
-    try { const j = await api({ app:'ping' }); toast(j.message || '接続OK'); }
-    catch (e) { alert('接続できません：' + e.message); }
-    finally { cfg = old; }
+  setTop({ title:'設定' });
+  $('view').innerHTML = `<div class="sec-title">接続</div>
+    <div class="field"><label for="sKey">アプリキー</label>
+      <input class="in" id="sKey" value="${esc(cfg.key)}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="管理者から聞いたキー">
+      <p class="small" style="margin:8px 0 0">この端末にだけ保存されます。</p></div>
+    <details class="field"><summary class="small" style="cursor:pointer">接続先URL（通常は変更しません）</summary>
+      <input class="in" id="sUrl" style="margin-top:10px" value="${esc(cfg.url)}"></details>
+    <div class="stack" style="margin-top:8px">
+      <button class="btn p wide" id="sSave" style="--gc:var(--brand)">保存して接続を確認</button>
+    </div>
+    <div class="sec-title">表示</div>
+    <div class="stack" style="margin-top:0">
+      <button class="btn s wide" id="sRefresh">帳票の一覧と入力欄を読み込み直す</button>
+    </div>`;
+  $('sSave').onclick = async () => {
+    const next = { url: ($('sUrl').value.trim() || DEFAULT_URL), key: $('sKey').value.trim() };
+    if (!next.key) { toast('アプリキーを入力してください'); return; }
+    $('sSave').disabled = true;
+    try { await api({ app:'ping' }, next); cfg = next; LS.set('fb_cfg', cfg); toast('つながりました'); location.hash = '#/'; }
+    catch (e) { openSheet('接続できませんでした', `<p>${esc(e.message)}</p>`, '<button class="btn p wide" id="eOk">閉じる</button>'); $('eOk').onclick = closeSheet; }
+    finally { $('sSave').disabled = false; }
+  };
+  $('sRefresh').onclick = () => {
+    LS.keys().filter(k => k.indexOf('fb_fields_') === 0 || k.indexOf('fb_forms_') === 0).forEach(k => LS.del(k));
+    toast('読み込み直します'); location.hash = '#/';
   };
 }
 
-$('back').onclick = showHome;
-$('gear').onclick = showSettings;
-showHome();
+route();
 </script>
 </body>
 </html>
