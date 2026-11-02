@@ -1560,38 +1560,99 @@ async function showJisseki(){
   const defMonth = d.toISOString().slice(0, 7);
   let names = LS.get('fb_jnames', []);
   $('view').innerHTML = `<div style="padding-top:12px;--gc:var(--g1)">
-    <div class="box"><div class="small" style="margin-bottom:10px">紙の「就労継続支援提供実績記録」を1人分ずつ撮影すると、読み取って打刻・支援経過記録と照合します。表全体が入るように、真上から明るい場所で撮ってください。</div>
-    <div class="field" style="padding:0"><label for="jsName">利用者</label><select class="in" id="jsName"><option value="">写真から読み取る</option>${names.map(n => `<option>${esc(n)}</option>`).join('')}</select></div>
+    <div class="box"><div class="small" style="margin-bottom:10px">紙の「就労継続支援提供実績記録」をスキャンしたPDFや写真を読み取り、打刻・支援経過記録と照合します。利用者はページごとに用紙の名前から自動で判定します。</div>
+    <div class="field" style="padding:0"><label for="jsName">利用者</label><select class="in" id="jsName"><option value="">用紙の名前から自動で判定</option>${names.map(n => `<option>${esc(n)}</option>`).join('')}</select></div>
     <div class="field" style="padding:0;margin-top:10px"><label for="jsMonth">年月</label><input class="in" id="jsMonth" type="month" value="${defMonth}"></div>
-    <label class="btn p wide" id="jsDrop" style="display:grid;place-items:center;margin-top:12px;cursor:pointer">写真・PDFを選ぶ（撮る）<input type="file" id="jsFile" accept="image/*,application/pdf" hidden></label>
-    <div class="small" style="margin-top:6px;text-align:center">パソコンでは、スキャンした画像やPDFをここにドラッグしても読み込めます。</div></div>
+    <label class="btn p wide" id="jsDrop" style="display:grid;place-items:center;margin-top:12px;cursor:pointer">写真・PDFを選ぶ（まとめて可）<input type="file" id="jsFile" accept="image/*,application/pdf" multiple hidden></label>
+    <div class="small" style="margin-top:6px;text-align:center">複数ページのPDF（1ページ＝1人分）や、複数のファイルをまとめて選べます。パソコンではドラッグでも読み込めます。</div></div>
     <div id="jsOut"></div></div>`;
   api({ app:'jissekiNames' }).then(j => { LS.set('fb_jnames', j.names); if ($('jsName') && !names.length) { names = j.names; $('jsName').insertAdjacentHTML('beforeend', names.map(n => `<option>${esc(n)}</option>`).join('')); } }).catch(() => {});
   const drop = $('jsDrop');
   drop.ondragover = e => { e.preventDefault(); drop.style.opacity = .7; };
   drop.ondragleave = () => { drop.style.opacity = 1; };
-  drop.ondrop = e => { e.preventDefault(); drop.style.opacity = 1; const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) readJissekiFile(f); };
-  $('jsFile').onchange = e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) readJissekiFile(f); };
+  drop.ondrop = e => { e.preventDefault(); drop.style.opacity = 1; const fs = Array.from(e.dataTransfer.files || []); if (fs.length) readJissekiFiles(fs); };
+  $('jsFile').onchange = e => { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) readJissekiFiles(fs); };
 }
-async function readJissekiFile(f){
-  {
-    let img;
-    try {
+/* まとめて取込み：複数ファイル・複数ページのPDFを1枚ずつに分けて、順に読み取る */
+let JS_BATCH = [];
+async function loadPdfLib(){
+  if (window.PDFLib) return window.PDFLib;
+  await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('PDFの部品を読み込めませんでした')); document.head.appendChild(sc); });
+  return window.PDFLib;
+}
+const fileToB64 = f => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(new Error('ファイルを読み込めませんでした')); fr.readAsDataURL(f); });
+
+async function readJissekiFiles(files){
+  const items = [];
+  $('jsOut').innerHTML = '<div class="box small">ファイルを準備しています…</div>';
+  try {
+    for (const f of files) {
       if (f.type === 'application/pdf') {
-        if (f.size > 15e6) throw new Error('PDFが大きすぎます（15MBまで）。1人分ずつスキャンしてください');
-        const dataUrl = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(new Error('PDFを読み込めませんでした')); fr.readAsDataURL(f); });
-        img = { dataUrl, b64: dataUrl.split(',')[1], mime:'application/pdf', pdf:true };
-      } else img = await shrinkImage(f, 2200);
-    } catch (err) { toast(err.message); return; }
-    $('jsOut').innerHTML = `<div class="box" style="text-align:center">${img.pdf ? `<div style="font-weight:700">${esc(f.name)}</div>` : `<img src="${img.dataUrl}" alt="撮った用紙" style="max-width:100%;max-height:220px;border-radius:var(--r-s)">`}<div class="spin" style="margin:12px auto"></div><b>読み取っています</b><div class="small">30秒ほどかかります。画面を閉じずにお待ちください。</div></div>`;
-    try {
-      const j = await apiPost({ app:'jissekiScan', name: $('jsName').value, month: $('jsMonth').value, file: JSON.stringify({ b64: img.b64, mime: img.mime }) });
-      JS_RES = j; drawJisseki(j);
-    } catch (err) { $('jsOut').innerHTML = `<div class="note err">${esc(err.message)}</div>`; }
-  }
+        const { PDFDocument } = await loadPdfLib();
+        const src = await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption:true });
+        const n = src.getPageCount();
+        for (let i = 0; i < n; i++) {
+          const one = await PDFDocument.create();
+          const [pg] = await one.copyPages(src, [i]);
+          one.addPage(pg);
+          items.push({ label: f.name + (n > 1 ? `（${i + 1}/${n}枚目）` : ''), b64: await one.saveAsBase64(), mime:'application/pdf' });
+        }
+      } else if (/^image\//.test(f.type)) {
+        const img = await shrinkImage(f, 2200);
+        items.push({ label: f.name, b64: img.b64, mime: img.mime });
+      }
+    }
+  } catch (err) { $('jsOut').innerHTML = `<div class="note err">${esc(err.message)}</div>`; return; }
+  if (!items.length) { $('jsOut').innerHTML = '<div class="note err">画像かPDFを選んでください。</div>'; return; }
+  const name = $('jsName').value, month = $('jsMonth').value;
+  JS_BATCH = items.map(x => ({ ...x, state:'wait', res:null, err:'' }));
+  drawBatch();
+  // 2件ずつ並べて読み取る
+  let next = 0;
+  const worker = async () => {
+    while (next < JS_BATCH.length) {
+      const it = JS_BATCH[next++];
+      it.state = 'run'; drawBatch();
+      try { it.res = await apiPost({ app:'jissekiScan', name: items.length === 1 ? name : '', month, file: JSON.stringify({ b64: it.b64, mime: it.mime }) }); it.state = 'done'; }
+      catch (err) { it.state = 'err'; it.err = err.message; }
+      delete it.b64;
+      drawBatch();
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  if (JS_BATCH.length === 1 && JS_BATCH[0].res) openBatch(0);
 }
 
-function drawJisseki(j, localImg){
+function drawBatch(){
+  if (!$('jsOut') || $('jsOut').dataset.detail === '1') return;
+  const done = JS_BATCH.filter(x => x.state === 'done'), errs = JS_BATCH.filter(x => x.state === 'err');
+  const need = done.filter(x => x.res.totals.issues || (x.res.headIssues || []).length);
+  const running = JS_BATCH.length - done.length - errs.length;
+  let html = `<div class="box"><h3>まとめて読み取り（${JS_BATCH.length}枚）</h3>
+    <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${done.length}</b><span>読み取り済み</span></div><div style="background:${need.length ? 'var(--err)' : 'var(--g1)'}"><b>${need.length}</b><span>要確認の人</span></div><div style="background:${errs.length ? 'var(--warn)' : 'var(--g2)'}"><b>${errs.length}</b><span>読めなかった</span></div></div>
+    ${running ? `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚。1枚30秒ほどかかります。画面を閉じずにお待ちください。</div>` : '<div class="small">すべて読み取りました。名前を押すと、その人の結果を確認・修正できます。</div>'}</div>`;
+  html += `<table class="at-tbl"><thead><tr><th style="width:42%">利用者</th><th>出勤（用紙／記録）</th><th>要確認</th></tr></thead><tbody>${JS_BATCH.map((x, i) => {
+    if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">待機中</td></tr>`;
+    if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">読み取り中…</td></tr>`;
+    if (x.state === 'err') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="flag">${esc(x.err)}</td></tr>`;
+    const r = x.res, n = r.totals.issues + (r.headIssues || []).length;
+    return `<tr data-open="${i}" style="cursor:pointer${n ? ';background:var(--err-bg)' : ''}"><td><b class="link" style="padding:0">${esc(r.name || '（名前不明）')}</b><div class="small">${esc(String(r.month).replace('-', '/'))}${r.hasSys ? '' : '　記録が見つからない'}</div></td>
+      <td class="n">${r.totals.paperDays}／${r.totals.sysDays}日</td><td class="n" style="${n ? 'color:var(--err);font-weight:700' : ''}">${n ? n + '件' : 'なし'}</td></tr>`;
+  }).join('')}</tbody></table>`;
+  $('jsOut').innerHTML = html;
+  $('jsOut').querySelectorAll('[data-open]').forEach(tr => tr.onclick = () => openBatch(Number(tr.dataset.open)));
+}
+
+let JS_CUR = -1;
+function openBatch(i){
+  JS_CUR = i; JS_RES = JS_BATCH[i].res;
+  $('jsOut').dataset.detail = JS_BATCH.length > 1 ? '1' : '';
+  drawJisseki(JS_RES);
+  window.scrollTo(0, $('jsOut').offsetTop - 70);
+}
+
+function drawJisseki(j){
+  if (JS_CUR >= 0 && JS_BATCH[JS_CUR]) JS_BATCH[JS_CUR].res = j;
   const t = j.totals || {};
   const bad = j.rows.filter(r => r.issues.length);
   const wd = r => r.wd ? `（${esc(r.wd)}）` : '';
@@ -1611,7 +1672,9 @@ function drawJisseki(j, localImg){
   html += `<details style="margin-top:12px"><summary class="sec-title" style="cursor:pointer">全部の日を見る</summary><table class="at-tbl"><thead><tr><th style="width:16%">日</th><th>用紙</th><th style="width:32%">記録</th></tr></thead><tbody>${j.rows.map(r =>
     `<tr${r.issues.length ? ' style="background:var(--err-bg)"' : ''}><td class="n">${r.day}${wd(r)}</td><td style="font-size:13px">${paperTxt(r)}</td><td style="font-size:13px">${sysTxt(r)}</td></tr>`).join('')}</tbody></table></details>`;
   html += `<div class="row2" style="display:flex;gap:10px;margin-top:14px"><button class="btn s" id="jsName2" style="flex:1">利用者・年月を変えて照合</button></div>`;
+  if (JS_BATCH.length > 1) html = `<button class="btn s wide" id="jsBack" style="margin-bottom:10px">‹ まとめて読み取りの一覧に戻る</button>` + html;
   $('jsOut').innerHTML = html;
+  if ($('jsBack')) $('jsBack').onclick = () => { $('jsOut').dataset.detail = ''; JS_CUR = -1; drawBatch(); };
   $('jsOut').querySelectorAll('[data-fix]').forEach(b => b.onclick = () => fixJissekiDay(Number(b.dataset.fix)));
   $('jsName2').onclick = () => {
     const names = LS.get('fb_jnames', []);
