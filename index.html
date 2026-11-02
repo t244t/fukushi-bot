@@ -441,7 +441,7 @@ async function demoApi(p){
   if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', img:'https://drive.google.com/uc?export=view&id=14FGABCFRWZt8ImltKwc40HdHm3ZoGfnl', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
   if (p.app === 'stockMove') { await new Promise(r => setTimeout(r, 500)); return { message:'（デモ）記録しました', stock:4 }; }
   if (p.app === 'deadlines' || p.app === 'deadlineSync') return { message:'（デモ）更新しました', people:[{ name:'山田 太郎', office:'あごら', staff:'神田', soon:2, items:[{ name:'受給者証支給終了', date:'2026/11/12', days:11 }, { name:'計画更新月', date:'2026/11/28', days:27 }, { name:'手帳有効期限', date:'2027/5/13', days:193 }] }, { name:'佐藤 花子', office:'木の実', staff:'松下', soon:0, items:[{ name:'暫定終了日', date:'2026/10/20', days:-12 }] }] };
-  if (p.app === 'monthly') return { month:p.month, exists:true, head:['氏名','出勤日数','出勤時間','送迎回数','有給回数','欠勤回数','合計日数','合計出勤時間'], rows:[['石橋 強','18','72','20','1','0','18','72'],['長屋 結衣','15','60','12','0','2','15','60']], total:{ users:'33', hours:'132' }, message:'（デモ）集計しました' };
+  if (p.app === 'monthly') return { month:p.month, exists:true, head:['氏名','出勤日数','出勤時間','送迎回数','有給回数','欠勤回数','合計日数','合計出勤時間'], rows:[['峰 恭子','18','98.5','34','0','1','18','98.5','利用者',''],['松川 忠義','15','80.2','15','0','2','15','80.2','利用者','10/14 退勤なし'],['石橋 強','20','152.0','0','1','0','20','152.0','正社員','']], total:{ users:'33', hours:'178.7' }, message:'（デモ）集計しました' };
   if (['safetySend','safetyResend','safetyNotify','safetyReport','eventAnswer','eventSend','eventCreate','broadcast','meetingCreate','meetingCancel'].includes(p.app)) { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）完了しました' }; }
   if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : DEMO_FIELDS };
@@ -1818,9 +1818,13 @@ async function showMonthly(){
     <div id="mOut" style="margin-top:16px"></div></div>`;
   const draw = j => {
     if (!j.exists) { $('mOut').innerHTML = `<div class="empty">${esc(j.month)} の集計はまだありません。「集計を実行」を押してください。</div>`; return; }
-    $('mOut').innerHTML = `<div class="small" style="margin-bottom:8px">延べ利用者数 <b>${esc(j.total.users)}</b>　延べ利用時間 <b>${esc(j.total.hours)}</b></div>
-      <div class="tscroll"><table class="mt"><thead><tr>${j.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
-      <tbody>${j.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    const need = j.rows.filter(r => r[9]).length;
+    const tbl = (title, list) => list.length ? `<div class="sec-title">${title}</div><table class="at-tbl"><thead><tr><th style="width:36%">氏名</th><th>日数</th><th>時間</th><th>送迎</th><th>有給</th><th>欠勤</th></tr></thead>
+      <tbody>${list.map(r => `<tr><td><b>${esc(r[0])}</b>${r[9] ? `<div class="flag">${esc(r[9])}</div>` : ''}</td><td class="n">${esc(r[1])}</td><td class="n">${esc(r[2])}</td><td class="n">${esc(r[3])}</td><td class="n">${esc(r[4])}</td><td class="n">${esc(r[5])}</td></tr>`).join('')}</tbody></table>` : '';
+    const mem = j.rows.filter(r => r[8] === '利用者'), oth = j.rows.filter(r => r[8] !== '利用者');
+    $('mOut').innerHTML = `<div class="counts" style="grid-template-columns:repeat(${need ? 3 : 2},1fr)"><div style="background:var(--g2)"><b>${esc(j.total.users)}</b><span>延べ利用者数</span></div><div style="background:var(--g2)"><b>${esc(j.total.hours)}</b><span>延べ利用時間</span></div>${need ? `<div style="background:var(--err)"><b>${need}</b><span>確認が必要</span></div>` : ''}</div>
+      <div class="small">時間は打刻の出勤〜退勤から離席を引いた実時間です。送迎は片道1回（往復＝2回）で数えます。</div>
+      ${mem.length ? tbl('利用者', mem) + tbl('スタッフ', oth) : tbl('全員', j.rows)}`;
   };
   const go = run => {
     const month = $('mMonth').value;
