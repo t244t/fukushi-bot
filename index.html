@@ -453,6 +453,7 @@ async function demoApi(p){
     { name:'田中 尚樹', kubun:'利用者', state:'notice', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:['欠席（理由：体調不良）'], flags:[], logs:[{ time:'07:45', log:'【連絡】欠席（理由：体調不良）' }] }] };
   if (p.app === 'jissekiNames') return { names:['臼木 楓','峰 恭子','松川 忠義','田中 尚樹'] };
   if (p.app === 'jissekiScan' || p.app === 'jissekiCheck') return demoJisseki(p);
+  if (p.app === 'attendQr') return { token: p.reset ? 'demo' + Date.now().toString(36) : 'demo1234abcd', liffId: LIFF_ID };
   if (p.app === 'attendSetOffice') return { message:'事業所の位置を設定しました' };
   if (p.app === 'attendanceNow') return { rows:[{ name:'石橋 強', group:'利用者', log:'出勤', time:'11/1 08:55' }, { name:'大原 里奈', group:'スタッフ', log:'退勤', time:'10/31 17:02' }] };
   if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true}] };
@@ -1451,6 +1452,8 @@ function drawAttend(j){
   } else {
     html += `<div class="small" style="margin-top:12px">おつかれさまでした。</div><div class="at-row"><button class="btn s" data-k="in">もう一度出勤</button><button class="btn s" data-k="contact">連絡する</button></div>`;
   }
+  if (qrToken()) html += `<div class="small" style="margin-top:12px;color:var(--g1);font-weight:700">✓ 事業所のQRコードを確認しました</div>`;
+  else if (canScan() && t.state !== 'out') html += `<button class="btn s wide" id="atScan" style="margin-top:10px">QRコードを読み取って打刻する</button>`;
   html += `</div>`;
   if (!j.office) html += `<div class="small" style="margin:4px 2px 10px">位置も一緒に記録します（事業所の位置は未設定）。</div>`;
   if ((t.logs || []).length) html += `<div class="sec-title">今日の記録</div><div class="box">${t.logs.map(l => `<div style="display:flex;gap:12px;padding:4px 0"><span class="n" style="font-variant-numeric:tabular-nums;color:var(--sub)">${esc(l.time)}</span><span>${esc(l.log)}</span></div>`).join('')}</div>`;
@@ -1463,6 +1466,7 @@ function drawAttend(j){
   $('view').innerHTML = html;
   $('view').querySelectorAll('[data-pk]').forEach(b => b.onclick = () => { atPickup = b.dataset.pk; $('view').querySelectorAll('[data-pk]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   $('view').querySelectorAll('[data-k]').forEach(b => b.onclick = () => b.dataset.k === 'contact' ? openAttendContact() : doPunch(b.dataset.k));
+  if ($('atScan')) $('atScan').onclick = scanOfficeQr;
 }
 
 async function doPunch(kind, reason){
@@ -1471,11 +1475,12 @@ async function doPunch(kind, reason){
   toast(label + 'を記録しています…');
   try {
     const pos = (kind === 'late' || kind === 'absent' || kind === 'tele') ? null : await getPos();
-    const j = await api({ app:'attendPunch', punch: JSON.stringify({ kind, pickup: atPickup, reason: reason || '', ...(pos || {}) }) });
+    const qr = (kind === 'late' || kind === 'absent') ? '' : qrToken();
+    const j = await api({ app:'attendPunch', punch: JSON.stringify({ kind, pickup: atPickup, reason: reason || '', qr, ...(pos || {}) }) });
     LS.set(atKey(), j);
     if (location.hash.startsWith('#/attend')) drawAttend(j);
     const pj = j.punched || {};
-    toast(label + 'しました' + (pj.judge === '事業所の外' ? '（事業所の外からの打刻として記録）' : pj.judge === '位置なし' && !['late','absent','tele'].includes(kind) ? '（位置は取れませんでした）' : ''));
+    toast(label + 'しました' + (/^QR確認/.test(pj.judge || '') ? '（QR確認済み）' : pj.judge === '事業所の外' ? '（事業所の外からの打刻として記録）' : pj.judge === '位置なし' && !['late','absent','tele'].includes(kind) ? '（位置は取れませんでした）' : ''));
   } catch (e) { toast(e.message); btns.forEach(b => b.disabled = false); }
 }
 
@@ -1540,8 +1545,10 @@ async function showAttendDay(date){
       `<div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g1)"><b>${c.in || 0}</b><span>勤務中</span></div><div style="background:var(--g2)"><b>${c.out || 0}</b><span>退勤済み</span></div><div style="background:var(--warn)"><b>${c.notice || 0}</b><span>遅延・欠席</span></div></div>`;
     html += rows.length ? sec('スタッフ', rows.filter(r => r.kubun !== '利用者')) + sec('利用者', rows.filter(r => r.kubun === '利用者')) : '<div class="empty">この日の打刻はありません。</div>';
     html += `<div class="sec-title">事業所の位置</div><div class="box"><div class="small">${j.office ? '設定済みです。事業所から離れた場所での打刻には印が付きます。' : 'まだ設定していません。事業所にいるときに下のボタンを押すと、今いる場所を事業所として登録します。'}</div>
-      <div class="row2"><button class="btn s" id="adOffice">今いる場所を事業所にする</button></div></div>`;
+      <div class="row2"><button class="btn s" id="adOffice">今いる場所を事業所にする</button></div></div>
+      <div class="sec-title">打刻用QRコード</div><div class="box" id="qrBox"><div class="small">読み込んでいます…</div></div>`;
     $('adBox').innerHTML = html;
+    loadOfficeQr(false);
     $('adOffice').onclick = () => confirmSheet('事業所の位置を設定', '今いる場所を事業所の位置として登録します。半径300m以内での打刻を「事業所」と判定します。', '登録する', async () => {
       const pos = await getPos();
       if (!pos) { toast('位置が取れませんでした。位置情報の利用を許可してください'); return; }
@@ -1712,6 +1719,55 @@ function fixJissekiDay(day){
     Object.assign(r, { start: $('fx_start').value, end: $('fx_end').value, work: n('fx_work'), rest: n('fx_rest'), use: n('fx_use'), ou: $('fx_ou').checked, fuku: $('fx_fuku').checked, stamp: $('fx_stamp').checked, unsure: [] });
     closeSheet(); recheckJisseki({});
   };
+}
+
+
+/* ===== QRコードでの打刻 ===== */
+function qrToken(){
+  try { const q = JSON.parse(sessionStorage.getItem('fb_qr') || 'null'); if (q && Date.now() - q.at < 10 * 60e3) return q.tk; } catch (e) {}
+  return '';
+}
+function setQrToken(tk){ try { sessionStorage.setItem('fb_qr', JSON.stringify({ tk, at: Date.now() })); } catch (e) {} }
+const canScan = () => !!(window.liff && liff.id && liff.isInClient && liff.isInClient() && liff.scanCodeV2);
+async function scanOfficeQr(){
+  try {
+    const r = await liff.scanCodeV2();
+    const v = String((r && r.value) || '');
+    const m = v.match(/[?&]qr=([\w-]+)/) || v.match(/^([\w-]{8,})$/);
+    if (!m) { toast('事業所の打刻用QRコードではありません'); return; }
+    setQrToken(m[1]); toast('QRコードを確認しました');
+    const j = LS.get(atKey(), null); if (j) drawAttend(j);
+  } catch (e) { toast('QRコードを読み取れませんでした（LINEの設定でカメラを許可してください）'); }
+}
+const qrUrl = (liffId, tk) => 'https://liff.line.me/' + liffId + '?qr=' + tk;
+let QR_LIB = null;
+async function loadQrLib(){
+  if (window.qrcode) return window.qrcode;
+  await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; sc.onload = res; sc.onerror = () => rej(new Error('QRコードの部品を読み込めませんでした')); document.head.appendChild(sc); });
+  return window.qrcode;
+}
+async function qrSvg(text, cell){
+  const q = (await loadQrLib())(0, 'M'); q.addData(text); q.make();
+  return q.createSvgTag({ cellSize: cell || 6, margin: 2, scalable: true });
+}
+async function loadOfficeQr(reset){
+  const box = $('qrBox'); if (!box) return;
+  try {
+    const j = await api({ app:'attendQr', reset: reset ? '1' : '' });
+    const url = qrUrl(j.liffId || LIFF_ID, j.token);
+    const svg = await qrSvg(url, 6);
+    box.innerHTML = `<div style="display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center"><div style="background:#fff;padding:6px;border-radius:var(--r-s)">${svg}</div>
+      <div class="small">事業所の入口などに貼ってください。LINEのカメラ（QRコードリーダー）で読み取ると、アプリが開いて「QR確認」付きで打刻できます。</div></div>
+      <div class="row2"><button class="btn s" id="qrPrint">印刷する</button><button class="btn s" id="qrReset">作り直す</button></div>`;
+    $('qrPrint').onclick = () => {
+      const w = window.open('', '_blank');
+      if (!w) { toast('印刷用の画面を開けませんでした（パソコンのブラウザでお試しください）'); return; }
+      w.document.write(`<!doctype html><meta charset="utf-8"><title>出退勤QRコード</title><style>body{font-family:sans-serif;text-align:center;padding:40px}svg{width:360px;height:360px}h1{font-size:40px;margin:0 0 8px}p{font-size:20px}</style>
+        <h1>出退勤 QRコード</h1><p>LINEで読み取って、出勤・退勤を打刻してください</p>${svg}<p style="font-size:14px;color:#666">福祉ボット２</p><script>setTimeout(()=>print(),300)<\/script>`);
+      w.document.close();
+    };
+    $('qrReset').onclick = () => confirmSheet('QRコードを作り直す', '新しいQRコードを作ります。今貼ってあるQRコードは使えなくなるので、印刷して貼り替えてください。', '作り直す', async () => { closeSheet(); await loadOfficeQr(true); toast('新しいQRコードを作りました'); }, true);
+  } catch (e) { box.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 
 /* ================= 業務 ================= */
@@ -2117,7 +2173,17 @@ function showSettings(){
 }
 
 $('view').innerHTML = '<div class="empty">準備しています…</div>';
-initAuth().then(route);
+/* 事業所のQRコード（https://liff.line.me/…?qr=合言葉）から開いたとき */
+function takeQrFromUrl(){
+  const sp = new URLSearchParams(location.search);
+  let qr = sp.get('qr');
+  if (!qr && sp.get('liff.state')) qr = new URLSearchParams(decodeURIComponent(sp.get('liff.state')).replace(/^[^?]*\?/, '')).get('qr');
+  if (!qr) return;
+  try { sessionStorage.setItem('fb_qr', JSON.stringify({ tk: qr, at: Date.now() })); } catch (e) {}
+  sp.delete('qr'); sp.delete('liff.state');
+  history.replaceState(null, '', location.pathname + (sp.toString() ? '?' + sp : '') + '#/attend');
+}
+initAuth().then(() => { takeQrFromUrl(); route(); });
 </script>
 </body>
 </html>
