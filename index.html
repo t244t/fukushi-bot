@@ -232,6 +232,22 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .kv{margin:8px 0 0;display:grid;grid-template-columns:max-content 1fr;gap:6px 12px}.kv dt{color:var(--sub);font-size:13px}.kv dd{margin:0;white-space:pre-wrap}
 .hf-path{font-size:13px;color:var(--sub);margin:0 0 10px}.hf-now{background:var(--paper);border-radius:var(--r-m);padding:14px;box-shadow:var(--shadow)}
 .hf-ans{display:grid;gap:10px}.hf-call{display:grid;place-items:center;text-decoration:none;margin:12px 0;--gc:var(--err);font-size:18px}
+.only-member{display:none!important}body.member .nav .wrap{grid-template-columns:1fr 1fr}body.member .only-member{display:flex!important}body.member .no-member{display:none!important}
+.at-hero{background:var(--paper);border-radius:var(--r-l);padding:18px;margin:14px 0 10px;box-shadow:var(--shadow);text-align:center}
+.at-hero .st{display:inline-block;padding:4px 14px;border-radius:999px;font-weight:700;font-size:15px;color:#fff;background:var(--sc)}
+.at-hero .clock{font-size:44px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;margin:6px 0 0}
+.at-hero .sub{color:var(--sub);font-size:14px}
+.at-big{display:grid;place-items:center;width:100%;min-height:76px;border:0;border-radius:var(--r-l);font-size:22px;font-weight:700;color:#fff;background:var(--bc);margin-top:14px}
+.at-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.at-row .btn{min-height:52px}
+.at-strip{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:var(--r-m);padding:10px 12px 10px 16px;margin:8px 0 4px;text-decoration:none;color:inherit;border-left:5px solid var(--sc)}
+.at-strip .t{flex:1;font-weight:700}.at-strip .t small{display:block;font-weight:400;color:var(--sub);font-size:13px}
+.at-strip .go{background:var(--bc);color:#fff;border-radius:var(--r-s);padding:10px 16px;font-weight:700;white-space:nowrap}
+.at-tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px;background:var(--paper);border-radius:var(--r-m);overflow:hidden}
+.at-tbl th,.at-tbl td{padding:9px 8px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+.at-tbl th{font-size:12px;color:var(--sub);font-weight:400}.at-tbl td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.at-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--sc);margin-right:6px;vertical-align:1px}
+.flag{color:var(--err);font-size:12px}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -246,11 +262,12 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 <main class="wrap" id="view"></main>
 
 <nav class="nav" id="nav"><div class="wrap">
-  <a href="#/" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg>記録する</a>
-  <a href="#/contact" data-nav="contact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg>連絡</a>
-  <a href="#/work" data-nav="work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="1.5"/><path d="M9 7.5V5.5a1 1 0 011-1h4a1 1 0 011 1v2M3.5 12.5h17"/></svg>業務</a>
+  <a href="#/attend" data-nav="attend" class="only-member"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>出退勤</a>
+  <a href="#/" data-nav="home" class="no-member"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg>記録する</a>
+  <a href="#/contact" data-nav="contact" class="no-member"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg>連絡</a>
+  <a href="#/work" data-nav="work" class="no-member"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="1.5"/><path d="M9 7.5V5.5a1 1 0 011-1h4a1 1 0 011 1v2M3.5 12.5h17"/></svg>業務</a>
   <a href="#/info" data-nav="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>情報</a>
-  <a href="#/drafts" data-nav="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>履歴<span class="dot" id="draftDot" hidden></span></a>
+  <a href="#/drafts" data-nav="drafts" class="no-member"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>履歴<span class="dot" id="draftDot" hidden></span></a>
 </div></nav>
 
 <div class="scrim" id="scrim"></div>
@@ -278,10 +295,11 @@ let idToken = '';
 let ME = null;          // { name, role, userId, via }
 let authError = '';
 const isAdmin = () => !!ME && ME.role === 'admin';
+const isMember = () => !!ME && ME.role === 'member';
 const signedIn = () => isDemo() || !!idToken || !!cfg.key;
 const liffReady = () => !!(window.liff && liff.id);
 async function initAuth(){
-  if (isDemo()) { ME = { name:'石橋 強', role: /admin/.test(location.search) ? 'admin' : 'staff', userId:'Udemo', via:'line' }; return; }
+  if (isDemo()) { const mb = /member/.test(location.search); ME = { name: mb ? '峰 恭子' : '石橋 強', role: /admin/.test(location.search) ? 'admin' : mb ? 'member' : 'staff', kubun: mb ? '利用者' : '正社員', userId:'Udemo', via:'line' }; return; }
   if (window.liff) {
     try { await liff.init({ liffId: LIFF_ID }); if (liff.isLoggedIn()) idToken = liff.getIDToken() || ''; }
     catch (e) { console.warn('LIFF', e); }
@@ -372,6 +390,29 @@ const DEMO_ALC = [
   { label:'画像', type:'image' },
   { label:'地域連携活動を公表している', type:'check' }
 ].map((f, i) => ({ index:i, options:[], hidden:false, auto:false, strict:false, multi:false, required:false, ...f }));
+let DEMO_AT = null;
+function demoAttend(p){
+  const hm = () => { const d = jst(); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };
+  if (!DEMO_AT) DEMO_AT = { state:'none', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:[], logs:[] };
+  const t = DEMO_AT;
+  let punched = null;
+  if (p.app === 'attendPunch') {
+    const k = (typeof p.punch === 'string' ? JSON.parse(p.punch) : p.punch).kind;
+    const pk = (typeof p.punch === 'string' ? JSON.parse(p.punch) : p.punch).pickup;
+    const log = { in: isMember() && pk ? 'オフィス出勤（送迎:' + pk + '）' : 'オフィス出勤', tele:'テレワーク', out:'退勤', away:'離席', back:'着席', late:'【連絡】遅延（理由：電車遅延）', absent:'【連絡】欠席（理由：体調不良）' }[k];
+    t.logs.push({ time: hm(), log });
+    if (k === 'in' || k === 'tele') { t.state = 'in'; t.inTime = t.inTime || hm(); t.pickup = pk || ''; }
+    if (k === 'out') { t.state = 'out'; t.outTime = hm(); }
+    if (k === 'away') t.state = 'away';
+    if (k === 'back') t.state = 'in';
+    if (k === 'late' || k === 'absent') { t.notes.push(log.replace('【連絡】', '')); if (t.state === 'none') t.state = 'notice'; }
+    punched = { log, judge:'事業所', dist:42 };
+  }
+  return { name: ME.name, kubun: ME.kubun, member: isMember(), today: { date: ymd(), ...t }, lastPickup:'往復', office:true, punched,
+    recent:[{ date:'2026-10-30', state:'out', inTime:'09:05', outTime:'15:10', workMin:350, awayMin:15, pickup:'往復', notes:[], logs:[] },
+            { date:'2026-10-29', state:'out', inTime:'09:12', outTime:'15:00', workMin:348, awayMin:0, pickup:'往復', notes:[], logs:[] },
+            { date:'2026-10-28', state:'notice', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:['欠席（理由：通院のため）'], logs:[] }] };
+}
 async function demoApi(p){
   await new Promise(r => setTimeout(r, 250));
   if (p.app === 'forms') return { forms: DEMO_FORMS };
@@ -381,6 +422,14 @@ async function demoApi(p){
   if (p.app === 'events') return { events:[{ id:'EV1', name:'秋の避難訓練', date:'2026/11/10', time:'10:00', place:'伊都国即売会', memo:'動きやすい服装で', upcoming:true, isTarget:true, my:'出席', targetCount:8,
       counts:{ '出席':['石橋 強','大原 里奈','大鶴 猛'], '遅刻':['福田'], '未定':[], '欠席':['重富'], '未回答':['河津 さち子','坂東 麻衣子','平山 菜々'] } }].map(e => /admin/.test(location.search) ? e : { ...e, counts:undefined }) };
   if (p.app === 'meetings') return { meetings:[{ row:5, title:'ケース会議', date:'11/5（水）', time:'14:00', minutes:60, url:'https://meet.google.com/' }] };
+  if (p.app === 'attendMe' || p.app === 'attendPunch') return demoAttend(p);
+  if (p.app === 'attendDay') return { date: p.date || ymd(), office:true, counts:{ in:3, out:1, notice:1 }, rows:[
+    { name:'石橋 強', kubun:'正社員', state:'in', inTime:'08:31', outTime:'', workMin:212, awayMin:0, pickup:'', notes:[], flags:[], logs:[{ time:'08:31', log:'オフィス出勤' }] },
+    { name:'大原 里奈', kubun:'パート', state:'out', inTime:'09:00', outTime:'13:02', workMin:242, awayMin:0, pickup:'', notes:[], flags:[], logs:[{ time:'09:00', log:'オフィス出勤' }, { time:'13:02', log:'退勤' }] },
+    { name:'峰 恭子', kubun:'利用者', state:'in', inTime:'09:12', outTime:'', workMin:180, awayMin:15, pickup:'往復', notes:[], flags:['09:12 オフィス出勤（送迎:往復）：事業所の外（820m）'], logs:[{ time:'09:12', log:'オフィス出勤（送迎:往復）' }, { time:'10:30', log:'離席' }, { time:'10:45', log:'着席' }] },
+    { name:'松川 忠義', kubun:'利用者', state:'away', inTime:'09:30', outTime:'', workMin:120, awayMin:10, pickup:'往', notes:[], flags:[], logs:[{ time:'09:30', log:'オフィス出勤（送迎:往）' }, { time:'11:40', log:'離席' }] },
+    { name:'田中 尚樹', kubun:'利用者', state:'notice', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:['欠席（理由：体調不良）'], flags:[], logs:[{ time:'07:45', log:'【連絡】欠席（理由：体調不良）' }] }] };
+  if (p.app === 'attendSetOffice') return { message:'事業所の位置を設定しました' };
   if (p.app === 'attendanceNow') return { rows:[{ name:'石橋 強', group:'利用者', log:'出勤', time:'11/1 08:55' }, { name:'大原 里奈', group:'スタッフ', log:'退勤', time:'10/31 17:02' }] };
   if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true}] };
   if (p.app === 'records') return { total:3, hasMore:false, items:[{ row:4, date:'2026/11/01', title:'松川 忠義　出勤', sub:'物販、配送　レジ補助を落ち着いてできた' }, { row:3, date:'2026/10/31', title:'長屋 結衣　出勤', sub:'野菜加工' }, { row:2, date:'2026/10/30', title:'田中 尚樹　欠勤', sub:'体調不良の連絡あり' }].filter(x => !p.q || (x.title + x.sub + x.date).includes(p.q)) };
@@ -452,7 +501,9 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
-  const navKey = page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'work', admin:'work', records:'home', record:'home' })[page] || page || 'home');
+  if (isMember() && !['attend', 'info', 'settings'].includes(page)) { location.replace('#/attend'); return; }
+  document.body.classList.toggle('member', isMember());
+  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'work', admin:'work', records:'home', record:'home' })[page] || page || 'home');
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -464,7 +515,8 @@ function route(){
   if (page === 'contact') return arg === 'broadcast' ? showBroadcast() : showContact();
   if (page === 'work') return showWork();
   if (page === 'stock') return showStock(arg);
-  if (page === 'admin') return arg === 'monthly' ? showMonthly() : showDeadlines();
+  if (page === 'attend') return showAttend();
+  if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
   return showHome();
@@ -519,6 +571,7 @@ async function showHome(){
     else if (!signedIn()) html += `<div class="note">LINEから開くと、そのまま使えます。<br>パソコンなどでは${liffReady() ? '<button class="link" style="padding:0" onclick="lineLogin()">LINEでログイン</button>するか、' : ''}<a class="link" style="padding:0" href="#/settings">設定</a>でアプリキーを入力してください。</div>`;
     else if (ME && ME.name) html = html.replace('<div class="stat">', `<div class="stat">${esc(ME.name)} さん${isAdmin() ? '<span class="admin-mark">管理者</span>' : ''}<br>`);
     if (isDemo()) html += `<div class="note">デモ表示です。入力しても記録はされません。</div>`;
+    if (!authError) html += attendStrip();
     html += `<label class="search">${ICON.search}<input id="q" type="search" placeholder="帳票をさがす（例：欠席、面談）" aria-label="帳票をさがす"></label>`;
     if (!forms) { v.innerHTML = html + '<div class="empty">帳票の一覧を読み込んでいます…</div>'; return; }
 
@@ -553,6 +606,7 @@ async function showHome(){
   };
   draw(); updateDraftDot();
   if (!signedIn()) return;
+  refreshStrip(() => token === viewToken);
   try {
     const j = await api({ app:'forms' });
     LS.set('fb_forms_' + (isDemo() ? 'demo' : 'live'), j.forms);
@@ -1304,6 +1358,173 @@ async function showContact(){
   if (isAdmin()) { loadSafety(live); loadMeetings(live); }
 }
 
+
+/* ================= 出退勤 ================= */
+const AT_STATE = {
+  none:   { label:'未出勤',   color:'var(--sub)' },
+  notice: { label:'連絡済み', color:'var(--warn)' },
+  in:     { label:'出勤中',   color:'var(--g1)' },
+  away:   { label:'離席中',   color:'var(--g3)' },
+  out:    { label:'退勤済み', color:'var(--g2)' }
+};
+const AT_REASONS = { late:['電車遅延','通院のため','体調不良','寝坊','その他'], absent:['体調不良','通院のため','悪天候・災害','家庭の事情','その他'] };
+const fmtMin = m => m ? (Math.floor(m / 60) ? Math.floor(m / 60) + '時間' : '') + (m % 60 ? (m % 60) + '分' : (Math.floor(m / 60) ? '' : '0分')) : '0分';
+const atKey = () => 'fb_attend_' + (isDemo() ? 'demo' : 'live');
+
+/* 位置を取る（だめでも打刻は止めない） */
+function getPos(){
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res({ lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy }), () => res(null), { enableHighAccuracy:true, timeout:8000, maximumAge:30000 });
+  });
+}
+
+async function showAttend(){
+  setTop({ title:'出退勤', back: !isMember() });
+  const token = viewToken;
+  const v = $('view');
+  if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くと打刻できます。')}</div>`; return; }
+  if (ME && ME.via !== 'line' && !isDemo()) { v.innerHTML = '<div class="note">出退勤の打刻は、LINEから開いたときに使えます（本人確認のため）。</div>'; return; }
+  const cached = LS.get(atKey(), null);
+  if (cached) drawAttend(cached); else v.innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const j = await api({ app:'attendMe' });
+    LS.set(atKey(), j);
+    if (token === viewToken) drawAttend(j);
+  } catch (e) { if (token === viewToken && !cached) v.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+let atPickup = '';
+function drawAttend(j){
+  const t = j.today || {};
+  const st = AT_STATE[t.state] || AT_STATE.none;
+  const member = j.member;
+  if (!atPickup) atPickup = j.lastPickup || '往復';
+  const d = jst();
+  const clock = String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0');
+  let sub = '';
+  if (t.state === 'in' || t.state === 'away') sub = `${esc(t.inTime)} 出勤　はたらいた時間 ${fmtMin(t.workMin)}${t.awayMin ? `（離席 ${fmtMin(t.awayMin)}）` : ''}`;
+  else if (t.state === 'out') sub = `${esc(t.inTime)}〜${esc(t.outTime)}　${fmtMin(t.workMin)}`;
+  else if (t.notes && t.notes.length) sub = esc(t.notes.join('／'));
+  else sub = `${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${'日月火水木金土'[d.getUTCDay()]}）`;
+
+  let html = '';
+  if (j.test) html += '<div class="note">テストモード（LINE_MUTE=1）：打刻は「打刻ログ（テスト）」に記録され、本番の利用者ログには入りません。</div>';
+  html += `<div class="at-hero" style="--sc:${st.color}"><div style="font-weight:700">${esc(j.name || (ME && ME.name) || '')} さん</div>
+    <div class="clock" id="atClock">${clock}</div><div style="margin:6px 0"><span class="st">${st.label}</span></div><div class="sub">${sub}</div>`;
+  if (t.state === 'none' || t.state === 'notice') {
+    if (member) html += `<div class="sec-title" style="text-align:left;margin-top:16px">送迎</div><div class="chips" id="atPick">${['往復','往','復','無し'].map(k =>
+      `<button class="chip" data-pk="${k}" aria-pressed="${k === atPickup}" style="--gc:var(--g1);flex:1;text-align:center">${k}</button>`).join('')}</div>`;
+    html += `<button class="at-big" style="--bc:var(--g1)" data-k="in">出勤する</button>
+      <div class="at-row"><button class="btn s" data-k="tele">テレワーク</button><button class="btn s" data-k="contact">遅れる・休む</button></div>`;
+  } else if (t.state === 'in') {
+    html += `<button class="at-big" style="--bc:var(--g2)" data-k="out">退勤する</button>
+      <div class="at-row"><button class="btn s" data-k="away">離席する</button><button class="btn s" data-k="contact">連絡する</button></div>`;
+  } else if (t.state === 'away') {
+    html += `<button class="at-big" style="--bc:var(--g3)" data-k="back">席に戻る</button>
+      <div class="at-row"><button class="btn s" data-k="out">退勤する</button><button class="btn s" data-k="contact">連絡する</button></div>`;
+  } else {
+    html += `<div class="small" style="margin-top:12px">おつかれさまでした。</div><div class="at-row"><button class="btn s" data-k="in">もう一度出勤</button><button class="btn s" data-k="contact">連絡する</button></div>`;
+  }
+  html += `</div>`;
+  if (!j.office) html += `<div class="small" style="margin:4px 2px 10px">位置も一緒に記録します（事業所の位置は未設定）。</div>`;
+  if ((t.logs || []).length) html += `<div class="sec-title">今日の記録</div><div class="box">${t.logs.map(l => `<div style="display:flex;gap:12px;padding:4px 0"><span class="n" style="font-variant-numeric:tabular-nums;color:var(--sub)">${esc(l.time)}</span><span>${esc(l.log)}</span></div>`).join('')}</div>`;
+  if ((j.recent || []).length) html += `<div class="sec-title">これまで</div><div class="box">${j.recent.map(r => {
+    const s2 = AT_STATE[r.state] || AT_STATE.none;
+    const dd = new Date(r.date + 'T00:00:00+09:00');
+    return `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule)"><span><span class="at-dot" style="--sc:${s2.color}"></span>${dd.getMonth() + 1}/${dd.getDate()}（${'日月火水木金土'[dd.getDay()]}）</span>
+      <span class="small" style="text-align:right">${r.inTime ? esc(r.inTime) + '〜' + esc(r.outTime || '') + '　' + fmtMin(r.workMin) : esc((r.notes || []).join('／') || s2.label)}</span></div>`;
+  }).join('')}</div>`;
+  $('view').innerHTML = html;
+  $('view').querySelectorAll('[data-pk]').forEach(b => b.onclick = () => { atPickup = b.dataset.pk; $('view').querySelectorAll('[data-pk]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  $('view').querySelectorAll('[data-k]').forEach(b => b.onclick = () => b.dataset.k === 'contact' ? openAttendContact() : doPunch(b.dataset.k));
+}
+
+async function doPunch(kind, reason){
+  const btns = $('view').querySelectorAll('[data-k]'); btns.forEach(b => b.disabled = true);
+  const label = { in:'出勤', tele:'テレワーク開始', out:'退勤', away:'離席', back:'着席', late:'遅延の連絡', absent:'欠席の連絡' }[kind];
+  toast(label + 'を記録しています…');
+  try {
+    const pos = (kind === 'late' || kind === 'absent' || kind === 'tele') ? null : await getPos();
+    const j = await api({ app:'attendPunch', punch: JSON.stringify({ kind, pickup: atPickup, reason: reason || '', ...(pos || {}) }) });
+    LS.set(atKey(), j);
+    if (location.hash.startsWith('#/attend')) drawAttend(j);
+    const pj = j.punched || {};
+    toast(label + 'しました' + (pj.judge === '事業所の外' ? '（事業所の外からの打刻として記録）' : pj.judge === '位置なし' && !['late','absent','tele'].includes(kind) ? '（位置は取れませんでした）' : ''));
+  } catch (e) { toast(e.message); btns.forEach(b => b.disabled = false); }
+}
+
+function openAttendContact(){
+  let kind = 'late', reason = '';
+  const draw = () => `<div class="chips" style="margin-bottom:12px">${[['late','遅れる'],['absent','休む']].map(([k, l]) =>
+      `<button class="chip" data-ck="${k}" aria-pressed="${k === kind}" style="--gc:var(--warn);flex:1;text-align:center">${l}</button>`).join('')}</div>
+    <div class="label" style="margin-bottom:6px">理由</div><div class="chips">${AT_REASONS[kind].map(r => `<button class="chip mini" data-rs="${esc(r)}" aria-pressed="${r === reason}" style="--gc:var(--warn)">${esc(r)}</button>`).join('')}</div>
+    <input class="in" id="rsOther" placeholder="その他の理由（任意）" style="margin-top:10px"><p class="small">管理者のLINEにも知らせます。</p>`;
+  openSheet('遅れる・休むの連絡', draw(), `<button class="btn s" id="ctCancel">やめる</button><button class="btn p" id="ctOk" style="--gc:var(--warn)">連絡する</button>`);
+  const bind = () => {
+    $('bsBody').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => { kind = b.dataset.ck; reason = ''; $('bsBody').innerHTML = draw(); bind(); });
+    $('bsBody').querySelectorAll('[data-rs]').forEach(b => b.onclick = () => { reason = b.dataset.rs; $('bsBody').querySelectorAll('[data-rs]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  };
+  bind();
+  $('ctCancel').onclick = closeSheet;
+  $('ctOk').onclick = () => {
+    const other = ($('rsOther') && $('rsOther').value.trim()) || '';
+    const r = other || (reason === 'その他' ? '' : reason) || 'その他';
+    closeSheet(); doPunch(kind, r);
+  };
+}
+
+/* ホームの出退勤ストリップ（スタッフ） */
+function attendStrip(){
+  if (!ME || ME.via !== 'line' && !isDemo()) return '';
+  const j = LS.get(atKey(), null);
+  const t = (j && j.today && j.today.date === ymd()) ? j.today : { state:'none' };
+  const st = AT_STATE[t.state] || AT_STATE.none;
+  const go = t.state === 'in' || t.state === 'away' ? ['退勤する', 'var(--g2)'] : t.state === 'out' ? ['記録を見る', 'var(--g2)'] : ['出勤する', 'var(--g1)'];
+  const sub = t.state === 'in' || t.state === 'away' ? esc(t.inTime) + ' 出勤' : t.state === 'out' ? esc(t.inTime) + '〜' + esc(t.outTime) : '出退勤の打刻';
+  return `<a class="at-strip" id="atStrip" href="#/attend" style="--sc:${st.color};--bc:${go[1]}"><span class="t">${st.label}<small>${sub}</small></span><span class="go">${go[0]}</span></a>`;
+}
+async function refreshStrip(live){
+  if (!ME || (ME.via !== 'line' && !isDemo())) return;
+  try { const j = await api({ app:'attendMe' }); LS.set(atKey(), j); if (live() && $('atStrip')) $('atStrip').outerHTML = attendStrip(); } catch (e) {}
+}
+
+/* 管理者：今日の出退勤 */
+async function showAttendDay(date){
+  setTop({ title:'出退勤の一覧', back:true });
+  const token = viewToken;
+  const d = date || ymd();
+  const v = $('view');
+  v.innerHTML = `<div style="display:flex;gap:8px;align-items:center;margin:14px 0 10px"><button class="btn s" id="adPrev" style="min-height:44px;padding:0 14px" aria-label="前の日">‹</button>
+    <input class="in" type="date" id="adDate" value="${d}" style="flex:1"><button class="btn s" id="adNext" style="min-height:44px;padding:0 14px" aria-label="次の日">›</button></div><div id="adBox"><div class="empty">読み込んでいます…</div></div>`;
+  const move = n => { const x = new Date(d + 'T00:00:00+09:00'); x.setDate(x.getDate() + n); location.hash = '#/admin/attend/' + ymd(x); };
+  $('adPrev').onclick = () => move(-1); $('adNext').onclick = () => move(1);
+  $('adDate').onchange = e => location.hash = '#/admin/attend/' + e.target.value;
+  try {
+    const j = await api({ app:'attendDay', date: d });
+    if (token !== viewToken) return;
+    const rows = j.rows || [];
+    const sec = (title, list) => list.length ? `<div class="sec-title">${title}</div><table class="at-tbl"><thead><tr><th style="width:44%">名前</th><th>出勤</th><th>退勤</th><th>時間</th></tr></thead><tbody>${list.map(r => {
+      const s2 = AT_STATE[r.state] || AT_STATE.none;
+      return `<tr><td><span class="at-dot" style="--sc:${s2.color}"></span><b>${esc(r.name)}</b><div class="small">${esc(r.kubun || '')}${r.pickup && r.pickup !== '無し' ? '　送迎' + esc(r.pickup) : ''}${r.awayMin ? '　離席' + fmtMin(r.awayMin) : ''}</div>
+        ${(r.notes || []).map(n => `<div class="small" style="color:var(--warn)">${esc(n)}</div>`).join('')}${r.noOut ? '<div class="flag">退勤の打刻がありません</div>' : ''}${(r.flags || []).map(f => `<div class="flag">${esc(f)}</div>`).join('')}</td>
+        <td class="n">${esc(r.inTime || '－')}</td><td class="n">${esc(r.outTime || (r.state === 'in' ? '勤務中' : r.state === 'away' ? '離席中' : '－'))}</td><td class="n">${r.workMin ? fmtMin(r.workMin) : '－'}</td></tr>`;
+    }).join('')}</tbody></table>` : '';
+    const c = j.counts || {};
+    let html = (j.test ? '<div class="note">テストモード：「打刻ログ（テスト）」の内容です。</div>' : '') +
+      `<div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g1)"><b>${c.in || 0}</b><span>勤務中</span></div><div style="background:var(--g2)"><b>${c.out || 0}</b><span>退勤済み</span></div><div style="background:var(--warn)"><b>${c.notice || 0}</b><span>遅延・欠席</span></div></div>`;
+    html += rows.length ? sec('スタッフ', rows.filter(r => r.kubun !== '利用者')) + sec('利用者', rows.filter(r => r.kubun === '利用者')) : '<div class="empty">この日の打刻はありません。</div>';
+    html += `<div class="sec-title">事業所の位置</div><div class="box"><div class="small">${j.office ? '設定済みです。事業所から離れた場所での打刻には印が付きます。' : 'まだ設定していません。事業所にいるときに下のボタンを押すと、今いる場所を事業所として登録します。'}</div>
+      <div class="row2"><button class="btn s" id="adOffice">今いる場所を事業所にする</button></div></div>`;
+    $('adBox').innerHTML = html;
+    $('adOffice').onclick = () => confirmSheet('事業所の位置を設定', '今いる場所を事業所の位置として登録します。半径300m以内での打刻を「事業所」と判定します。', '登録する', async () => {
+      const pos = await getPos();
+      if (!pos) { toast('位置が取れませんでした。位置情報の利用を許可してください'); return; }
+      await runAction(() => api({ app:'attendSetOffice', lat: pos.lat, lng: pos.lng }), () => showAttendDay(d));
+    });
+  } catch (e) { if (token === viewToken) $('adBox').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
 /* ================= 業務 ================= */
 function showWork(){
   setTop({ title:'業務' });
@@ -1316,6 +1537,7 @@ function showWork(){
     <div class="sec-title">報告</div><div id="rpBox">${workReports()}</div>`;
   if (isAdmin()) {
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
+      <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/monthly" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">月別集計</div><div class="m">出勤日数・時間・送迎・有給・欠勤</div></div>${ICON.chev}</a>
       <div class="sec-title">現在の出勤状況<span class="admin-mark">管理者</span></div><div id="atBox"><div class="box small">読み込んでいます…</div></div>`;
