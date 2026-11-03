@@ -73,6 +73,7 @@ body.no-nav main.wrap{padding-bottom:0}
 .tabs{display:flex;gap:4px;margin-top:20px;overflow-x:auto;scrollbar-width:none}
 .tab{flex:1 0 auto;border:0;padding:10px 8px 9px;border-radius:var(--r-m) var(--r-m) 0 0;background:var(--soft);color:var(--sub);font-weight:700;font-size:13px;border-top:4px solid transparent}
 .tab[aria-selected="true"]{background:var(--paper);color:var(--ink);border-top-color:var(--gc)}
+.tabs.mini{margin-top:0;background:var(--soft);border-radius:var(--r-m);padding:4px}.tabs.mini .tab{border-radius:var(--r-s);border-top:0;padding:10px 8px;font-size:14px}.tabs.mini .tab[aria-selected="true"]{box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .sheet{background:var(--paper);border-radius:0 var(--r-m) var(--r-m) var(--r-m);border-top:4px solid var(--gc);margin-bottom:24px}
 .row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:12px 16px;border:0;background:transparent;text-align:left;border-bottom:1px solid var(--rule)}
 .row:last-child{border-bottom:0}
@@ -508,6 +509,8 @@ async function demoApi(p){
   if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
   if (p.app === 'jigaiInfo') return { current:'2026-02', months:[{ ym:'2026-10', count:12 }, { ym:'2026-09', count:14 }, { ym:'2026-02', count:9 }] };
   if (p.app === 'jigaiBuild') { await new Promise(r => setTimeout(r, 600)); return { message: p.ym.replace('-', '年') + '月の報告書を作りました' }; }
+  if (p.app === 'recordPeople') return { field:'名前', people:[{ name:'井上 俊二', kana:'いのうえ', gyo:'あ', count:12, last:'2026/10/30' }, { name:'稼木 敏明', kana:'かせぎ', gyo:'か', count:30, last:'2026/11/02' }, { name:'木村 圭吾', kana:'きむら', gyo:'か', count:8, last:'2026/10/21' },
+    { name:'佐々木 勇斗', kana:'ささき', gyo:'さ', count:15, last:'2026/10/29' }, { name:'田中 尚樹', kana:'たなか', gyo:'た', count:22, last:'2026/11/01' }, { name:'仲西 大介', kana:'なかにし', gyo:'な', count:5, last:'2026/09/30' }, { name:'松川 忠義', kana:'まつかわ', gyo:'ま', count:19, last:'2026/11/02' }, { name:'峰 恭子', kana:'みね', gyo:'ま', count:25, last:'2026/11/02' }] };
   if (p.app === 'quarantine') { const t = ymd(), dd = n => { const x = new Date(t + 'T00:00:00+09:00'); x.setDate(x.getDate() + n); return ymd(x); };
     return { today:t, items:[{ row:6, name:'松川 忠義', kind:'メンバー', start:dd(-2), end:dd(3), date:dd(-2) }, { row:5, name:'大原 里奈', kind:'スタッフ', start:dd(-1), end:dd(1), date:dd(-1) },
       { row:4, name:'峰 恭子', kind:'メンバー', start:dd(2), end:dd(6), date:dd(0) }, { row:3, name:'石橋 強', kind:'スタッフ', start:dd(-12), end:dd(-7), date:dd(-12) }, { row:2, name:'佐藤 正', kind:'メンバー', start:dd(-30), end:dd(-25), date:dd(-30) }] }; }
@@ -1020,19 +1023,43 @@ async function submitEdit(){
 }
 
 /* ================= これまでの記録 ================= */
-async function showRecords(sheet){
+let REC_MODE = LS.get('fb_rec_mode', 'name');
+async function showRecords(arg){
+  const [sheet, person] = arg.split('|');
   const group = groupOf(sheet);
-  setTop({ title: sheet, back:true });
+  setTop({ title: person ? person + ' さん' : sheet, back:true });
   const token = viewToken;
   let q = '', page = 0, items = [];
+  const mode = person ? 'date' : REC_MODE;
   $('view').innerHTML = `<div class="${gClass(group)}" style="padding-top:12px">
-    <label class="search" style="margin-top:0">${ICON.search}<input id="rq" type="search" placeholder="名前・日付・言葉でさがす" aria-label="記録をさがす"></label>
-    <div class="small" id="rcount" style="margin:8px 0"></div><div id="rlist"><div class="empty">読み込んでいます…</div></div>
+    ${person ? `<div class="small" style="margin-bottom:8px">${esc(sheet)}</div>` : `<div class="tabs mini" role="tablist" style="margin-bottom:10px">${[['name','名前から（あいうえお順）'],['date','新しい順']].map(([k, l]) => `<button class="tab" role="tab" data-rm="${k}" aria-selected="${k === mode}">${l}</button>`).join('')}</div>`}
+    <label class="search" style="margin-top:0">${ICON.search}<input id="rq" type="search" placeholder="${mode === 'name' ? '名前・ふりがなでさがす' : '名前・日付・言葉でさがす'}" aria-label="さがす"></label>
+    <div id="rgyo"></div><div class="small" id="rcount" style="margin:8px 0"></div><div id="rlist"><div class="empty">読み込んでいます…</div></div>
     <div id="rmore"></div></div>`;
+  $('view').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { REC_MODE = b.dataset.rm; LS.set('fb_rec_mode', REC_MODE); showRecords(sheet); });
+  let people = null;
+  const drawPeople = () => {
+    const qq = q.replace(/\s/g, '');
+    const list = people.people.filter(x => !qq || x.name.replace(/\s/g, '').includes(qq) || (x.kana || '').includes(qq));
+    $('rcount').textContent = `${people.field}ごと ${list.length}人`;
+    const gyos = [...new Set(list.map(x => x.gyo))];
+    $('rgyo').innerHTML = gyos.length > 1 ? `<div class="chips" style="margin-top:10px">${gyos.map(g => `<button class="chip mini" data-gy="${g}">${g}${g === '他' ? '' : '行'}</button>`).join('')}</div>` : '';
+    $('rlist').innerHTML = list.length ? gyos.map(g => `<div class="sec-title" id="gy_${g}">${g}${g === '他' ? '（読み未登録）' : '行'}</div><div class="sheet" style="border-radius:var(--r-m)">${list.filter(x => x.gyo === g).map(x =>
+      `<a class="row" href="#/records/${encodeURIComponent(sheet + '|' + x.name)}" style="color:inherit;text-decoration:none"><span class="name">${esc(x.name)}<span class="small" style="display:block">${x.kana ? esc(x.kana) + '　' : ''}${x.count}件${x.last ? '　最新 ' + esc(x.last) : ''}</span></span>${ICON.chev}</a>`).join('')}</div>`).join('')
+      : `<div class="empty">${q ? '見つかりませんでした。' : 'まだ記録はありません。'}</div>`;
+    $('rgyo').querySelectorAll('[data-gy]').forEach(b => b.onclick = () => { const el = $('gy_' + b.dataset.gy); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 70, behavior:'smooth' }); });
+    $('rmore').innerHTML = '';
+  };
   const load = async reset => {
     if (reset) { page = 0; items = []; }
     try {
-      const j = await api({ app:'records', sheet, q, page });
+      if (mode === 'name') {
+        if (!people) people = await api({ app:'recordPeople', sheet });
+        if (token !== viewToken) return;
+        if (!people.field) { REC_MODE = 'date'; return showRecords(sheet); }
+        return drawPeople();
+      }
+      const j = await api({ app:'records', sheet, q, page, person: person || '' });
       if (token !== viewToken) return;
       items = items.concat(j.items || []);
       $('rcount').textContent = q ? `「${q}」で ${j.total}件` : `全 ${j.total}件（新しい順）`;
@@ -1044,7 +1071,7 @@ async function showRecords(sheet){
     } catch (e) { if (token === viewToken) $('rlist').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
   };
   let t;
-  $('rq').oninput = e => { clearTimeout(t); t = setTimeout(() => { q = e.target.value.trim(); load(true); }, 450); };
+  $('rq').oninput = e => { clearTimeout(t); t = setTimeout(() => { q = e.target.value.trim(); mode === 'name' && people ? drawPeople() : load(true); }, mode === 'name' ? 150 : 450); };
   load(true);
 }
 
