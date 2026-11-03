@@ -498,10 +498,13 @@ async function demoApi(p){
   if (p.app === 'jissekiScan' || p.app === 'jissekiCheck') return demoJisseki(p);
   if (p.app === 'voiceDraft') { await new Promise(r => setTimeout(r, 800)); return { main:'相談内容', fields:{ '対象者':'峰 恭子', '相談内容':'１．相談内容\n\n作業中の休憩の取り方について相談あり。\n本人より「午後になると集中が続かない」との申し出があった。\n\n２．事業所対応\n\n午後の作業を30分ごとに区切り、5分の小休憩を入れる方法を提案した。\n\n３．今後の対応・所見\n\n1週間試して、次回の面談で様子を確認する。職員間で休憩の声かけを共有する。' },
     transcript:'職員：今日はどうしました？\n本人：午後になると集中が続かなくて…\n職員：じゃあ30分ごとに5分休んでみましょうか。', points:['対象者の名前を確認してください'] }; }
-  if (p.app === 'books') return { books:[{ name:'峰 恭子', type:'利用者' }, { name:'松川 忠義', type:'利用者' }, { name:'石橋 強', type:'スタッフ' }, { name:'大原 里奈', type:'スタッフ' }], month:'2026-11' };
+  if (p.app === 'books') return { books:[{ name:'峰 恭子', type:'利用者', ym:'2026-10' }, { name:'松川 忠義', type:'利用者', ym:'2026-11' }, { name:'石橋 強', type:'スタッフ', ym:'2026-10' }, { name:'大原 里奈', type:'スタッフ', ym:'2026-11' }], month:'2026-11', auto:false };
+  if (p.app === 'bookRollover' || p.app === 'bookAuto') { await new Promise(r => setTimeout(r, 600)); return { message: p.app === 'bookAuto' ? '毎月1日に自動で切り替えるようにしました' : '2026年11月に切り替えました（2件）' }; }
   if (p.app === 'book') { const wd = '日月火水木金土'; const rows = Array.from({ length:30 }, (_, i) => { const d = new Date(2026, 10, i + 1), w = d.getDay(), on = w > 0 && w < 6 && i < 2;
       return { row: 11 + i, stamp: on && i !== 1, cells:[`11/${i + 1}`, wd[w], on ? '08:30' : '', on && i !== 1 ? '13:30' : '', on && i !== 1 ? '4.00' : '', on ? '1.00' : '', on ? '0.00' : '', on && i !== 1 ? '5.00' : '', on ? '〇' : '', on ? '〇' : '', '', i === 1 ? '退勤忘れ' : ''] }; });
-    return { name: p.name, month:'2026/11/01', title: p.name + ' 出勤簿', head:[], rows, admin: isAdmin() }; }
+    const staff = /石橋|大原/.test(p.name);
+    if (staff) rows.forEach(r => { const c = r.cells; r.cells = [c[0], c[1], c[2], c[3], c[2] && c[3] ? '5.00' : '', c[5], c[2] && c[3] ? '4.00' : '', '', c[11], '', '', '']; });
+    return { name: p.name, layout: staff ? 'staff' : 'member', month:'2026/11/01', ym:'2026-11', title: p.name + ' 出勤簿', rows, admin: isAdmin() }; }
   if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
   if (p.app === 'quarantine') { const t = ymd(), dd = n => { const x = new Date(t + 'T00:00:00+09:00'); x.setDate(x.getDate() + n); return ymd(x); };
     return { today:t, items:[{ row:6, name:'松川 忠義', kind:'メンバー', start:dd(-2), end:dd(3), date:dd(-2) }, { row:5, name:'大原 里奈', kind:'スタッフ', start:dd(-1), end:dd(1), date:dd(-1) },
@@ -2045,8 +2048,17 @@ async function showBooks(){
     if (token !== viewToken) return;
     const grp = t => j.books.filter(b => b.type === t);
     const sec = (t, list) => list.length ? `<div class="sec-title">${t}（${list.length}人）</div><div class="sheet" style="border-radius:var(--r-m)">${list.map(b =>
-      `<a class="row" href="#/book/${encodeURIComponent(b.name)}" style="color:inherit;text-decoration:none"><span class="name">${esc(b.name)}</span>${ICON.chev}</a>`).join('')}</div>` : '';
-    $('view').innerHTML = `<div style="padding-top:6px">${sec('利用者', grp('利用者')) + sec('スタッフ', grp('スタッフ')) || '<div class="empty">出勤簿はまだありません。</div>'}</div>`;
+      `<a class="row" href="#/book/${encodeURIComponent(b.name)}" style="color:inherit;text-decoration:none"><span class="name">${esc(b.name)}${b.ym && b.ym !== j.month ? `<span class="pill" style="--gc:var(--warn)">${esc(b.ym.replace(/^\d{4}-0?/, ''))}月のまま</span>` : ''}</span>${ICON.chev}</a>`).join('')}</div>` : '';
+    const ymL = ym => ym ? ym.replace(/^(\d{4})-0?(\d+)$/, '$1年$2月') : '不明';
+    const old = j.books.filter(b => b.ym !== j.month);
+    const head = `<div class="box" style="margin-top:12px"><h3>出勤簿の月</h3>
+      ${old.length ? `<div class="note">${old.length}人の出勤簿が前の月（${[...new Set(old.map(b => ymL(b.ym)))].join('・')}）のままです。</div>` : `<div class="small">全員 ${ymL(j.month)} になっています。</div>`}
+      <div class="small" style="margin-top:6px">切り替えると、前の月の出勤簿をPDFでドライブに残してから、日付・曜日を新しい月にして記入欄を空にします（数式はそのまま）。</div>
+      <div class="row2"><button class="btn p" id="bkRoll" style="--gc:var(--brand)">${ymL(j.month)}に切り替える</button></div>
+      <div class="small" style="margin-top:8px">${j.auto ? '✓ 毎月1日の0時台に自動で切り替わります。' : `自動の切り替えはまだ設定していません。<button class="link" id="bkAuto" style="padding:0">毎月1日に自動で切り替える</button>`}</div></div>`;
+    $('view').innerHTML = `<div style="padding-top:6px">${head}${sec('利用者', grp('利用者')) + sec('スタッフ', grp('スタッフ')) || '<div class="empty">出勤簿はまだありません。</div>'}</div>`;
+    $('bkRoll').onclick = () => confirmSheet('出勤簿の月を切り替える', `全員の出勤簿とテンプレートを ${ymL(j.month)} にします。前の月の出勤簿はPDFでドライブに残します。人数が多いと1〜3分かかります。`, '切り替える', () => runAction(() => api({ app:'bookRollover', ym: j.month }), () => showBooks()));
+    if ($('bkAuto')) $('bkAuto').onclick = () => runAction(() => api({ app:'bookAuto' }), () => showBooks());
   } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 let BOOK = null;
@@ -2065,16 +2077,17 @@ function drawBook(){
   const c = (r, i) => esc(r.cells[i] || '');
   const work = j.rows.filter(r => r.cells[2] || r.cells[3]);
   const sum = i => work.reduce((a, r) => a + (parseFloat(r.cells[i]) || 0), 0);
-  const ou = j.rows.filter(r => /〇|○/.test(r.cells[8])).length, fuku = j.rows.filter(r => /〇|○/.test(r.cells[9])).length;
+  const mem = j.layout !== 'staff';
+  const ou = mem ? j.rows.filter(r => /〇|○/.test(r.cells[8])).length : 0, fuku = mem ? j.rows.filter(r => /〇|○/.test(r.cells[9])).length : 0;
   const noOut = work.filter(r => r.cells[2] && !r.cells[3]).length;
-  let html = `<div style="padding-top:12px"><div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${work.length}</b><span>出勤日数</span></div><div style="background:var(--g2)"><b>${sum(7).toFixed(1)}</b><span>利用時間</span></div><div style="background:var(--g2)"><b>${ou}／${fuku}</b><span>送迎 往／復</span></div></div>
+  let html = `<div style="padding-top:12px"><div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${work.length}</b><span>出勤日数</span></div><div style="background:var(--g2)"><b>${sum(mem ? 7 : 6).toFixed(1)}</b><span>${mem ? '利用時間' : '勤務時間'}</span></div><div style="background:var(--g2)"><b>${mem ? ou + '／' + fuku : sum(7).toFixed(1)}</b><span>${mem ? '送迎 往／復' : '残業'}</span></div></div>
     ${noOut ? `<div class="note">退勤の記録がない日が ${noOut}日 あります。</div>` : ''}
     <div class="small" style="margin:0 2px 8px">${esc(j.title || '')}　${esc(j.month || '')}${j.admin ? '　日付を押すと直せます' : ''}</div>
-    <div class="tscroll"><table class="at-tbl bk"><thead><tr><th>日</th><th>出勤</th><th>退勤</th><th>休憩</th><th>面談</th><th>利用</th><th>送迎</th><th>印</th></tr></thead><tbody>${j.rows.map((r, i) => {
+    <div class="tscroll"><table class="at-tbl bk"><thead><tr>${(mem ? ['日','出勤','退勤','休憩','面談','利用','送迎','印'] : ['日','出勤','退勤','休憩','勤務','残業','印']).map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${j.rows.map((r, i) => {
       const we = /土|日/.test(r.cells[1]);
       const miss = r.cells[2] && !r.cells[3];
-      return `<tr${j.admin ? ` data-br="${i}" style="cursor:pointer"` : ''} class="${we ? 'we' : ''}${miss ? ' miss' : ''}"><td class="n"><b>${c(r, 0)}</b><span class="small">${c(r, 1)}</span></td><td class="n">${c(r, 2)}</td><td class="n">${c(r, 3)}</td><td class="n">${c(r, 5)}</td><td class="n">${c(r, 6)}</td><td class="n"><b>${c(r, 7)}</b></td>
-        <td class="n">${/〇|○/.test(r.cells[8]) ? '往' : ''}${/〇|○/.test(r.cells[9]) ? '復' : ''}</td><td>${r.stamp ? '<span class="stamp">印</span>' : ''}</td></tr>${r.cells[10] || r.cells[11] ? `<tr class="${we ? 'we' : ''}"><td></td><td colspan="7" class="small" style="padding-top:0">${c(r, 10)} ${c(r, 11)}</td></tr>` : ''}`;
+      return `<tr${j.admin ? ` data-br="${i}" style="cursor:pointer"` : ''} class="${we ? 'we' : ''}${miss ? ' miss' : ''}"><td class="n"><b>${c(r, 0)}</b><span class="small">${c(r, 1)}</span></td><td class="n">${c(r, 2)}</td><td class="n">${c(r, 3)}</td><td class="n">${c(r, 5)}</td>${mem ? `<td class="n">${c(r, 6)}</td><td class="n"><b>${c(r, 7)}</b></td>` : `<td class="n"><b>${c(r, 6)}</b></td><td class="n">${c(r, 7)}</td>`}
+        ${mem ? `<td class="n">${/〇|○/.test(r.cells[8]) ? '往' : ''}${/〇|○/.test(r.cells[9]) ? '復' : ''}</td>` : ''}<td>${r.stamp ? '<span class="stamp">印</span>' : ''}</td></tr>${(mem ? r.cells[10] || r.cells[11] : r.cells[8]) ? `<tr class="${we ? 'we' : ''}"><td></td><td colspan="${mem ? 7 : 6}" class="small" style="padding-top:0">${mem ? c(r, 10) + ' ' + c(r, 11) : c(r, 8)}</td></tr>` : ''}`;
     }).join('')}</tbody></table></div>
     ${j.admin ? '<button class="btn s wide" id="bkPdf" style="margin-top:14px">PDFを作り直してドライブに保存</button>' : ''}</div>`;
   $('view').innerHTML = html;
@@ -2082,17 +2095,19 @@ function drawBook(){
   if ($('bkPdf')) $('bkPdf').onclick = () => runAction(() => api({ app:'bookPdf', name: j.name }), r => { if (r.url) msgSheet('PDFを保存しました', 'ドライブの出勤簿フォルダに保存しました。'); });
 }
 function editBookRow(r){
+  const mem = BOOK.layout !== 'staff';
   const tm = v => /^\d{1,2}:\d{2}/.test(v) ? v.padStart(5, '0').slice(0, 5) : '';
   openSheet(r.cells[0] + '（' + r.cells[1] + '）を直す', `
     <div style="display:flex;gap:8px"><div style="flex:1"><label class="small" for="be_s">出勤</label><input class="in" id="be_s" type="time" value="${tm(r.cells[2])}"></div><div style="flex:1"><label class="small" for="be_e">退勤</label><input class="in" id="be_e" type="time" value="${tm(r.cells[3])}"></div></div>
-    <div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1"><label class="small" for="be_r">休憩（時間）</label><input class="in" id="be_r" inputmode="decimal" value="${esc(r.cells[5])}"></div><div style="flex:1"><label class="small" for="be_m">面談（時間）</label><input class="in" id="be_m" inputmode="decimal" value="${esc(r.cells[6])}"></div></div>
-    <div style="display:flex;gap:8px;margin-top:10px"><label class="chip" style="flex:1;display:flex;gap:6px;align-items:center"><input type="checkbox" id="be_ou"${/〇|○/.test(r.cells[8]) ? ' checked' : ''}>送迎 往</label><label class="chip" style="flex:1;display:flex;gap:6px;align-items:center"><input type="checkbox" id="be_fu"${/〇|○/.test(r.cells[9]) ? ' checked' : ''}>送迎 復</label></div>
-    <div style="display:flex;gap:8px;margin-top:8px"><div style="width:90px"><label class="small" for="be_k">欠/有</label><select class="in" id="be_k">${['', '欠', '有'].map(o => `<option${o === r.cells[10] ? ' selected' : ''}>${o}</option>`).join('')}</select></div><div style="flex:1"><label class="small" for="be_n">備考</label><input class="in" id="be_n" value="${esc(r.cells[11])}"></div></div>
-    <p class="small">勤務時間と利用時間は自動で計算し直します。直した内容は「アプリ修正ログ」に残ります。</p>`,
+    <div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1"><label class="small" for="be_r">休憩（時間）</label><input class="in" id="be_r" inputmode="decimal" value="${esc(r.cells[5])}"></div>${mem ? `<div style="flex:1"><label class="small" for="be_m">面談（時間）</label><input class="in" id="be_m" inputmode="decimal" value="${esc(r.cells[6])}"></div>` : ''}</div>
+    ${mem ? `<div style="display:flex;gap:8px;margin-top:10px"><label class="chip" style="flex:1;display:flex;gap:6px;align-items:center"><input type="checkbox" id="be_ou"${/〇|○/.test(r.cells[8]) ? ' checked' : ''}>送迎 往</label><label class="chip" style="flex:1;display:flex;gap:6px;align-items:center"><input type="checkbox" id="be_fu"${/〇|○/.test(r.cells[9]) ? ' checked' : ''}>送迎 復</label></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><div style="width:90px"><label class="small" for="be_k">欠/有</label><select class="in" id="be_k">${['', '欠', '有'].map(o => `<option${o === r.cells[10] ? ' selected' : ''}>${o}</option>`).join('')}</select></div><div style="flex:1"><label class="small" for="be_n">備考</label><input class="in" id="be_n" value="${esc(r.cells[11])}"></div></div>` : `<div style="margin-top:8px"><label class="small" for="be_n">備考</label><input class="in" id="be_n" value="${esc(r.cells[8])}"></div>`}
+    <p class="small">${mem ? '勤務時間と利用時間は自動で計算し直します。' : ''}直した内容は「アプリ修正ログ」に残ります。</p>`,
     `<button class="btn s" id="beNo">やめる</button><button class="btn p" id="beOk" style="--gc:var(--brand)">保存する</button>`);
   $('beNo').onclick = closeSheet;
   $('beOk').onclick = () => {
-    const data = { start: $('be_s').value, end: $('be_e').value, rest: $('be_r').value.trim(), mendan: $('be_m').value.trim(), ou: $('be_ou').checked, fuku: $('be_fu').checked, mark: $('be_k').value, note: $('be_n').value.trim() };
+    const data = mem ? { start: $('be_s').value, end: $('be_e').value, rest: $('be_r').value.trim(), mendan: $('be_m').value.trim(), ou: $('be_ou').checked, fuku: $('be_fu').checked, mark: $('be_k').value, note: $('be_n').value.trim() }
+      : { start: $('be_s').value, end: $('be_e').value, rest: $('be_r').value.trim(), note: $('be_n').value.trim() };
     runAction(() => apiPost({ app:'bookEdit', name: BOOK.name, row: r.row, data: JSON.stringify(data) }), () => showBook(BOOK.name));
   };
 }
