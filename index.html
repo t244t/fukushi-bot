@@ -287,6 +287,13 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .tk-sec>summary::-webkit-details-marker{display:none}
 .tk-item{padding:12px 16px;border-top:1px solid var(--rule);border-left:4px solid transparent}.tk-item.ok{border-left-color:var(--g1)}.tk-item.ng{border-left-color:var(--err);background:var(--err-bg)}
 .tk-text{font-size:15px;line-height:1.6}.tk-btns{display:flex;gap:8px;margin-top:8px}.tk-btns .chip{flex:1;text-align:center;min-height:42px}
+.pv{position:fixed;inset:0;z-index:60;background:#3a3f3c;display:flex;flex-direction:column}
+.pv-bar{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:var(--paper)}
+.pv-bar .btn{min-height:44px;padding:0 16px}.pv-t{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv-body{flex:1;overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+.pv-page{display:block;width:100%;max-width:820px;margin:0 auto 12px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.pv-open{display:block;text-align:center;color:#fff;margin:8px 0 30px}
+@media print{body.pv-on>*:not(.pv){display:none!important}body.pv-on .pv{position:static;background:#fff}body.pv-on .pv-bar,body.pv-on .pv-open{display:none}body.pv-on .pv-body{overflow:visible;padding:0}body.pv-on .pv-page{box-shadow:none;margin:0;max-width:none;page-break-after:always}}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -512,6 +519,7 @@ async function demoApi(p){
     if (staff) rows.forEach(r => { const c = r.cells; r.cells = [c[0], c[1], c[2], c[3], c[2] && c[3] ? '5.00' : '', c[5], c[2] && c[3] ? '4.00' : '', '', c[11], '', '', '']; });
     return { name: p.name, layout: staff ? 'staff' : 'member', month:'2026/11/01', ym:'2026-11', title: p.name + ' 出勤簿', rows, admin: isAdmin() }; }
   if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
+  if (p.app === 'recordPdf') { await new Promise(r => setTimeout(r, 500)); if (p.save) return { message:'PDFを保存しました（デモ）', pdfs:[] }; return { files: window.DEMO_PDF ? [{ name:'デモ.pdf', b64: window.DEMO_PDF }] : [] }; }
   if (p.app === 'tenken') return {"items": [{"row": 9, "sec": "第１基本方針", "grp": "", "text": "（１）指定就労継続支援Ａ型事業者は、利用者の意向、適性、障害の特性その他の事情を踏まえた計画（個別支援計画）を作成し、これに基づき利用者に対して指定就労継続支援Ａ型を提供するとともに、その効果について継続的な評価を実施することその他の措置を講ずることにより利用者に対して適切かつ効果的に指定就労継続支援Ａ型を提供しているか。", "law": "平18厚令171 第3条第1項", "docs": ["運営規程", "個別支援計画", "ケース記録"], "cur": "適"}, {"row": 10, "sec": "第１基本方針", "grp": "", "text": "（２）指定就労継続支援Ａ型事業者は、利用者の意思及び人格を尊重して、常に当該利用者の立場に立った指定就労継続支援Ａ型の提供に努めているか。", "law": "平18厚令171 第3条第2項", "docs": ["運営規程", "個別支援計画", "ケース記録"], "cur": "適"}, {"row": 11, "sec": "第１基本方針", "grp": "", "text": "（３）指定就労継続支援Ａ型事業者は、利用者の人権の擁護、虐待の防止等のため、必要な体制の整備を行うとともに、その従業者に対し、研修を実施する等の措置を講じているか。", "law": "平18厚令171 第3条第3項", "docs": ["運営規程", "研修計画、研修実施記録", "虐待防止関係書類", "体制の整備をしていることが分かる書類"], "cur": "適"}, {"row": 12, "sec": "第１基本方針", "grp": "", "text": "（４）指定就労継続支援Ａ型の事業は、利用者が自立した日常生活又は社会生活を営むことができるよう、専ら障害者総合支援法施行規則（平成18年厚生労働省令第19号）（規則）第6条の10第1号に規定する者を雇用して就労の機会を提供するとともに、その知識及び能力の向上のために必要な訓練その他の便宜を適切かつ効果的に行っているか。", "law": "平18厚令171第185条 平18厚令19第6条の10第1号", "docs": ["運営規程", "個別支援計画", "ケース記録"], "cur": "適"}, {"row": 15, "sec": "第２ 人員に関する基準", "grp": "（１）職業指導員及び生活支援員", "text": "① 職業指導員及び生活支援員の総数は、指定就労継続支援Ａ型事業所ごとに、常勤換算方法で、利用者の数を10で除した数以上となっているか。", "law": "平18厚令171 第186条第1項第1号イ", "docs": ["勤務実績表", "出勤簿（タイムカード）", "従業員の資格証", "勤務体制一覧表", "利用者数（平均利用人数）が分かる書類（実績表等）"], "cur": "適"}, {"row": 16, "sec": "第２ 人員に関する基準", "grp": "（１）職業指導員及び生活支援員", "text": "② 職業指導員の数は、指定就労継続支援Ａ型事業所ごとに、1以上となっているか。", "law": "平18厚令171 第186条第1項第1号ロ", "docs": ["勤務実績表", "出勤簿（タイムカード）", "従業員の資格証", "勤務体制一覧表", "利用者数（平均利用人数）が分かる書類（実績表等）"], "cur": "適"}, {"row": 37, "sec": "第４ 運営に関する基準", "grp": "１ 内容及び手続きの説明及び同意", "text": "（１）指定就労継続支援Ａ型事業者は、支給決定障害者等が指定就労継続支援Ａ型の利用の申込みを行ったときは、当該利用申込者に係る障害の特性に応じた適切な配慮をしつつ、当該利用申込者に対し、運営規程の概要、従業者の勤務体制、その他の利用申込者のサービスの選択に資すると認められる重要事項を記した文書を交付して説明を行い、当該指定就労継続支援Ａ型の提供の開始について当該利用申込者の同意を得ているか。", "law": "平18厚令171 第197条準用（第9条第1項）", "docs": ["重要事項説明書", "利用契約書", "その他利用者に交付した書面"], "cur": "適"}, {"row": 38, "sec": "第４ 運営に関する基準", "grp": "１ 内容及び手続きの説明及び同意", "text": "（２）指定就労継続支援Ａ型事業者は、社会福祉法（昭和26年法律第45号）第77条の規定に基づき書面の交付を行う場合は、利用者の障害の特性に応じた適切な配慮をしているか。", "law": "平18厚令171 第197条準用（第9条第2項）", "docs": ["重要事項説明書", "利用契約書"], "cur": "適"}, {"row": 39, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（１）指定就労継続支援Ａ型事業者は、指定就労継続支援Ａ型を提供するときは、当該指定就労継続支援Ａ型の内容、契約支給量、その他の必要な事項（受給者証記載事項）を支給決定障害者等の受給者証に記載しているか。", "law": "平18厚令171 第197条準用（第10条第1項)", "docs": ["受給者証の写し"], "cur": "適"}, {"row": 40, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（２）契約支給量の総量は、当該支給決定障害者等の支給量を超えていないか。", "law": "平18厚令171 第197条準用（第10条第2項)", "docs": ["受給者証の写し", "契約内容報告書"], "cur": "適"}, {"row": 41, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（３）指定就労継続支援Ａ型事業者は、指定就労継続支援Ａ型の利用に係る契約をしたときは、受給者証記載事項その他の必要な事項を市町村に対し遅滞なく報告しているか。", "law": "平18厚令171 第197条準用（第10条第3項)", "docs": ["契約内容報告書"], "cur": "適"}, {"row": 42, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（４）指定就労継続支援Ａ型事業者は、受給者証記載事項に変更があった場合に、(1)から(3)に準じて取り扱っているか。", "law": "平18厚令171 第197条準用（第10条第4項)", "docs": ["受給者証の写し", "契約内容報告書"], "cur": "適"}], "meta": {"office": "唐泊ストアー", "checker": "石橋 強", "date": "2026-04-05 00:00:00"}, "last": null, "offices": ["ファームパーク伊都国即売会", "唐泊ストアー"]};
   if (p.app === 'tenkenSave') { await new Promise(r => setTimeout(r, 700)); return { message:'保存しました（デモ）', pdf:null }; }
   if (p.app === 'jigaiSheet') return { ym:p.ym, company:'㈱銀の華', hourly:992, totalHours:7.5, totalYen:14880, rows:[{ day:22, wd:'月', start:'12:00', end:'15:00', rest:0, hours:3, people:2, per:2976, total:5952, names:'C.山本,D.市丸' }, { day:26, wd:'金', start:'12:00', end:'14:30', rest:0, hours:2.5, people:2, per:2480, total:4960, names:'C.山本,D.市丸' }, { day:29, wd:'月', start:'12:00', end:'14:00', rest:0, hours:2, people:2, per:1984, total:3968, names:'C.山本,D.市丸' }] };
@@ -1113,8 +1121,54 @@ async function showRecord(sheet, row){
       ${lastPdf ? `<a class="btn s wide" href="${esc(lastPdf.url)}" target="_blank" rel="noopener" style="display:grid;place-items:center;text-decoration:none;color:inherit;margin-bottom:10px">作り直したPDFを開く</a>` : ''}
       <div class="box"><dl class="review" style="margin:0">${filled.map(f => `<dt>${esc(f.label)}</dt><dd>${val(f)}</dd>`).join('')}</dl>
       ${vis.length > filled.length ? `<p class="small" style="margin:12px 0 0">未記入 ${vis.length - filled.length}項目</p>` : ''}</div>
+      ${rec.hasPdf ? `<div class="sec-title">帳票（テンプレート）</div><div class="row2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn s" id="rcPrev" style="min-height:52px">プレビュー・印刷</button><button class="btn s" id="rcSave" style="min-height:52px">PDFをドライブに保存</button></div>
+        <p class="small">プレビューは保存もLINEのお知らせもしません。</p>` : ''}
       <div class="bar"><a class="btn p wide" href="#/edit/${encodeURIComponent(sheet)}/${row}" style="display:grid;place-items:center;text-decoration:none">この記録を修正する</a></div></div>`;
+    if ($('rcPrev')) $('rcPrev').onclick = () => previewRecord(sheet, row);
+    if ($('rcSave')) $('rcSave').onclick = () => confirmSheet('PDFをドライブに保存', 'この記録をテンプレートに書いて、PDFをドライブに保存します（いつもどおりLINEにもお知らせします）。', '保存する', () =>
+      runAction(() => api({ app:'recordPdf', sheet, row, save:'1' }), r => { const pdf = (r.pdfs || [])[0]; if (pdf) { LS.set('fb_lastpdf', pdf); showRecord(sheet, row); } }));
   } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+/* 帳票のプレビュー：PDFを受け取り、PDF.js でページを画像にして表示・印刷 */
+async function loadPdfJs(){
+  if (window.pdfjsLib) return window.pdfjsLib;
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => window.pdfjsLib);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  return window.pdfjsLib;
+}
+async function previewRecord(sheet, row){
+  const ov = document.createElement('div');
+  ov.className = 'pv'; ov.id = 'pv';
+  ov.innerHTML = `<div class="pv-bar"><button class="btn s" id="pvClose">閉じる</button><span class="pv-t">${esc(sheet)}</span><button class="btn p" id="pvPrint" style="--gc:var(--brand)" disabled>印刷</button></div>
+    <div class="pv-body" id="pvBody"><div class="empty" style="color:#fff"><div class="spin" style="margin:0 auto 12px"></div>テンプレートに書いています…<br><span class="small" style="color:#ddd">10〜20秒ほどかかります</span></div></div>`;
+  document.body.appendChild(ov);
+  document.body.classList.add('pv-on');
+  const close = () => { ov.remove(); document.body.classList.remove('pv-on'); };
+  $('pvClose').onclick = close;
+  try {
+    const [j, lib] = await Promise.all([api({ app:'recordPdf', sheet, row }), loadPdfJs()]);
+    if (!document.getElementById('pv')) return;
+    const body = $('pvBody'); body.innerHTML = '';
+    let blobUrl = '';
+    for (const f of j.files || []) {
+      const bin = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
+      blobUrl = blobUrl || URL.createObjectURL(new Blob([bin], { type:'application/pdf' }));
+      const pdf = await lib.getDocument({ data: bin }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({ scale: 2 });
+        const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        const img = new Image(); img.src = c.toDataURL('image/png'); img.alt = f.name + ' ' + i + 'ページ'; img.className = 'pv-page';
+        body.appendChild(img);
+      }
+    }
+    if (blobUrl) body.insertAdjacentHTML('beforeend', `<a class="pv-open" href="${blobUrl}" target="_blank" rel="noopener" download="${esc((j.files[0] || {}).name || 'preview.pdf')}">PDFファイルとして開く・保存</a>`);
+    $('pvPrint').disabled = false;
+    $('pvPrint').onclick = () => window.print();
+  } catch (e) { $('pvBody').innerHTML = `<div class="note err" style="margin:16px">${esc(e.message)}</div>`; }
 }
 
 async function showEdit(sheet, row){
