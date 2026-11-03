@@ -269,6 +269,9 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .vc-rec{width:84px;height:84px;border-radius:50%;border:4px solid var(--err);background:var(--paper);display:grid;place-items:center;margin:14px auto 4px}
 .vc-rec i{width:56px;height:56px;border-radius:50%;background:var(--err);transition:all .2s}.vc-rec.on i{width:30px;height:30px;border-radius:6px}
 .vc-res{margin-top:10px;border-left:4px solid var(--g1)}
+.tscroll{overflow-x:auto}.at-tbl.bk{font-size:13px;min-width:340px}.at-tbl.bk th,.at-tbl.bk td{padding:7px 5px}.at-tbl.bk td .small{font-size:11px;margin-left:3px}
+.at-tbl.bk tr.we td{background:var(--soft)}.at-tbl.bk tr.miss td{background:var(--err-bg)}
+.stamp{display:inline-grid;place-items:center;width:22px;height:22px;border:2px solid #c62f22;border-radius:50%;color:#c62f22;font-size:11px;font-weight:700}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -446,16 +449,17 @@ function demoAttend(p){
   if (p.app === 'attendPunch') {
     const k = (typeof p.punch === 'string' ? JSON.parse(p.punch) : p.punch).kind;
     const pk = (typeof p.punch === 'string' ? JSON.parse(p.punch) : p.punch).pickup;
-    const log = { in: isMember() && pk ? 'オフィス出勤（送迎:' + pk + '）' : 'オフィス出勤', tele:'テレワーク', out:'退勤', away:'離席', back:'着席', late:'【連絡】遅延（理由：電車遅延）', absent:'【連絡】欠席（理由：体調不良）' }[k];
-    t.logs.push({ time: hm(), log });
+    const log = { in: isMember() && pk ? 'オフィス出勤（送迎:' + pk + '）' : 'オフィス出勤', tele:'テレワーク', out:'退勤', away:'離席', back:'着席', late:'【連絡】遅延（理由：電車遅延）', absent:'【連絡】欠席（理由：体調不良）', early:'【連絡】早退（理由：体調不良）', mendan:'' }[k];
+    if (log) t.logs.push({ time: hm(), log });
     if (k === 'in' || k === 'tele') { t.state = 'in'; t.inTime = t.inTime || hm(); t.pickup = pk || ''; }
     if (k === 'out') { t.state = 'out'; t.outTime = hm(); }
     if (k === 'away') t.state = 'away';
     if (k === 'back') t.state = 'in';
     if (k === 'late' || k === 'absent') { t.notes.push(log.replace('【連絡】', '')); if (t.state === 'none') t.state = 'notice'; }
-    punched = { log, judge:'事業所', dist:42 };
+    punched = k === 'mendan' ? { message:'面談の時間を記録しました' } : { log, judge:'事業所', dist:42 };
+    if (k === 'early') { t.notes.push(log.replace('【連絡】', '')); }
   }
-  return { name: ME.name, kubun: ME.kubun, member: isMember(), today: { date: ymd(), ...t }, lastPickup:'往復', office:true, punched,
+  return { name: ME.name, kubun: ME.kubun, member: isMember(), book:true, today: { date: ymd(), ...t }, lastPickup:'往復', office:true, punched,
     recent:[{ date:'2026-10-30', state:'out', inTime:'09:05', outTime:'15:10', workMin:350, awayMin:15, pickup:'往復', notes:[], logs:[] },
             { date:'2026-10-29', state:'out', inTime:'09:12', outTime:'15:00', workMin:348, awayMin:0, pickup:'往復', notes:[], logs:[] },
             { date:'2026-10-28', state:'notice', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:['欠席（理由：通院のため）'], logs:[] }] };
@@ -480,6 +484,11 @@ async function demoApi(p){
   if (p.app === 'jissekiScan' || p.app === 'jissekiCheck') return demoJisseki(p);
   if (p.app === 'voiceDraft') { await new Promise(r => setTimeout(r, 800)); return { main:'相談内容', fields:{ '対象者':'峰 恭子', '相談内容':'１．相談内容\n\n作業中の休憩の取り方について相談あり。\n本人より「午後になると集中が続かない」との申し出があった。\n\n２．事業所対応\n\n午後の作業を30分ごとに区切り、5分の小休憩を入れる方法を提案した。\n\n３．今後の対応・所見\n\n1週間試して、次回の面談で様子を確認する。職員間で休憩の声かけを共有する。' },
     transcript:'職員：今日はどうしました？\n本人：午後になると集中が続かなくて…\n職員：じゃあ30分ごとに5分休んでみましょうか。', points:['対象者の名前を確認してください'] }; }
+  if (p.app === 'books') return { books:[{ name:'峰 恭子', type:'利用者' }, { name:'松川 忠義', type:'利用者' }, { name:'石橋 強', type:'スタッフ' }, { name:'大原 里奈', type:'スタッフ' }], month:'2026-11' };
+  if (p.app === 'book') { const wd = '日月火水木金土'; const rows = Array.from({ length:30 }, (_, i) => { const d = new Date(2026, 10, i + 1), w = d.getDay(), on = w > 0 && w < 6 && i < 2;
+      return { row: 11 + i, stamp: on && i !== 1, cells:[`11/${i + 1}`, wd[w], on ? '08:30' : '', on && i !== 1 ? '13:30' : '', on && i !== 1 ? '4.00' : '', on ? '1.00' : '', on ? '0.00' : '', on && i !== 1 ? '5.00' : '', on ? '〇' : '', on ? '〇' : '', '', i === 1 ? '退勤忘れ' : ''] }; });
+    return { name: p.name, month:'2026/11/01', title: p.name + ' 出勤簿', head:[], rows, admin: isAdmin() }; }
+  if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
   if (p.app === 'quarantine') { const t = ymd(), dd = n => { const x = new Date(t + 'T00:00:00+09:00'); x.setDate(x.getDate() + n); return ymd(x); };
     return { today:t, items:[{ row:6, name:'松川 忠義', kind:'メンバー', start:dd(-2), end:dd(3), date:dd(-2) }, { row:5, name:'大原 里奈', kind:'スタッフ', start:dd(-1), end:dd(1), date:dd(-1) },
       { row:4, name:'峰 恭子', kind:'メンバー', start:dd(2), end:dd(6), date:dd(0) }, { row:3, name:'石橋 強', kind:'スタッフ', start:dd(-12), end:dd(-7), date:dd(-12) }, { row:2, name:'佐藤 正', kind:'メンバー', start:dd(-30), end:dd(-25), date:dd(-30) }] }; }
@@ -556,9 +565,9 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
-  if (isMember() && !['attend', 'info', 'settings'].includes(page)) { location.replace('#/attend'); return; }
+  if (isMember() && !['attend', 'info', 'settings', 'book'].includes(page)) { location.replace('#/attend'); return; }
   document.body.classList.toggle('member', isMember());
-  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'work', admin:'work', quarantine:'work', records:'home', record:'home' })[page] || page || 'home');
+  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'work', admin:'work', quarantine:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home' })[page] || page || 'home');
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -572,6 +581,8 @@ function route(){
   if (page === 'stock') return showStock(arg);
   if (page === 'attend') return showAttend();
   if (page === 'quarantine') return showQuarantine();
+  if (page === 'books') return showBooks();
+  if (page === 'book') return showBook(arg);
   if (page === 'admin' && arg === 'jisseki') return showJisseki();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
@@ -1426,7 +1437,7 @@ const AT_STATE = {
   away:   { label:'離席中',   color:'var(--g3)' },
   out:    { label:'退勤済み', color:'var(--g2)' }
 };
-const AT_REASONS = { late:['電車遅延','通院のため','体調不良','寝坊','その他'], absent:['体調不良','通院のため','悪天候・災害','家庭の事情','その他'] };
+const AT_REASONS = { late:['電車遅延','バス遅延','通院のため','体調不良','その他'], absent:['体調不良','家庭の事情','悪天候・災害','通院のため','その他'], early:['体調不良','家庭の事情','通院のため','その他'] };
 const fmtMin = m => m ? (Math.floor(m / 60) ? Math.floor(m / 60) + '時間' : '') + (m % 60 ? (m % 60) + '分' : (Math.floor(m / 60) ? '' : '0分')) : '0分';
 const atKey = () => 'fb_attend_' + (isDemo() ? 'demo' : 'live');
 
@@ -1483,12 +1494,15 @@ function drawAttend(j){
     html += `<button class="at-big" style="--bc:var(--g3)" data-k="back">席に戻る</button>
       <div class="at-row"><button class="btn s" data-k="out">退勤する</button><button class="btn s" data-k="contact">連絡する</button></div>`;
   } else {
-    html += `<div class="small" style="margin-top:12px">おつかれさまでした。</div><div class="at-row"><button class="btn s" data-k="in">もう一度出勤</button><button class="btn s" data-k="contact">連絡する</button></div>`;
+    html += `<div class="small" style="margin-top:12px">おつかれさまでした。</div><div class="at-row"><button class="btn s" data-k="contact">連絡する</button>${member ? '<button class="btn s" data-k="mendan">面談の時間</button>' : '<span></span>'}</div>`;
   }
+  if (member && (t.state === 'in' || t.state === 'away')) html += `<button class="btn s wide" data-k="mendan" style="margin-top:10px;min-height:46px">面談の時間を記録する</button>`;
   if (qrToken()) html += `<div class="small" style="margin-top:12px;color:var(--g1);font-weight:700">✓ 事業所のQRコードを確認しました</div>`;
   else if (canScan() && t.state !== 'out') html += `<button class="btn s wide" id="atScan" style="margin-top:10px">QRコードを読み取って打刻する</button>`;
   html += `</div>`;
   if (!j.office) html += `<div class="small" style="margin:4px 2px 10px">位置も一緒に記録します（事業所の位置は未設定）。</div>`;
+  html += `<div class="small" style="margin:4px 2px 10px">時刻は15分単位で記録します（出勤は切り上げ、退勤は切り捨て）。</div>`;
+  if (j.book) html += `<a class="list-item" href="#/book/${encodeURIComponent(j.name)}" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">自分の出勤簿を見る</div><div class="m">今月の出勤・退勤・送迎</div></div>${ICON.chev}</a>`;
   if ((t.logs || []).length) html += `<div class="sec-title">今日の記録</div><div class="box">${t.logs.map(l => `<div style="display:flex;gap:12px;padding:4px 0"><span class="n" style="font-variant-numeric:tabular-nums;color:var(--sub)">${esc(l.time)}</span><span>${esc(l.log)}</span></div>`).join('')}</div>`;
   if ((j.recent || []).length) html += `<div class="sec-title">これまで</div><div class="box">${j.recent.map(r => {
     const s2 = AT_STATE[r.state] || AT_STATE.none;
@@ -1498,32 +1512,45 @@ function drawAttend(j){
   }).join('')}</div>`;
   $('view').innerHTML = html;
   $('view').querySelectorAll('[data-pk]').forEach(b => b.onclick = () => { atPickup = b.dataset.pk; $('view').querySelectorAll('[data-pk]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
-  $('view').querySelectorAll('[data-k]').forEach(b => b.onclick = () => b.dataset.k === 'contact' ? openAttendContact() : doPunch(b.dataset.k));
+  $('view').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    if (k === 'contact') return openAttendContact(t.state === 'in' || t.state === 'away');
+    if (k === 'mendan') return openMendan();
+    if (k === 'out' && member) return confirmSheet('退勤', '今日の出勤を、実績として記録します。よろしいですか？', 'はい、記録する', () => { closeSheet(); doPunch('out'); });
+    doPunch(k);
+  });
   if ($('atScan')) $('atScan').onclick = scanOfficeQr;
 }
 
-async function doPunch(kind, reason){
+function openMendan(){
+  openSheet('面談の時間', `<p class="small">今日の面談の時間を選んでください。出勤簿の「面談」に入り、休憩は「1時間−面談」になります。</p><div class="chips">${[0.25, 0.5, 0.75, 1].map(h => `<button class="chip" data-mh="${h}" style="flex:1;text-align:center">${h}時間</button>`).join('')}</div>`,
+    '<button class="btn s wide" id="mhNo">やめる</button>');
+  $('mhNo').onclick = closeSheet;
+  $('bsBody').querySelectorAll('[data-mh]').forEach(b => b.onclick = () => { closeSheet(); doPunch('mendan', '', Number(b.dataset.mh)); });
+}
+async function doPunch(kind, reason, hours){
   const btns = $('view').querySelectorAll('[data-k]'); btns.forEach(b => b.disabled = true);
-  const label = { in:'出勤', tele:'テレワーク開始', out:'退勤', away:'離席', back:'着席', late:'遅延の連絡', absent:'欠席の連絡' }[kind];
+  const label = { in:'出勤', tele:'テレワーク開始', out:'退勤', away:'離席', back:'着席', late:'遅延の連絡', absent:'欠席の連絡', early:'早退の連絡', mendan:'面談の時間' }[kind];
   toast(label + 'を記録しています…');
   try {
-    const pos = (kind === 'late' || kind === 'absent' || kind === 'tele') ? null : await getPos();
-    const qr = (kind === 'late' || kind === 'absent') ? '' : qrToken();
-    const j = await api({ app:'attendPunch', punch: JSON.stringify({ kind, pickup: atPickup, reason: reason || '', qr, ...(pos || {}) }) });
+    const noPos = ['late', 'absent', 'early', 'tele', 'mendan'].includes(kind);
+    const pos = noPos ? null : await getPos();
+    const qr = noPos ? '' : qrToken();
+    const j = await api({ app:'attendPunch', punch: JSON.stringify({ kind, pickup: atPickup, reason: reason || '', hours: hours || '', qr, ...(pos || {}) }) });
     LS.set(atKey(), j);
     if (location.hash.startsWith('#/attend')) drawAttend(j);
     const pj = j.punched || {};
-    toast(label + 'しました' + (/^QR確認/.test(pj.judge || '') ? '（QR確認済み）' : pj.judge === '事業所の外' ? '（事業所の外からの打刻として記録）' : pj.judge === '位置なし' && !['late','absent','tele'].includes(kind) ? '（位置は取れませんでした）' : ''));
+    toast((pj.message || label + 'しました') + (/^QR確認/.test(pj.judge || '') ? '（QR確認済み）' : pj.judge === '事業所の外' ? '（事業所の外からの打刻として記録）' : pj.judge === '位置なし' && !noPos ? '（位置は取れませんでした）' : ''), 3500);
   } catch (e) { toast(e.message); btns.forEach(b => b.disabled = false); }
 }
 
-function openAttendContact(){
-  let kind = 'late', reason = '';
-  const draw = () => `<div class="chips" style="margin-bottom:12px">${[['late','遅れる'],['absent','休む']].map(([k, l]) =>
+function openAttendContact(working){
+  let kind = working ? 'early' : 'late', reason = '';
+  const draw = () => `<div class="chips" style="margin-bottom:12px">${(working ? [['early','早退する']] : [['late','遅れる'],['absent','休む']]).map(([k, l]) =>
       `<button class="chip" data-ck="${k}" aria-pressed="${k === kind}" style="--gc:var(--warn);flex:1;text-align:center">${l}</button>`).join('')}</div>
     <div class="label" style="margin-bottom:6px">理由</div><div class="chips">${AT_REASONS[kind].map(r => `<button class="chip mini" data-rs="${esc(r)}" aria-pressed="${r === reason}" style="--gc:var(--warn)">${esc(r)}</button>`).join('')}</div>
     <input class="in" id="rsOther" placeholder="その他の理由（任意）" style="margin-top:10px"><p class="small">管理者のLINEにも知らせます。</p>`;
-  openSheet('遅れる・休むの連絡', draw(), `<button class="btn s" id="ctCancel">やめる</button><button class="btn p" id="ctOk" style="--gc:var(--warn)">連絡する</button>`);
+  openSheet(working ? '早退の連絡' : '遅れる・休むの連絡', draw(), `<button class="btn s" id="ctCancel">やめる</button><button class="btn p" id="ctOk" style="--gc:var(--warn)">連絡する</button>`);
   const bind = () => {
     $('bsBody').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => { kind = b.dataset.ck; reason = ''; $('bsBody').innerHTML = draw(); bind(); });
     $('bsBody').querySelectorAll('[data-rs]').forEach(b => b.onclick = () => { reason = b.dataset.rs; $('bsBody').querySelectorAll('[data-rs]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
@@ -1988,6 +2015,70 @@ function applyVoice(j){
     ${j.transcript ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">文字起こしを見る</summary><div class="small" style="white-space:pre-wrap;margin-top:6px;max-height:320px;overflow:auto">${esc(j.transcript)}</div></details>` : ''}</div>`;
 }
 
+
+/* ===== 出勤簿（LINE出退勤ボットの「氏名出勤簿」シート） ===== */
+async function showBooks(){
+  setTop({ title:'出勤簿', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">この画面は管理者だけが使えます。</div>'; return; }
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const j = await api({ app:'books' });
+    if (token !== viewToken) return;
+    const grp = t => j.books.filter(b => b.type === t);
+    const sec = (t, list) => list.length ? `<div class="sec-title">${t}（${list.length}人）</div><div class="sheet" style="border-radius:var(--r-m)">${list.map(b =>
+      `<a class="row" href="#/book/${encodeURIComponent(b.name)}" style="color:inherit;text-decoration:none"><span class="name">${esc(b.name)}</span>${ICON.chev}</a>`).join('')}</div>` : '';
+    $('view').innerHTML = `<div style="padding-top:6px">${sec('利用者', grp('利用者')) + sec('スタッフ', grp('スタッフ')) || '<div class="empty">出勤簿はまだありません。</div>'}</div>`;
+  } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+let BOOK = null;
+async function showBook(name){
+  setTop({ title: name + 'さんの出勤簿', back:true });
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const j = await api({ app:'book', name });
+    if (token !== viewToken) return;
+    BOOK = j; drawBook();
+  } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+function drawBook(){
+  const j = BOOK;
+  const c = (r, i) => esc(r.cells[i] || '');
+  const work = j.rows.filter(r => r.cells[2] || r.cells[3]);
+  const sum = i => work.reduce((a, r) => a + (parseFloat(r.cells[i]) || 0), 0);
+  const ou = j.rows.filter(r => /〇|○/.test(r.cells[8])).length, fuku = j.rows.filter(r => /〇|○/.test(r.cells[9])).length;
+  const noOut = work.filter(r => r.cells[2] && !r.cells[3]).length;
+  let html = `<div style="padding-top:12px"><div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${work.length}</b><span>出勤日数</span></div><div style="background:var(--g2)"><b>${sum(7).toFixed(1)}</b><span>利用時間</span></div><div style="background:var(--g2)"><b>${ou}／${fuku}</b><span>送迎 往／復</span></div></div>
+    ${noOut ? `<div class="note">退勤の記録がない日が ${noOut}日 あります。</div>` : ''}
+    <div class="small" style="margin:0 2px 8px">${esc(j.title || '')}　${esc(j.month || '')}${j.admin ? '　日付を押すと直せます' : ''}</div>
+    <div class="tscroll"><table class="at-tbl bk"><thead><tr><th>日</th><th>出勤</th><th>退勤</th><th>休憩</th><th>面談</th><th>利用</th><th>送迎</th><th>印</th></tr></thead><tbody>${j.rows.map((r, i) => {
+      const we = /土|日/.test(r.cells[1]);
+      const miss = r.cells[2] && !r.cells[3];
+      return `<tr${j.admin ? ` data-br="${i}" style="cursor:pointer"` : ''} class="${we ? 'we' : ''}${miss ? ' miss' : ''}"><td class="n"><b>${c(r, 0)}</b><span class="small">${c(r, 1)}</span></td><td class="n">${c(r, 2)}</td><td class="n">${c(r, 3)}</td><td class="n">${c(r, 5)}</td><td class="n">${c(r, 6)}</td><td class="n"><b>${c(r, 7)}</b></td>
+        <td class="n">${/〇|○/.test(r.cells[8]) ? '往' : ''}${/〇|○/.test(r.cells[9]) ? '復' : ''}</td><td>${r.stamp ? '<span class="stamp">印</span>' : ''}</td></tr>${r.cells[10] || r.cells[11] ? `<tr class="${we ? 'we' : ''}"><td></td><td colspan="7" class="small" style="padding-top:0">${c(r, 10)} ${c(r, 11)}</td></tr>` : ''}`;
+    }).join('')}</tbody></table></div>
+    ${j.admin ? '<button class="btn s wide" id="bkPdf" style="margin-top:14px">PDFを作り直してドライブに保存</button>' : ''}</div>`;
+  $('view').innerHTML = html;
+  $('view').querySelectorAll('[data-br]').forEach(tr => tr.onclick = () => editBookRow(j.rows[Number(tr.dataset.br)]));
+  if ($('bkPdf')) $('bkPdf').onclick = () => runAction(() => api({ app:'bookPdf', name: j.name }), r => { if (r.url) msgSheet('PDFを保存しました', 'ドライブの出勤簿フォルダに保存しました。'); });
+}
+function editBookRow(r){
+  const tm = v => /^\d{1,2}:\d{2}/.test(v) ? v.padStart(5, '0').slice(0, 5) : '';
+  openSheet(r.cells[0] + '（' + r.cells[1] + '）を直す', `
+    <div style="display:flex;gap:8px"><div style="flex:1"><label class="small" for="be_s">出勤</label><input class="in" id="be_s" type="time" value="${tm(r.cells[2])}"></div><div style="flex:1"><label class="small" for="be_e">退勤</label><input class="in" id="be_e" type="time" value="${tm(r.cells[3])}"></div></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1"><label class="small" for="be_r">休憩（時間）</label><input class="in" id="be_r" inputmode="decimal" value="${esc(r.cells[5])}"></div><div style="flex:1"><label class="small" for="be_m">面談（時間）</label><input class="in" id="be_m" inputmode="decimal" value="${esc(r.cells[6])}"></div></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><label class="chip" style="flex:1;display:flex;gap:6px;align-items:center"><input type="checkbox" id="be_ou"${/〇|○/.test(r.cells[8]) ? ' checked' : ''}>送迎 往</label><label class="chip" style="flex:1;display:flex;gap:6px;align-items:center"><input type="checkbox" id="be_fu"${/〇|○/.test(r.cells[9]) ? ' checked' : ''}>送迎 復</label></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><div style="width:90px"><label class="small" for="be_k">欠/有</label><select class="in" id="be_k">${['', '欠', '有'].map(o => `<option${o === r.cells[10] ? ' selected' : ''}>${o}</option>`).join('')}</select></div><div style="flex:1"><label class="small" for="be_n">備考</label><input class="in" id="be_n" value="${esc(r.cells[11])}"></div></div>
+    <p class="small">勤務時間と利用時間は自動で計算し直します。直した内容は「アプリ修正ログ」に残ります。</p>`,
+    `<button class="btn s" id="beNo">やめる</button><button class="btn p" id="beOk" style="--gc:var(--brand)">保存する</button>`);
+  $('beNo').onclick = closeSheet;
+  $('beOk').onclick = () => {
+    const data = { start: $('be_s').value, end: $('be_e').value, rest: $('be_r').value.trim(), mendan: $('be_m').value.trim(), ou: $('be_ou').checked, fuku: $('be_fu').checked, mark: $('be_k').value, note: $('be_n').value.trim() };
+    runAction(() => apiPost({ app:'bookEdit', name: BOOK.name, row: r.row, data: JSON.stringify(data) }), () => showBook(BOOK.name));
+  };
+}
+
 /* ================= 業務 ================= */
 function showWork(){
   setTop({ title:'業務' });
@@ -2003,6 +2094,7 @@ function showWork(){
   if (isAdmin()) {
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jisseki" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">実績記録のチェック</div><div class="m">紙の実績記録を撮影 → 打刻・支援経過記録と照合</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/monthly" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">月別集計</div><div class="m">出勤日数・時間・送迎・有給・欠勤</div></div>${ICON.chev}</a>
