@@ -282,6 +282,11 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .dr-item small{display:block;font-size:12px;color:var(--sub)}
 .dr-item[aria-current="page"]{background:var(--soft);box-shadow:inset 4px 0 0 var(--brand);font-weight:700}
 @media (prefers-reduced-motion:reduce){.drawer,.dscrim{transition:none}}
+.tk-sec{background:var(--paper);border-radius:var(--r-m);margin-bottom:10px;overflow:hidden}
+.tk-sec>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;cursor:pointer;list-style:none}
+.tk-sec>summary::-webkit-details-marker{display:none}
+.tk-item{padding:12px 16px;border-top:1px solid var(--rule);border-left:4px solid transparent}.tk-item.ok{border-left-color:var(--g1)}.tk-item.ng{border-left-color:var(--err);background:var(--err-bg)}
+.tk-text{font-size:15px;line-height:1.6}.tk-btns{display:flex;gap:8px;margin-top:8px}.tk-btns .chip{flex:1;text-align:center;min-height:42px}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -507,6 +512,8 @@ async function demoApi(p){
     if (staff) rows.forEach(r => { const c = r.cells; r.cells = [c[0], c[1], c[2], c[3], c[2] && c[3] ? '5.00' : '', c[5], c[2] && c[3] ? '4.00' : '', '', c[11], '', '', '']; });
     return { name: p.name, layout: staff ? 'staff' : 'member', month:'2026/11/01', ym:'2026-11', title: p.name + ' 出勤簿', rows, admin: isAdmin() }; }
   if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
+  if (p.app === 'tenken') return {"items": [{"row": 9, "sec": "第１基本方針", "grp": "", "text": "（１）指定就労継続支援Ａ型事業者は、利用者の意向、適性、障害の特性その他の事情を踏まえた計画（個別支援計画）を作成し、これに基づき利用者に対して指定就労継続支援Ａ型を提供するとともに、その効果について継続的な評価を実施することその他の措置を講ずることにより利用者に対して適切かつ効果的に指定就労継続支援Ａ型を提供しているか。", "law": "平18厚令171 第3条第1項", "docs": ["運営規程", "個別支援計画", "ケース記録"], "cur": "適"}, {"row": 10, "sec": "第１基本方針", "grp": "", "text": "（２）指定就労継続支援Ａ型事業者は、利用者の意思及び人格を尊重して、常に当該利用者の立場に立った指定就労継続支援Ａ型の提供に努めているか。", "law": "平18厚令171 第3条第2項", "docs": ["運営規程", "個別支援計画", "ケース記録"], "cur": "適"}, {"row": 11, "sec": "第１基本方針", "grp": "", "text": "（３）指定就労継続支援Ａ型事業者は、利用者の人権の擁護、虐待の防止等のため、必要な体制の整備を行うとともに、その従業者に対し、研修を実施する等の措置を講じているか。", "law": "平18厚令171 第3条第3項", "docs": ["運営規程", "研修計画、研修実施記録", "虐待防止関係書類", "体制の整備をしていることが分かる書類"], "cur": "適"}, {"row": 12, "sec": "第１基本方針", "grp": "", "text": "（４）指定就労継続支援Ａ型の事業は、利用者が自立した日常生活又は社会生活を営むことができるよう、専ら障害者総合支援法施行規則（平成18年厚生労働省令第19号）（規則）第6条の10第1号に規定する者を雇用して就労の機会を提供するとともに、その知識及び能力の向上のために必要な訓練その他の便宜を適切かつ効果的に行っているか。", "law": "平18厚令171第185条 平18厚令19第6条の10第1号", "docs": ["運営規程", "個別支援計画", "ケース記録"], "cur": "適"}, {"row": 15, "sec": "第２ 人員に関する基準", "grp": "（１）職業指導員及び生活支援員", "text": "① 職業指導員及び生活支援員の総数は、指定就労継続支援Ａ型事業所ごとに、常勤換算方法で、利用者の数を10で除した数以上となっているか。", "law": "平18厚令171 第186条第1項第1号イ", "docs": ["勤務実績表", "出勤簿（タイムカード）", "従業員の資格証", "勤務体制一覧表", "利用者数（平均利用人数）が分かる書類（実績表等）"], "cur": "適"}, {"row": 16, "sec": "第２ 人員に関する基準", "grp": "（１）職業指導員及び生活支援員", "text": "② 職業指導員の数は、指定就労継続支援Ａ型事業所ごとに、1以上となっているか。", "law": "平18厚令171 第186条第1項第1号ロ", "docs": ["勤務実績表", "出勤簿（タイムカード）", "従業員の資格証", "勤務体制一覧表", "利用者数（平均利用人数）が分かる書類（実績表等）"], "cur": "適"}, {"row": 37, "sec": "第４ 運営に関する基準", "grp": "１ 内容及び手続きの説明及び同意", "text": "（１）指定就労継続支援Ａ型事業者は、支給決定障害者等が指定就労継続支援Ａ型の利用の申込みを行ったときは、当該利用申込者に係る障害の特性に応じた適切な配慮をしつつ、当該利用申込者に対し、運営規程の概要、従業者の勤務体制、その他の利用申込者のサービスの選択に資すると認められる重要事項を記した文書を交付して説明を行い、当該指定就労継続支援Ａ型の提供の開始について当該利用申込者の同意を得ているか。", "law": "平18厚令171 第197条準用（第9条第1項）", "docs": ["重要事項説明書", "利用契約書", "その他利用者に交付した書面"], "cur": "適"}, {"row": 38, "sec": "第４ 運営に関する基準", "grp": "１ 内容及び手続きの説明及び同意", "text": "（２）指定就労継続支援Ａ型事業者は、社会福祉法（昭和26年法律第45号）第77条の規定に基づき書面の交付を行う場合は、利用者の障害の特性に応じた適切な配慮をしているか。", "law": "平18厚令171 第197条準用（第9条第2項）", "docs": ["重要事項説明書", "利用契約書"], "cur": "適"}, {"row": 39, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（１）指定就労継続支援Ａ型事業者は、指定就労継続支援Ａ型を提供するときは、当該指定就労継続支援Ａ型の内容、契約支給量、その他の必要な事項（受給者証記載事項）を支給決定障害者等の受給者証に記載しているか。", "law": "平18厚令171 第197条準用（第10条第1項)", "docs": ["受給者証の写し"], "cur": "適"}, {"row": 40, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（２）契約支給量の総量は、当該支給決定障害者等の支給量を超えていないか。", "law": "平18厚令171 第197条準用（第10条第2項)", "docs": ["受給者証の写し", "契約内容報告書"], "cur": "適"}, {"row": 41, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（３）指定就労継続支援Ａ型事業者は、指定就労継続支援Ａ型の利用に係る契約をしたときは、受給者証記載事項その他の必要な事項を市町村に対し遅滞なく報告しているか。", "law": "平18厚令171 第197条準用（第10条第3項)", "docs": ["契約内容報告書"], "cur": "適"}, {"row": 42, "sec": "第４ 運営に関する基準", "grp": "２ 契約支給量の報告等", "text": "（４）指定就労継続支援Ａ型事業者は、受給者証記載事項に変更があった場合に、(1)から(3)に準じて取り扱っているか。", "law": "平18厚令171 第197条準用（第10条第4項)", "docs": ["受給者証の写し", "契約内容報告書"], "cur": "適"}], "meta": {"office": "唐泊ストアー", "checker": "石橋 強", "date": "2026-04-05 00:00:00"}, "last": null, "offices": ["ファームパーク伊都国即売会", "唐泊ストアー"]};
+  if (p.app === 'tenkenSave') { await new Promise(r => setTimeout(r, 700)); return { message:'保存しました（デモ）', pdf:null }; }
   if (p.app === 'jigaiSheet') return { ym:p.ym, company:'㈱銀の華', hourly:992, totalHours:7.5, totalYen:14880, rows:[{ day:22, wd:'月', start:'12:00', end:'15:00', rest:0, hours:3, people:2, per:2976, total:5952, names:'C.山本,D.市丸' }, { day:26, wd:'金', start:'12:00', end:'14:30', rest:0, hours:2.5, people:2, per:2480, total:4960, names:'C.山本,D.市丸' }, { day:29, wd:'月', start:'12:00', end:'14:00', rest:0, hours:2, people:2, per:1984, total:3968, names:'C.山本,D.市丸' }] };
   if (p.app === 'jigaiInfo') return { sheetYm:'2026-02', hourly:992, current:'2026-02', months:[{ ym:'2026-10', count:12 }, { ym:'2026-09', count:14 }, { ym:'2026-02', count:9 }] };
   if (p.app === 'jigaiBuild') { await new Promise(r => setTimeout(r, 600)); return { message: p.ym.replace('-', '年') + '月の報告書を作りました' }; }
@@ -608,6 +615,7 @@ function route(){
   if (page === 'book') return showBook(arg);
   if (page === 'admin' && arg === 'jisseki') return showJisseki();
   if (page === 'admin' && arg === 'jigai') return showJigai();
+  if (page === 'admin' && arg === 'tenken') return showTenken();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
@@ -2153,7 +2161,7 @@ function drawerItems(){
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', '避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
@@ -2221,6 +2229,84 @@ async function showJigai(){
   } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 
+
+/* ===== 運営指導 自己点検表 ===== */
+let TK = null, TK_FILTER = 'all';
+const tkKey = () => 'fb_tenken_draft' + (isDemo() ? '_demo' : '');
+async function showTenken(){
+  setTop({ title:'運営指導 自己点検表', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">この画面は管理者だけが使えます。</div>'; return; }
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">点検項目を読み込んでいます…</div>';
+  try {
+    const j = await api({ app:'tenken' });
+    if (token !== viewToken) return;
+    const draft = LS.get(tkKey(), null);
+    TK = { def: j, d: draft || { office: (j.last && j.last.office) || j.meta.office || '', checker: (ME && ME.name) || j.meta.checker || '', date: ymd(), results: {} } };
+    if (!draft && j.last) TK.fromLast = j.last.at;
+    if (!draft && j.last) TK.d.results = JSON.parse(JSON.stringify(j.last.results || {}));
+    drawTenken();
+  } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+function tkSave(){ LS.set(tkKey(), TK.d); }
+function drawTenken(){
+  const { def, d } = TK;
+  const items = def.items;
+  const R = row => d.results[row] = d.results[row] || { v:'', docs:[], memo:'' };
+  const done = items.filter(it => (d.results[it.row] || {}).v).length;
+  const ng = items.filter(it => (d.results[it.row] || {}).v === '否');
+  const secs = [...new Set(items.map(it => it.sec))];
+  const show = it => TK_FILTER === 'all' || (TK_FILTER === 'todo' && !(d.results[it.row] || {}).v) || (TK_FILTER === 'ng' && (d.results[it.row] || {}).v === '否');
+  let html = `<div style="padding-top:12px;--gc:var(--g4)">
+    ${TK.fromLast ? `<div class="note">前回（${esc(TK.fromLast)}）の結果を入れてあります。変わったところだけ直してください。</div>` : ''}
+    <div class="box"><div class="field" style="padding:0"><label for="tkOffice">事業所名</label><input class="in" id="tkOffice" list="tkOff" value="${esc(d.office)}"><datalist id="tkOff">${def.offices.map(o => `<option value="${esc(o)}">`).join('')}</datalist></div>
+      <div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1"><label class="small" for="tkChecker">点検者</label><input class="in" id="tkChecker" value="${esc(d.checker)}"></div><div style="flex:1"><label class="small" for="tkDate">点検年月日</label><input class="in" id="tkDate" type="date" value="${esc(d.date)}"></div></div></div>
+    <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${done}/${items.length}</b><span>点検済み</span></div><div style="background:var(--g1)"><b>${items.filter(it => (d.results[it.row] || {}).v === '適').length}</b><span>適</span></div><div style="background:${ng.length ? 'var(--err)' : 'var(--g2)'}"><b>${ng.length}</b><span>否</span></div></div>
+    <div class="tabs mini" style="margin:6px 0 10px">${[['all','すべて'],['todo','未点検'],['ng','否だけ']].map(([k, l]) => `<button class="tab" data-tf="${k}" aria-selected="${k === TK_FILTER}">${l}</button>`).join('')}</div>
+    <div class="chips" style="margin-bottom:6px">${items.length > 20 ? '<button class="chip mini" id="tkAllOk">未点検をすべて「適」にする</button>' : ''}<button class="chip mini" id="tkClear">点検をやり直す（空にする）</button></div>`;
+  secs.forEach((sc, si) => {
+    const list = items.filter(it => it.sec === sc && show(it));
+    if (!list.length) return;
+    const all = items.filter(it => it.sec === sc), dn = all.filter(it => (d.results[it.row] || {}).v).length;
+    html += `<details class="tk-sec"${TK_FILTER !== 'all' || si === 0 ? ' open' : ''}><summary><b>${esc(sc)}</b><span class="small">${dn}/${all.length}</span></summary>${list.map(it => {
+      const r = d.results[it.row] || { v:'', docs:[], memo:'' };
+      return `<div class="tk-item${r.v === '否' ? ' ng' : r.v ? ' ok' : ''}" id="tk${it.row}">${it.grp ? `<div class="small" style="font-weight:700">${esc(it.grp)}</div>` : ''}
+        <div class="tk-text">${esc(it.text)}</div>${it.law ? `<div class="small" style="margin-top:2px">${esc(it.law)}</div>` : ''}
+        <div class="tk-btns">${['適','否','－'].map(o => `<button class="chip" data-tv="${it.row}" data-o="${o}" aria-pressed="${r.v === o}" style="--gc:${o === '適' ? 'var(--g1)' : o === '否' ? 'var(--err)' : 'var(--sub)'}">${o === '－' ? '該当なし' : o}</button>`).join('')}</div>
+        <div class="small" style="margin-top:6px">関係書類（そろっているものを押す）</div><div class="chips">${it.docs.map((dc, k) => `<button class="chip mini" data-td="${it.row}" data-k="${k}" aria-pressed="${(r.docs || []).includes(dc)}" style="--gc:var(--g2)">${esc(dc)}</button>`).join('')}</div>
+        ${r.v === '否' ? `<input class="in" data-tm="${it.row}" placeholder="否の理由・改善すること（メモ）" value="${esc(r.memo || '')}" style="margin-top:8px">` : ''}</div>`;
+    }).join('')}</details>`;
+  });
+  html += `<div class="bar"><span class="saved">入力は自動で下書き保存されます</span><button class="btn s" id="tkSaveOnly" style="min-height:48px">保存</button><button class="btn p" id="tkPdf" style="--gc:var(--brand)">保存してPDF</button></div></div>`;
+  $('view').innerHTML = html;
+  const v = $('view');
+  ['tkOffice','tkChecker','tkDate'].forEach(id => $(id).oninput = () => { d.office = $('tkOffice').value.trim(); d.checker = $('tkChecker').value.trim(); d.date = $('tkDate').value; tkSave(); });
+  v.querySelectorAll('[data-tf]').forEach(b => b.onclick = () => { TK_FILTER = b.dataset.tf; drawTenken(); });
+  v.querySelectorAll('[data-tv]').forEach(b => b.onclick = () => {
+    const r = R(b.dataset.tv); r.v = r.v === b.dataset.o ? '' : b.dataset.o;
+    if (r.v === '適' && !(r.docs || []).length) { const it = items.find(x => String(x.row) === b.dataset.tv); r.docs = it.docs.slice(); }
+    tkSave(); const y = window.scrollY; drawTenken(); window.scrollTo(0, y);
+  });
+  v.querySelectorAll('[data-td]').forEach(b => b.onclick = () => {
+    const it = items.find(x => String(x.row) === b.dataset.td); const r = R(it.row); const dc = it.docs[Number(b.dataset.k)];
+    r.docs = (r.docs || []).includes(dc) ? r.docs.filter(x => x !== dc) : (r.docs || []).concat(dc);
+    b.setAttribute('aria-pressed', r.docs.includes(dc)); tkSave();
+  });
+  v.querySelectorAll('[data-tm]').forEach(i => i.oninput = () => { R(i.dataset.tm).memo = i.value; tkSave(); });
+  if ($('tkAllOk')) $('tkAllOk').onclick = () => confirmSheet('未点検をすべて「適」にする', 'まだ選んでいない項目を、すべて「適」にします（関係書類もそろっている扱いにします）。あとで個別に直せます。', '「適」にする', () => {
+    items.forEach(it => { const r = R(it.row); if (!r.v) { r.v = '適'; r.docs = it.docs.slice(); } }); tkSave(); closeSheet(); drawTenken();
+  });
+  $('tkClear').onclick = () => confirmSheet('点検をやり直す', 'すべての項目の結果を空にします。', '空にする', () => { d.results = {}; TK.fromLast = ''; tkSave(); closeSheet(); drawTenken(); }, true);
+  const save = pdf => {
+    if (!d.office || !d.checker || !d.date) { toast('事業所名・点検者・点検年月日を入れてください'); return; }
+    const left = items.length - items.filter(it => (d.results[it.row] || {}).v).length;
+    const go = () => runAction(() => apiPost({ app:'tenkenSave', pdf: pdf ? '1' : '', data: JSON.stringify(d) }), r => { if (r.pdf) msgSheet('PDFを保存しました', r.pdf.name || ''); LS.del(tkKey()); TK.fromLast = ''; });
+    if (left) confirmSheet('未点検の項目があります', `まだ ${left}項目 が未点検です（空欄のままPDFに出ます）。このまま保存しますか？`, '保存する', () => { closeSheet(); go(); }); else go();
+  };
+  $('tkSaveOnly').onclick = () => save(false);
+  $('tkPdf').onclick = () => save(true);
+}
+
 /* ================= 業務 ================= */
 function showWork(){
   setTop({ title:'業務' });
@@ -2235,6 +2321,7 @@ function showWork(){
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/tenken" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">運営指導 自己点検表</div><div class="m">項目ごとに 適・否 と関係書類を点検 → PDF</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労（報告書・タイムシート）</div><div class="m">実施報告書と請求用タイムシートを月ごとに</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jisseki" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">実績記録のチェック</div><div class="m">紙の実績記録を撮影 → 打刻・支援経過記録と照合</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
