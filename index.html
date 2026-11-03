@@ -262,6 +262,13 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .gt-bar{position:absolute;top:9px;height:26px;border:0;border-radius:6px;color:var(--on);font-size:11px;font-weight:700;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:1;min-width:6px;text-align:left}
 .gt-now{background:var(--err)}.gt-soon{background:var(--warn)}.gt-done{background:#9aa5a0}
 .gt-legend{display:flex;gap:14px;font-size:12px;color:var(--sub);margin:8px 2px}.gt-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.vc-start{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:12px 14px;border:1px dashed var(--gc,var(--brand));border-radius:var(--r-m);background:var(--paper);color:inherit;text-align:left}
+.vc-start .vc-ic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--gc,var(--brand));color:var(--on)}.vc-start .vc-ic svg{width:22px;height:22px}
+.vc-start b{display:block;font-size:16px}.vc-start small{color:var(--sub);font-size:13px}
+.vc-box{text-align:center;padding:6px 0}.vc-time{font-size:44px;font-weight:700;font-variant-numeric:tabular-nums}
+.vc-rec{width:84px;height:84px;border-radius:50%;border:4px solid var(--err);background:var(--paper);display:grid;place-items:center;margin:14px auto 4px}
+.vc-rec i{width:56px;height:56px;border-radius:50%;background:var(--err);transition:all .2s}.vc-rec.on i{width:30px;height:30px;border-radius:6px}
+.vc-res{margin-top:10px;border-left:4px solid var(--g1)}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
@@ -396,6 +403,10 @@ const DEMO_VIEW = {
     { date:'2026/10/20', title:'大原', staff:'石橋', fields:[{ k:'主な相談内容', v:'仕事の段取りについて相談' }, { k:'体調・様子', v:'落ち着いていた' }, { k:'今後の対応方針', v:'翌月にもう一度面談' }, { k:'本部対応の要否', v:'該当なし' }] }] },
   news:{ kind:'feed', items:[{ date:'2026/03/26 10:30', title:'令和８年度福祉タクシー料金助成事業について', url:'https://www.city.fukuoka.lg.jp/' }] }
 };
+const DEMO_SOUDAN = [
+  { label:'対象者', type:'text', options:DEMO_NAMES, strict:true }, { label:'担当者', type:'text', options:['石橋 強','大原 里奈','平山 奈々'], strict:true },
+  { label:'日付', type:'date', required:true }, { label:'時間', type:'time' }, { label:'相談内容', type:'textarea', required:true }
+].map((f, i) => ({ index:i, options:[], hidden:false, auto:false, strict:false, multi:false, required:false, ...f }));
 const DEMO_ALC = [
   { label:'確認日時', type:'datetime', required:true },
   { label:'運転者', type:'text', options:['石橋','大鶴','吉澤','平山'], strict:true },
@@ -467,6 +478,8 @@ async function demoApi(p){
     { name:'田中 尚樹', kubun:'利用者', state:'notice', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:['欠席（理由：体調不良）'], flags:[], logs:[{ time:'07:45', log:'【連絡】欠席（理由：体調不良）' }] }] };
   if (p.app === 'jissekiNames') return { names:['臼木 楓','峰 恭子','松川 忠義','田中 尚樹'] };
   if (p.app === 'jissekiScan' || p.app === 'jissekiCheck') return demoJisseki(p);
+  if (p.app === 'voiceDraft') { await new Promise(r => setTimeout(r, 800)); return { main:'相談内容', fields:{ '対象者':'峰 恭子', '相談内容':'１．相談内容\n\n作業中の休憩の取り方について相談あり。\n本人より「午後になると集中が続かない」との申し出があった。\n\n２．事業所対応\n\n午後の作業を30分ごとに区切り、5分の小休憩を入れる方法を提案した。\n\n３．今後の対応・所見\n\n1週間試して、次回の面談で様子を確認する。職員間で休憩の声かけを共有する。' },
+    transcript:'職員：今日はどうしました？\n本人：午後になると集中が続かなくて…\n職員：じゃあ30分ごとに5分休んでみましょうか。', points:['対象者の名前を確認してください'] }; }
   if (p.app === 'quarantine') { const t = ymd(), dd = n => { const x = new Date(t + 'T00:00:00+09:00'); x.setDate(x.getDate() + n); return ymd(x); };
     return { today:t, items:[{ row:6, name:'松川 忠義', kind:'メンバー', start:dd(-2), end:dd(3), date:dd(-2) }, { row:5, name:'大原 里奈', kind:'スタッフ', start:dd(-1), end:dd(1), date:dd(-1) },
       { row:4, name:'峰 恭子', kind:'メンバー', start:dd(2), end:dd(6), date:dd(0) }, { row:3, name:'石橋 強', kind:'スタッフ', start:dd(-12), end:dd(-7), date:dd(-12) }, { row:2, name:'佐藤 正', kind:'メンバー', start:dd(-30), end:dd(-25), date:dd(-30) }] }; }
@@ -486,7 +499,7 @@ async function demoApi(p){
   if (p.app === 'monthly') return { month:p.month, exists:true, head:['氏名','出勤日数','出勤時間','送迎回数','有給回数','欠勤回数','合計日数','合計出勤時間'], rows:[['峰 恭子','18','98.5','34','0','1','18','98.5','利用者',''],['松川 忠義','15','80.2','15','0','2','15','80.2','利用者','10/14 退勤なし'],['石橋 強','20','152.0','0','1','0','20','152.0','正社員','']], total:{ users:'33', hours:'178.7' }, message:'（デモ）集計しました' };
   if (['safetySend','safetyResend','safetyNotify','safetyReport','eventAnswer','eventSend','eventCreate','broadcast','meetingCreate','meetingCancel'].includes(p.app)) { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）完了しました' }; }
   if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
-  if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : DEMO_FIELDS };
+  if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : p.sheet === '相談記録表' ? DEMO_SOUDAN : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
   if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[], note: p.sheet === '検温管理' ? '36.8℃：発熱無し 🟢' : '' }; }
 }
@@ -725,6 +738,7 @@ function renderForm(sheet, fields, keepValues, edit){
     if (!priv || isAdmin()) html += `<a class="list-item" href="#/records/${encodeURIComponent(sheet)}" style="color:inherit;text-decoration:none;margin-top:12px"><div class="main"><div class="t" style="font-weight:400">これまでの記録を見る${priv ? '<span class="admin-mark">管理者</span>' : ''}</div><div class="m">さがす・修正する</div></div>${ICON.chev}</a>`;
     else html += `<div class="note">この帳票の過去の記録は、管理者だけが見られます。</div>`;
     if (draft && draft.at) html += `<div class="note">${esc(draft.at)} の下書きから続けています。</div>`;
+    if (VOICE_FORMS[sheet] && !isMember()) html += `<button type="button" class="vc-start" id="vcOpen"><span class="vc-ic">${ICON_MIC}</span><span><b>面談を録音して下書きを作る</b><small>録音から「${esc(VOICE_FORMS[sheet])}」などを自動で書きます</small></span></button><div id="vcResult"></div>`;
   }
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
   vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); });
@@ -733,6 +747,7 @@ function renderForm(sheet, fields, keepValues, edit){
   $('view').innerHTML = html;
   bindForm();
   updateProgress();
+  if ($('vcOpen')) $('vcOpen').onclick = () => openVoice(sheet);
 }
 
 function fieldHtml(f, raw){
@@ -1844,6 +1859,133 @@ function drawQuarantine(j){
       `<button class="btn s" id="qtClose">閉じる</button><a class="btn p" href="#/record/${encodeURIComponent('待機期間管理')}/${x.row}" style="display:grid;place-items:center;text-decoration:none;--gc:var(--brand)">記録を開く・直す</a>`);
     $('qtClose').onclick = closeSheet;
   });
+}
+
+
+/* ===== 面談の録音から下書き ===== */
+const VOICE_FORMS = { '相談記録表':'相談内容' };
+const ICON_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></svg>';
+let VC = null;
+function loadScript(src, test){
+  if (test()) return Promise.resolve();
+  return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.onload = res; sc.onerror = () => rej(new Error('部品を読み込めませんでした。電波の良い場所でお試しください')); document.head.appendChild(sc); });
+}
+/* どんな録音でも、16kHz・モノラル・32kbps の mp3 にそろえる（小さく、Geminiが読める形） */
+async function toMp3(blob, onProg){
+  await loadScript('https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js', () => window.lamejs && lamejs.Mp3Encoder);
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ac = new AC({ sampleRate: 16000 });
+  const ab = await new Response(blob).arrayBuffer();
+  const buf = await new Promise((res, rej) => ac.decodeAudioData(ab, res, () => rej(new Error('この音声ファイルは読み込めませんでした（別の形式で保存してお試しください）'))));
+  try { ac.close(); } catch (e) {}
+  let pcm = buf.getChannelData(0);
+  if (buf.numberOfChannels > 1) { const r = buf.getChannelData(1); const m = new Float32Array(pcm.length); for (let i = 0; i < pcm.length; i++) m[i] = (pcm[i] + r[i]) / 2; pcm = m; }
+  let rate = buf.sampleRate;
+  if (rate !== 16000) { // 念のため間引き
+    const k = rate / 16000, out = new Float32Array(Math.floor(pcm.length / k));
+    for (let i = 0; i < out.length; i++) out[i] = pcm[Math.floor(i * k)];
+    pcm = out; rate = 16000;
+  }
+  const enc = new lamejs.Mp3Encoder(1, 16000, 32);
+  const chunks = [], block = 1152 * 20, s16 = new Int16Array(block);
+  for (let i = 0; i < pcm.length; i += block) {
+    const n = Math.min(block, pcm.length - i);
+    for (let j = 0; j < n; j++) { const v = Math.max(-1, Math.min(1, pcm[i + j])); s16[j] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+    const mp3 = enc.encodeBuffer(n === block ? s16 : s16.subarray(0, n));
+    if (mp3.length) chunks.push(mp3);
+    if (onProg && i % (block * 50) === 0) { onProg(i / pcm.length); await new Promise(r => setTimeout(r)); }
+  }
+  const end = enc.flush(); if (end.length) chunks.push(end);
+  return { blob: new Blob(chunks, { type:'audio/mpeg' }), sec: pcm.length / 16000 };
+}
+const blobToB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(new Error('音声を読み込めませんでした')); fr.readAsDataURL(b); });
+const fmtSec = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+
+function openVoice(sheet){
+  const canRec = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  openSheet('面談を録音して下書きを作る', `<div class="vc-box">
+      <div class="vc-time" id="vcTime">0:00</div><div class="small" id="vcMsg">${canRec ? '「録音を始める」を押して、面談を始めてください。最長60分です。' : 'この画面では録音できません。スマホの録音アプリで録った音声ファイルを選んでください。'}</div>
+      ${canRec ? `<button class="vc-rec" id="vcRec" aria-label="録音を始める"><i></i></button>` : ''}
+    </div>
+    <label class="btn s wide" style="display:grid;place-items:center;cursor:pointer;margin-top:10px">音声ファイルを選ぶ<input type="file" id="vcFile" accept="audio/*,.m4a,.mp3,.wav,.aac,.ogg,.webm" hidden></label>
+    <p class="small">録音は文字起こしだけに使い、音声そのものは保存しません。面談の前に、録音することを本人に伝えてください。</p>`,
+    `<button class="btn s wide" id="vcCancel">やめる</button>`);
+  VC = { sheet, rec:null, chunks:[], t0:0, timer:null, stream:null };
+  $('vcCancel').onclick = () => { stopVoice(true); closeSheet(); };
+  $('vcFile').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) { stopVoice(true); processVoice(f); } };
+  if ($('vcRec')) $('vcRec').onclick = () => VC.rec ? finishVoice() : startVoice();
+}
+async function startVoice(){
+  try {
+    VC.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true, noiseSuppression:true, channelCount:1 } });
+  } catch (e) { $('vcMsg').textContent = 'マイクが使えません。設定でマイクを許可するか、音声ファイルを選んでください。'; return; }
+  const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  VC.rec = new MediaRecorder(VC.stream, type ? { mimeType: type, audioBitsPerSecond: 32000 } : undefined);
+  VC.chunks = [];
+  VC.rec.ondataavailable = e => { if (e.data && e.data.size) VC.chunks.push(e.data); };
+  VC.rec.start(1000);
+  VC.t0 = Date.now();
+  $('vcRec').classList.add('on'); $('vcRec').setAttribute('aria-label', '録音を止めて下書きを作る');
+  $('vcMsg').innerHTML = '<b style="color:var(--err)">● 録音中</b>　終わったら、もう一度押してください。画面は閉じないでください。';
+  $('vcCancel').textContent = '録音を捨てて閉じる';
+  VC.timer = setInterval(() => { const s = (Date.now() - VC.t0) / 1000; if ($('vcTime')) $('vcTime').textContent = fmtSec(s); if (s > 3600) finishVoice(); }, 500);
+}
+function stopVoice(discard){
+  if (!VC) return;
+  clearInterval(VC.timer);
+  if (VC.rec && VC.rec.state !== 'inactive') { if (discard) VC.rec.ondataavailable = null; try { VC.rec.stop(); } catch (e) {} }
+  if (VC.stream) VC.stream.getTracks().forEach(t => t.stop());
+  VC.rec = null;
+}
+function finishVoice(){
+  const rec = VC.rec; if (!rec) return;
+  rec.onstop = () => { const b = new Blob(VC.chunks, { type: rec.mimeType || 'audio/webm' }); VC.chunks = []; processVoice(b); };
+  stopVoice(false);
+}
+async function processVoice(blob){
+  const msg = t => { const m = $('vcMsg'); if (m) m.innerHTML = t; };
+  if ($('vcRec')) $('vcRec').hidden = true;
+  if ($('bsFoot')) $('bsFoot').innerHTML = '';
+  msg('<div class="spin" style="width:28px;height:28px;border-width:3px;margin:8px auto"></div>音声を小さくしています…');
+  try {
+    let send = blob, mime = blob.type;
+    if (!/mpeg|mp3|wav|flac/.test(mime) || blob.size > 10e6) {
+      const r = await toMp3(blob, p => msg(`<div class="spin" style="width:28px;height:28px;border-width:3px;margin:8px auto"></div>音声を小さくしています… ${Math.round(p * 100)}%`));
+      send = r.blob; mime = 'audio/mpeg';
+      if ($('vcTime')) $('vcTime').textContent = fmtSec(r.sec);
+      if (r.sec > 3700) throw new Error('録音が長すぎます（60分まで）');
+    }
+    msg('<div class="spin" style="width:28px;height:28px;border-width:3px;margin:8px auto"></div>文字起こしと下書きを作っています…<br>録音の長さによって1〜3分かかります。画面を閉じないでください。');
+    const j = await apiPost({ app:'voiceDraft', sheet: VC.sheet, file: JSON.stringify({ b64: await blobToB64(send), mime }) });
+    applyVoice(j);
+    closeSheet();
+    toast('下書きを入れました。内容を確認してください', 3500);
+  } catch (e) {
+    msg(`<span style="color:var(--err)">${esc(e.message)}</span>`);
+    if ($('bsFoot')) { $('bsFoot').innerHTML = '<button class="btn s wide" id="vcClose">閉じる</button>'; $('vcClose').onclick = closeSheet; }
+  }
+}
+function applyVoice(j){
+  const filled = [];
+  F.fields.filter(f => !f.hidden).forEach(f => {
+    const v = (j.fields || {})[f.label];
+    if (v == null || v === '') return;
+    if (String(F.values[f.index] ?? '').trim() && f.label !== j.main) return; // 入力済みの欄は上書きしない（本文は除く）
+    let val = String(v);
+    if (f.type === 'date') val = val.slice(0, 10);
+    if (f.strict && (f.options || []).length && !f.options.includes(val)) return;
+    F.values[f.index] = val; filled.push(f.label);
+    const w = $('w' + f.index); if (w) w.outerHTML = fieldHtml(f, val);
+  });
+  // 担当者が空なら自分の名前
+  const tan = F.fields.find(f => !f.hidden && /担当者/.test(f.label));
+  if (tan && !String(F.values[tan.index] ?? '').trim() && ME && ME.name && (!(tan.options || []).length || tan.options.includes(ME.name))) { F.values[tan.index] = ME.name; const w = $('w' + tan.index); if (w) w.outerHTML = fieldHtml(tan, ME.name); }
+  bindForm(); saveDraft(); updateProgress();
+  const box = $('vcResult');
+  if (box) box.innerHTML = `<div class="box vc-res"><div style="font-weight:700">録音から下書きを入れました</div>
+    <div class="small">${filled.length ? '入れた欄：' + filled.map(esc).join('、') : '入れられる内容がありませんでした'}。必ず内容を確認して、直してから送信してください。</div>
+    ${(j.points || []).length ? `<div class="small" style="margin-top:6px;color:var(--warn)"><b>確認してほしい点</b><ul style="margin:2px 0 0;padding-left:18px">${j.points.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${j.transcript ? `<details style="margin-top:8px"><summary class="small" style="cursor:pointer">文字起こしを見る</summary><div class="small" style="white-space:pre-wrap;margin-top:6px;max-height:320px;overflow:auto">${esc(j.transcript)}</div></details>` : ''}</div>`;
 }
 
 /* ================= 業務 ================= */
