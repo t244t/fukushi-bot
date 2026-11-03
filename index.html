@@ -506,6 +506,8 @@ async function demoApi(p){
     if (staff) rows.forEach(r => { const c = r.cells; r.cells = [c[0], c[1], c[2], c[3], c[2] && c[3] ? '5.00' : '', c[5], c[2] && c[3] ? '4.00' : '', '', c[11], '', '', '']; });
     return { name: p.name, layout: staff ? 'staff' : 'member', month:'2026/11/01', ym:'2026-11', title: p.name + ' 出勤簿', rows, admin: isAdmin() }; }
   if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
+  if (p.app === 'jigaiInfo') return { current:'2026-02', months:[{ ym:'2026-10', count:12 }, { ym:'2026-09', count:14 }, { ym:'2026-02', count:9 }] };
+  if (p.app === 'jigaiBuild') { await new Promise(r => setTimeout(r, 600)); return { message: p.ym.replace('-', '年') + '月の報告書を作りました' }; }
   if (p.app === 'quarantine') { const t = ymd(), dd = n => { const x = new Date(t + 'T00:00:00+09:00'); x.setDate(x.getDate() + n); return ymd(x); };
     return { today:t, items:[{ row:6, name:'松川 忠義', kind:'メンバー', start:dd(-2), end:dd(3), date:dd(-2) }, { row:5, name:'大原 里奈', kind:'スタッフ', start:dd(-1), end:dd(1), date:dd(-1) },
       { row:4, name:'峰 恭子', kind:'メンバー', start:dd(2), end:dd(6), date:dd(0) }, { row:3, name:'石橋 強', kind:'スタッフ', start:dd(-12), end:dd(-7), date:dd(-12) }, { row:2, name:'佐藤 正', kind:'メンバー', start:dd(-30), end:dd(-25), date:dd(-30) }] }; }
@@ -601,6 +603,7 @@ function route(){
   if (page === 'books') return showBooks();
   if (page === 'book') return showBook(arg);
   if (page === 'admin' && arg === 'jisseki') return showJisseki();
+  if (page === 'admin' && arg === 'jigai') return showJigai();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
@@ -2122,7 +2125,7 @@ function drawerItems(){
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', '避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労の実施報告書'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
@@ -2146,6 +2149,29 @@ $('drClose').onclick = closeDrawer;
 $('dscrim').onclick = closeDrawer;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('drawer').classList.contains('on')) closeDrawer(); });
 
+
+/* ===== 施設外就労実施報告書 ===== */
+async function showJigai(){
+  setTop({ title:'施設外就労の実施報告書', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">この画面は管理者だけが使えます。</div>'; return; }
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try {
+    const j = await api({ app:'jigaiInfo' });
+    if (token !== viewToken) return;
+    const ymL = ym => ym ? ym.replace(/^(\d{4})-0?(\d+)$/, '$1年$2月') : '不明';
+    const now = ymd().slice(0, 7);
+    const months = j.months.some(m => m.ym === now) ? j.months : [{ ym: now, count: 0 }].concat(j.months);
+    $('view').innerHTML = `<div style="padding-top:12px"><div class="box"><h3>今の報告書：${ymL(j.current)}</h3>
+      <div class="small">「施設外実績記録表」のその月の記録から、報告書（日付・曜日・利用者の〇・支援員の時間・合計）を作り直します。どの月でも作れます。新しい記録を送ったときに月が違えば、自動でその月に切り替わります。</div></div>
+      <div class="sec-title">月を選ぶ</div>${months.map(m => `<div class="list-item" style="--gc:${m.ym === j.current ? 'var(--g1)' : 'var(--rule)'}"><div class="main"><div class="t">${ymL(m.ym)}${m.ym === j.current ? '<span class="pill">表示中</span>' : ''}</div><div class="m">記録 ${m.count}件</div></div>
+        <button class="btn s" data-jb="${m.ym}" style="min-height:40px;padding:0 12px">作り直す</button><button class="btn p" data-jp="${m.ym}" style="min-height:40px;padding:0 12px;--gc:var(--brand)">＋PDF</button></div>`).join('')}</div>`;
+    const go = (ym, pdf) => runAction(() => api({ app:'jigaiBuild', ym, pdf: pdf ? '1' : '' }), () => showJigai());
+    $('view').querySelectorAll('[data-jb]').forEach(b => b.onclick = () => go(b.dataset.jb, false));
+    $('view').querySelectorAll('[data-jp]').forEach(b => b.onclick = () => go(b.dataset.jp, true));
+  } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
 /* ================= 業務 ================= */
 function showWork(){
   setTop({ title:'業務' });
@@ -2160,6 +2186,7 @@ function showWork(){
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労の実施報告書</div><div class="m">月を選んで作り直す・PDF保存</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jisseki" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">実績記録のチェック</div><div class="m">紙の実績記録を撮影 → 打刻・支援経過記録と照合</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/monthly" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">月別集計</div><div class="m">出勤日数・時間・送迎・有給・欠勤</div></div>${ICON.chev}</a>
