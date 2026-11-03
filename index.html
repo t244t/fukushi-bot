@@ -272,11 +272,21 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .tscroll{overflow-x:auto}.at-tbl.bk{font-size:13px;min-width:340px}.at-tbl.bk th,.at-tbl.bk td{padding:7px 5px}.at-tbl.bk td .small{font-size:11px;margin-left:3px}
 .at-tbl.bk tr.we td{background:var(--soft)}.at-tbl.bk tr.miss td{background:var(--err-bg)}
 .stamp{display:inline-grid;place-items:center;width:22px;height:22px;border:2px solid #c62f22;border-radius:50%;color:#c62f22;font-size:11px;font-weight:700}
+.dscrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}.dscrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(300px,84vw);background:var(--paper);z-index:41;transform:translateX(-102%);visibility:hidden;transition:transform .22s ease,visibility 0s .22s;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 10px) 0 calc(env(safe-area-inset-bottom) + 20px)}
+.drawer.on{transform:none;visibility:visible;transition:transform .22s ease;box-shadow:4px 0 18px rgba(0,0,0,.18)}
+.dr-head{display:flex;align-items:center;gap:10px;padding:4px 18px 12px;border-bottom:1px solid var(--rule)}
+.dr-sec{font-size:12px;color:var(--sub);font-weight:700;padding:14px 18px 4px}.dr-sep{border-top:1px solid var(--rule);margin:10px 0 4px}
+.dr-item{display:flex;align-items:center;min-height:48px;padding:6px 18px;color:inherit;text-decoration:none;font-size:16px}
+.dr-item small{display:block;font-size:12px;color:var(--sub)}
+.dr-item[aria-current="page"]{background:var(--soft);box-shadow:inset 4px 0 0 var(--brand);font-weight:700}
+@media (prefers-reduced-motion:reduce){.drawer,.dscrim{transition:none}}
 .gs{--gc:var(--g3);--gbg:var(--g3-bg)} .gl{--gc:var(--g2);--gbg:var(--g2-bg)} .gn{--gc:var(--g1);--gbg:var(--g1-bg)}
 </style>
 </head>
 <body>
 <header class="top" id="top"><div class="wrap">
+  <button class="icon-btn" id="menuBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   <button class="icon-btn" id="back" aria-label="戻る" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
   <h1 id="title">福祉ボット２</h1>
   <a class="icon-btn" id="gearBtn" href="#/settings" aria-label="設定" style="color:inherit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></a>
@@ -294,6 +304,10 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
   <a href="#/drafts" data-nav="drafts" class="no-member"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>履歴<span class="dot" id="draftDot" hidden></span></a>
 </div></nav>
 
+<div class="dscrim" id="dscrim"></div>
+<nav class="drawer" id="drawer" aria-label="すべてのメニュー" aria-hidden="true"><div class="dr-head"><img src="logo.png" alt="" width="44" height="44"><div><b>福祉ボット２</b><div class="small" id="drWho"></div></div>
+  <button class="icon-btn" id="drClose" aria-label="メニューを閉じる" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="drBody"></div></nav>
 <div class="scrim" id="scrim"></div>
 <section class="bsheet" id="bsheet" role="dialog" aria-modal="true" aria-labelledby="bsTitle">
   <div class="grab"></div><h2 id="bsTitle"></h2><div class="body" id="bsBody"></div><div class="foot" id="bsFoot"></div>
@@ -594,6 +608,7 @@ function setTop({ title, back = false, group = null, pin = null }){
   top.className = 'top' + (group ? ' group ' + gClass(group) : '');
   $('title').textContent = title;
   $('back').hidden = !back;
+  $('menuBtn').hidden = back;
   $('prog').hidden = !group;
   $('pinBtn').hidden = pin === null;
   $('gearBtn').hidden = back || pin !== null || title === '設定';
@@ -2078,6 +2093,40 @@ function editBookRow(r){
     runAction(() => apiPost({ app:'bookEdit', name: BOOK.name, row: r.row, data: JSON.stringify(data) }), () => showBook(BOOK.name));
   };
 }
+
+
+/* ===== サイドメニュー（三本線） ===== */
+function drawerItems(){
+  const a = isAdmin(), m = isMember();
+  const it = (href, label, sub) => ({ href, label, sub });
+  if (m) return [['毎日', [it('#/attend', '出退勤'), ME && ME.name ? it('#/book/' + encodeURIComponent(ME.name), '自分の出勤簿') : null]], ['見る', [it('#/info', '情報')]], ['', [it('#/settings', '設定')]]];
+  return [
+    ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
+    ['連絡・安全', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null]],
+    ['業務', [it('#/work', 'やること・在庫'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
+    ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
+    ['', [it('#/settings', '設定')]]
+  ].filter(Boolean);
+}
+function openDrawer(){
+  const cur = location.hash || '#/';
+  $('drWho').innerHTML = ME && ME.name ? esc(ME.name) + ' さん' + (isAdmin() ? '<span class="admin-mark">管理者</span>' : '') : '';
+  $('drBody').innerHTML = drawerItems().map(([g, list]) => `${g ? `<div class="dr-sec">${esc(g)}</div>` : '<div class="dr-sep"></div>'}${list.filter(Boolean).map(x =>
+    `<a class="dr-item" href="${x.href}"${x.href === cur ? ' aria-current="page"' : ''}><span>${esc(x.label)}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`).join('')}`).join('');
+  $('drawer').classList.add('on'); $('dscrim').classList.add('on');
+  $('drawer').setAttribute('aria-hidden', 'false'); $('menuBtn').setAttribute('aria-expanded', 'true');
+  $('drBody').querySelectorAll('a').forEach(x => x.onclick = () => closeDrawer());
+  setTimeout(() => { const f = $('drClose'); if (f) f.focus(); }, 50);
+}
+function closeDrawer(){
+  $('drawer').classList.remove('on'); $('dscrim').classList.remove('on');
+  $('drawer').setAttribute('aria-hidden', 'true'); $('menuBtn').setAttribute('aria-expanded', 'false');
+}
+$('menuBtn').onclick = openDrawer;
+$('drClose').onclick = closeDrawer;
+$('dscrim').onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('drawer').classList.contains('on')) closeDrawer(); });
 
 /* ================= 業務 ================= */
 function showWork(){
