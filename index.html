@@ -468,7 +468,7 @@ async function demoApi(p){
   if (p.app === 'safety') return { lastSend:'2026/11/01 09:00', total:8, groups:{ '無事です':[{name:'石橋 強'},{name:'大原 里奈'},{name:'坂東 麻衣子'},{name:'大鶴 猛'}], '怪我あり':[{name:'平山 菜々',time:'11/1 09:12'}], '避難中':[{name:'福田',time:'11/1 09:20'}], '連絡不可':[], '未回答':[{name:'重富'},{name:'河津 さち子'}] } };
   if (p.app === 'events') return { events:[{ id:'EV1', name:'秋の避難訓練', date:'2026/11/10', time:'10:00', place:'伊都国即売会', memo:'動きやすい服装で', upcoming:true, isTarget:true, my:'出席', targetCount:8,
       counts:{ '出席':['石橋 強','大原 里奈','大鶴 猛'], '遅刻':['福田'], '未定':[], '欠席':['重富'], '未回答':['河津 さち子','坂東 麻衣子','平山 菜々'] } }].map(e => /admin/.test(location.search) ? e : { ...e, counts:undefined }) };
-  if (p.app === 'meetings') return { meetings:[{ row:5, title:'ケース会議', date:'11/5（水）', time:'14:00', minutes:60, url:'https://meet.google.com/' }] };
+  if (p.app === 'meetings') return { meetings:[{ row:5, title:'ケース会議', date:'11/5（水）', time:'14:00', minutes:60, url:'https://meet.google.com/' }], people:[{ name:'石橋', email:'a@example.com' }, { name:'大原', email:'b@example.com' }, { name:'平山', email:'c@example.com' }] };
   if (p.app === 'attendMe' || p.app === 'attendPunch') return demoAttend(p);
   if (p.app === 'attendDay') return { date: p.date || ymd(), office:true, counts:{ in:3, out:1, notice:1 }, rows:[
     { name:'石橋 強', kubun:'正社員', state:'in', inTime:'08:31', outTime:'', workMin:212, awayMin:0, pickup:'', notes:[], flags:[], logs:[{ time:'08:31', log:'オフィス出勤' }] },
@@ -2104,32 +2104,37 @@ async function loadMeetings(live){
         <button class="link" style="color:var(--err)" data-mtc="${m.row}" data-t="${esc(m.title)}">取消</button></div>`).join('')
         : '<div class="box small">予定している会議はありません。</div>');
     const reload = () => loadMeetings(live);
-    $('mtNew').onclick = () => openMeetingForm(reload);
+    $('mtNew').onclick = () => openMeetingForm(reload, j.people || []);
     $('mtBox').querySelectorAll('[data-mtc]').forEach(b => b.onclick = () =>
       confirmSheet('会議の取り消し', `「${b.dataset.t}」を取り消し、参加者に連絡します。`, '取り消す',
         () => runAction(() => api({ app:'meetingCancel', row:b.dataset.mtc }), reload), true));
   } catch (e) { if (live()) $('mtBox').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 
-function openMeetingForm(reload){
-  const staff = LS.get('fb_staff', null);
+function openMeetingForm(reload, people){
+  const picked = new Set();
   openSheet('新しい会議', `
     <div class="field" style="padding:0"><label for="mtTitle">会議名</label><input class="in" id="mtTitle"></div>
     <div class="field" style="padding:0"><label for="mtDate">日付</label><input class="in" id="mtDate" type="date" value="${ymd()}"></div>
     <div class="field" style="padding:0"><label for="mtTime">開始時間</label><input class="in" id="mtTime" type="time" value="10:00"></div>
-    <div class="field" style="padding:0"><label>会議の長さ</label><div class="chips">${[30,60,90].map(n => `<button type="button" class="chip mini" data-min="${n}" aria-pressed="${n === 60}" style="--gc:var(--brand)">${n}分</button>`).join('')}</div></div>
-    <div class="field" style="padding:0"><label for="mtMails">参加者のメールアドレス（カンマ区切り）</label><textarea class="in" id="mtMails" style="min-height:70px" placeholder="example@f-advance.net, ..."></textarea></div>
+    <div class="field" style="padding:0"><label for="mtMin">会議の長さ（分）</label><div style="display:flex;gap:8px;align-items:center"><input class="in" id="mtMin" type="number" inputmode="numeric" value="60" style="width:96px"><div class="chips">${[15,30,60,90].map(n => `<button type="button" class="chip mini" data-min="${n}" aria-pressed="${n === 60}" style="--gc:var(--brand)">${n}</button>`).join('')}</div></div></div>
+    <div class="field" style="padding:0"><div class="label">参加者<span class="hint" id="mtN">0人</span></div>
+      ${people.length ? `<div class="chips">${people.map((p, i) => `<button type="button" class="chip" data-pp="${i}" aria-pressed="false" style="--gc:var(--brand)">${esc(p.name)}</button>`).join('')}<button type="button" class="chip mini" id="mtAll">全員</button></div>` : '<div class="small">「メールアドレスリスト」シートに氏名とメールアドレスを入れると、ここから選べます。</div>'}
+      <input class="in" id="mtMails" style="margin-top:8px" placeholder="ほかのメールアドレス（任意）"></div>
     <p class="small">Google Meet のURLを作り、参加者にメール、LINEグループにお知らせします。</p>`,
     `<button class="btn s" id="mtCancel">やめる</button><button class="btn p" id="mtOk" style="--gc:var(--brand)">作成する</button>`);
-  let minutes = 60;
-  $('bsBody').querySelectorAll('[data-min]').forEach(b => b.onclick = () => {
-    minutes = Number(b.dataset.min);
-    $('bsBody').querySelectorAll('[data-min]').forEach(x => x.setAttribute('aria-pressed', x === b));
-  });
+  const mark = () => $('bsBody').querySelectorAll('[data-min]').forEach(x => x.setAttribute('aria-pressed', x.dataset.min === $('mtMin').value));
+  $('bsBody').querySelectorAll('[data-min]').forEach(b => b.onclick = () => { $('mtMin').value = b.dataset.min; mark(); });
+  $('mtMin').oninput = mark;
+  const count = () => { $('mtN').textContent = picked.size + '人'; };
+  $('bsBody').querySelectorAll('[data-pp]').forEach(b => b.onclick = () => { const i = Number(b.dataset.pp); picked.has(i) ? picked.delete(i) : picked.add(i); b.setAttribute('aria-pressed', picked.has(i)); count(); });
+  if ($('mtAll')) $('mtAll').onclick = () => { const all = picked.size < people.length; people.forEach((_, i) => all ? picked.add(i) : picked.delete(i)); $('bsBody').querySelectorAll('[data-pp]').forEach(b => b.setAttribute('aria-pressed', picked.has(Number(b.dataset.pp)))); count(); };
   $('mtCancel').onclick = closeSheet;
   $('mtOk').onclick = () => {
-    const m = { title:$('mtTitle').value.trim(), date:$('mtDate').value, time:$('mtTime').value, minutes, emails:$('mtMails').value };
+    const emails = [...picked].map(i => people[i].email).concat($('mtMails').value.split(/[,、\s]+/).map(x => x.trim()).filter(x => /@/.test(x)));
+    const m = { title:$('mtTitle').value.trim(), date:$('mtDate').value, time:$('mtTime').value, minutes: Number($('mtMin').value) || 60, emails: [...new Set(emails)].join(',') };
     if (!m.title || !m.date || !m.time) { toast('会議名・日付・開始時間を入れてください'); return; }
+    if (!m.emails) { toast('参加者を1人以上選んでください'); return; }
     runAction(() => apiPost({ app:'meetingCreate', meeting:m }), reload);
   };
 }
