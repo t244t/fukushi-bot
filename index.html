@@ -2197,7 +2197,7 @@ async function showJigai(){
       <div class="box"><h3>今のシート：${ymL(cur)}</h3><div class="small">${sheet
         ? `「施設外実績記録表」の記録から、日ごとの就業時間・実務人数・日給（時給 ${Number(j.hourly).toLocaleString()}円 × 労働時間 × 人数）を作ります。企業への請求のもとになります。`
         : '「施設外実績記録表」のその月の記録から、実施報告書（利用者の〇・支援員の時間・合計）を作り直します。'}　どの月でも作れ、新しい記録の月が違えば自動で切り替わります。</div></div>
-      <div class="sec-title">月を選ぶ</div>${months.map(m => `<div class="list-item" style="--gc:${m.ym === cur ? 'var(--g1)' : 'var(--rule)'}"><div class="main">${sheet ? `<button class="link" data-jv="${m.ym}" style="padding:0;text-align:left;color:var(--ink);font-size:16px"><b>${ymL(m.ym)}</b> <span class="small" style="color:var(--brand)">内容を見る</span></button>` : `<div class="t">${ymL(m.ym)}</div>`}${m.ym === cur ? '<span class="pill">表示中</span>' : ''}<div class="m">記録 ${m.count}件</div></div>
+      <div class="sec-title">月を選ぶ</div>${months.map(m => `<div class="list-item" style="--gc:${m.ym === cur ? 'var(--g1)' : 'var(--rule)'}"><div class="main">${sheet ? `<button class="link" data-jv="${m.ym}" style="padding:0;text-align:left;color:var(--ink);font-size:16px"><b>${ymL(m.ym)}</b><span class="small" style="display:block;color:var(--brand)">内容を見る ›</span></button>` : `<div class="t">${ymL(m.ym)}</div>`}${m.ym === cur ? '<span class="pill">表示中</span>' : ''}<div class="m">記録 ${m.count}件</div></div>
         <button class="btn s" data-jb="${m.ym}" style="min-height:40px;padding:0 12px">作り直す</button><button class="btn p" data-jp="${m.ym}" style="min-height:40px;padding:0 12px;--gc:var(--brand)">＋PDF</button></div>`).join('')}
       <div id="jgView"></div></div>`;
     $('view').innerHTML = html;
