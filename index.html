@@ -486,7 +486,7 @@ async function demoApi(p){
   if (p.app === 'attendQr') return { token: p.reset ? 'demo' + Date.now().toString(36) : 'demo1234abcd', liffId: LIFF_ID };
   if (p.app === 'attendSetOffice') return { message:'事業所の位置を設定しました' };
   if (p.app === 'attendanceNow') return { rows:[{ name:'石橋 強', group:'利用者', log:'出勤', time:'11/1 08:55' }, { name:'大原 里奈', group:'スタッフ', log:'退勤', time:'10/31 17:02' }] };
-  if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true}] };
+  if (p.app === 'staffList') return { stores:['伊都国即売会','ねぎぼうず','イオン笹丘'], staff:[{id:'S001',name:'石橋 強',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S002',name:'大原 里奈',store:'伊都国即売会',kind:'正社員',line:true,mail:true},{id:'S003',name:'平山 菜々',store:'ねぎぼうず',kind:'パート',line:true,mail:false},{id:'S004',name:'大鶴 猛',store:'イオン笹丘',kind:'パート',line:false,mail:true},{id:'R001',name:'峰 恭子',store:'伊都国即売会',kind:'利用者',line:true,mail:false},{id:'R003',name:'松川 忠義',store:'イオン笹丘',kind:'利用者',line:true,mail:false}] };
   if (p.app === 'records') return { total:3, hasMore:false, items:[{ row:4, date:'2026/11/01', title:'松川 忠義　出勤', sub:'物販、配送　レジ補助を落ち着いてできた' }, { row:3, date:'2026/10/31', title:'長屋 結衣　出勤', sub:'野菜加工' }, { row:2, date:'2026/10/30', title:'田中 尚樹　欠勤', sub:'体調不良の連絡あり' }].filter(x => !p.q || (x.title + x.sub + x.date).includes(p.q)) };
   if (p.app === 'record') return { row:p.row, hasPdf:true, values:{ 0:'2026-11-01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' },
       display:{ 0:'2026/11/01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' } };
@@ -2320,18 +2320,21 @@ async function showBroadcast(){
   catch (e) { data = LS.get('fb_staff', null); if (!data) { $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; } }
   if (token !== viewToken) return;
   const sel = new Set();
-  let store = '', method = 'LINE';
+  let store = '', kind = '', method = 'LINE';
+  const kinds = [...new Set(data.staff.map(x => x.kind).filter(Boolean))];
+  const KF = [['', 'すべての区分']].concat(kinds.includes('利用者') && kinds.length > 1 ? [['@staff', 'スタッフのみ']] : []).concat(kinds.map(k => [k, k]));
   const draft = LS.get('fb_bc_draft', {});
   $('view').innerHTML = `<div style="--gc:var(--brand);padding-top:12px">
     <div class="field"><div class="label">送り方</div><div class="chips">${['LINE','メール','両方'].map(m => `<button type="button" class="chip" data-m="${m}" aria-pressed="${m === method}">${m}</button>`).join('')}</div></div>
     <div class="field"><div class="label">送る相手<span class="hint" id="selN">0名を選択中</span></div>
       ${data.stores.length > 1 ? `<div class="chips" style="margin-bottom:10px"><button type="button" class="chip mini" data-st="" aria-pressed="true">すべての店舗</button>${data.stores.map(st => `<button type="button" class="chip mini" data-st="${esc(st)}" aria-pressed="false">${esc(st)}</button>`).join('')}</div>` : ''}
-      <div class="chips" style="margin-bottom:10px"><button type="button" class="chip mini" id="allOn">表示中を全員選ぶ</button><button type="button" class="chip mini" id="allOff">選択を外す</button></div>
+      ${kinds.length > 1 ? `<div class="chips" style="margin-bottom:10px">${KF.map(([k, l]) => `<button type="button" class="chip mini" data-kd="${esc(k)}" aria-pressed="${k === ''}">${esc(l)}</button>`).join('')}</div>` : ''}
+      <div class="chips" style="margin-bottom:10px"><button type="button" class="chip mini" id="allOn">表示中を全員選ぶ</button><button type="button" class="chip mini" id="allOff">選択を外す</button><button type="button" class="chip mini" id="allEvery" style="--gc:var(--err);border-color:var(--err);color:var(--err)">全員を選ぶ（災害時など）</button></div>
       <div class="chips" id="people"></div></div>
     <div class="field"><label for="bcSub">件名</label><input class="in" id="bcSub" value="${esc(draft.subject || '')}"></div>
     <div class="field"><label for="bcMsg">内容</label><textarea class="in" id="bcMsg">${esc(draft.message || '')}</textarea></div>
     <div class="bar"><span class="saved"></span><button class="btn p" id="bcSend">送信内容を確認</button></div></div>`;
-  const visible = () => data.staff.filter(x => !store || x.store === store);
+  const visible = () => data.staff.filter(x => (!store || x.store === store) && (!kind || (kind === '@staff' ? x.kind !== '利用者' : x.kind === kind)));
   const usable = x => method === 'LINE' ? x.line : method === 'メール' ? x.mail : (x.line || x.mail);
   const drawPeople = () => {
     $('people').innerHTML = visible().map(x => `<button type="button" class="chip" data-id="${esc(x.id)}" aria-pressed="${sel.has(x.id)}" ${usable(x) ? '' : 'disabled style="opacity:.45"'}>${esc(x.name)}<span class="small" style="color:inherit;opacity:.75">　${esc(x.kind)}</span></button>`).join('');
@@ -2340,7 +2343,16 @@ async function showBroadcast(){
   };
   $('view').querySelectorAll('[data-m]').forEach(b => b.onclick = () => { method = b.dataset.m; $('view').querySelectorAll('[data-m]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawPeople(); });
   $('view').querySelectorAll('[data-st]').forEach(b => b.onclick = () => { store = b.dataset.st; $('view').querySelectorAll('[data-st]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawPeople(); });
+  $('view').querySelectorAll('[data-kd]').forEach(b => b.onclick = () => { kind = b.dataset.kd; $('view').querySelectorAll('[data-kd]').forEach(x => x.setAttribute('aria-pressed', x === b)); drawPeople(); });
   $('allOn').onclick = () => { visible().filter(usable).forEach(x => sel.add(x.id)); drawPeople(); };
+  $('allEvery').onclick = () => {
+    store = ''; kind = '';
+    $('view').querySelectorAll('[data-st]').forEach(x => x.setAttribute('aria-pressed', x.dataset.st === ''));
+    $('view').querySelectorAll('[data-kd]').forEach(x => x.setAttribute('aria-pressed', x.dataset.kd === ''));
+    data.staff.filter(usable).forEach(x => sel.add(x.id)); drawPeople();
+    const ng = data.staff.filter(x => !usable(x)).length;
+    toast(sel.size + '名を選びました' + (ng ? `（${method === 'LINE' ? 'LINE' : 'メール'}の登録がない${ng}名は送れません）` : ''), 3500);
+  };
   $('allOff').onclick = () => { sel.clear(); drawPeople(); };
   ['bcSub','bcMsg'].forEach(id => $(id).oninput = () => LS.set('fb_bc_draft', { subject:$('bcSub').value, message:$('bcMsg').value }));
   drawPeople();
