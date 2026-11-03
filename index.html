@@ -581,7 +581,7 @@ function route(){
   const arg = rest.join('/');
   if (isMember() && !['attend', 'info', 'settings', 'book'].includes(page)) { location.replace('#/attend'); return; }
   document.body.classList.toggle('member', isMember());
-  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'work', admin:'work', quarantine:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home' })[page] || page || 'home');
+  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'contact', admin:'work', quarantine:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home' })[page] || page || 'home');
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -1426,6 +1426,9 @@ async function showContact(){
   if (isAdmin()) {
     html += `<div class="sec-title">安否確認の状況<span class="admin-mark">管理者</span></div><div class="box" id="safetyBox"><div class="small">読み込んでいます…</div></div>`;
   }
+  html += `<div class="sec-title">災害への備え</div>
+    <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">災害時の備蓄品</div><div class="m">在庫の確認・入庫・出庫（QRコード対応）</div></div>${ICON.chev}</a>
+    <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">避難場所</div><div class="m">近くの避難場所・口コミ・今必要なもの</div></div>${ICON.chev}</a>`;
   html += `<div class="sec-title">イベント${isAdmin() ? '<span class="admin-mark">管理者</span>' : 'の出欠'}</div><div id="evBox"><div class="box small">読み込んでいます…</div></div>`;
   if (isAdmin()) {
     html += `<div class="sec-title">スタッフへの連絡<span class="admin-mark">管理者</span></div>
@@ -2102,8 +2105,8 @@ function drawerItems(){
   if (m) return [['毎日', [it('#/attend', '出退勤'), ME && ME.name ? it('#/book/' + encodeURIComponent(ME.name), '自分の出勤簿') : null]], ['見る', [it('#/info', '情報')]], ['', [it('#/settings', '設定')]]];
   return [
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
-    ['連絡・安全', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null]],
-    ['業務', [it('#/work', 'やること・在庫'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
+    ['連絡・災害', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', '避難場所')]],
+    ['業務', [it('#/work', 'やること'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
     a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
@@ -2135,8 +2138,6 @@ function showWork(){
   const v = $('view');
   if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くか、設定でアプリキーを入力すると使えます。')}</div>`; return; }
   let html = `<div class="sec-title">やること</div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
-    <div class="sec-title">備品・在庫</div>
-    <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">在庫の確認・入庫・出庫</div><div class="m">QRコードの読み取りにも対応</div></div>${ICON.chev}</a>
     <div class="sec-title">健康・感染症</div>
     <a class="list-item" href="#/quarantine" style="color:inherit;text-decoration:none;--gc:var(--err)"><div class="main"><div class="t">感染症の待機期間</div><div class="m" id="qtSub">誰がいつまで待機中かをチャートで</div></div>${ICON.chev}</a>
     <div class="sec-title">報告</div><div id="rpBox">${workReports()}</div>`;
@@ -2326,7 +2327,7 @@ async function loadTasks(live){
 /* ===== 在庫 ===== */
 let STOCK = null;
 async function showStock(){
-  setTop({ title:'在庫', back:true });
+  setTop({ title:'災害時の備蓄品', back:true });
   const token = viewToken;
   STOCK = LS.get('fb_stock', null);
   const draw = () => {
