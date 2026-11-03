@@ -507,7 +507,8 @@ async function demoApi(p){
     if (staff) rows.forEach(r => { const c = r.cells; r.cells = [c[0], c[1], c[2], c[3], c[2] && c[3] ? '5.00' : '', c[5], c[2] && c[3] ? '4.00' : '', '', c[11], '', '', '']; });
     return { name: p.name, layout: staff ? 'staff' : 'member', month:'2026/11/01', ym:'2026-11', title: p.name + ' 出勤簿', rows, admin: isAdmin() }; }
   if (p.app === 'bookEdit' || p.app === 'bookPdf') { await new Promise(r => setTimeout(r, 400)); return { message: p.app === 'bookPdf' ? 'PDFを保存しました' : '出勤簿を直しました', url:'https://drive.google.com/' }; }
-  if (p.app === 'jigaiInfo') return { current:'2026-02', months:[{ ym:'2026-10', count:12 }, { ym:'2026-09', count:14 }, { ym:'2026-02', count:9 }] };
+  if (p.app === 'jigaiSheet') return { ym:p.ym, company:'㈱銀の華', hourly:992, totalHours:7.5, totalYen:14880, rows:[{ day:22, wd:'月', start:'12:00', end:'15:00', rest:0, hours:3, people:2, per:2976, total:5952, names:'C.山本,D.市丸' }, { day:26, wd:'金', start:'12:00', end:'14:30', rest:0, hours:2.5, people:2, per:2480, total:4960, names:'C.山本,D.市丸' }, { day:29, wd:'月', start:'12:00', end:'14:00', rest:0, hours:2, people:2, per:1984, total:3968, names:'C.山本,D.市丸' }] };
+  if (p.app === 'jigaiInfo') return { sheetYm:'2026-02', hourly:992, current:'2026-02', months:[{ ym:'2026-10', count:12 }, { ym:'2026-09', count:14 }, { ym:'2026-02', count:9 }] };
   if (p.app === 'jigaiBuild') { await new Promise(r => setTimeout(r, 600)); return { message: p.ym.replace('-', '年') + '月の報告書を作りました' }; }
   if (p.app === 'recordPeople') return { field:'名前', people:[{ name:'井上 俊二', kana:'いのうえ', gyo:'あ', count:12, last:'2026/10/30' }, { name:'稼木 敏明', kana:'かせぎ', gyo:'か', count:30, last:'2026/11/02' }, { name:'木村 圭吾', kana:'きむら', gyo:'か', count:8, last:'2026/10/21' },
     { name:'佐々木 勇斗', kana:'ささき', gyo:'さ', count:15, last:'2026/10/29' }, { name:'田中 尚樹', kana:'たなか', gyo:'た', count:22, last:'2026/11/01' }, { name:'仲西 大介', kana:'なかにし', gyo:'な', count:5, last:'2026/09/30' }, { name:'松川 忠義', kana:'まつかわ', gyo:'ま', count:19, last:'2026/11/02' }, { name:'峰 恭子', kana:'みね', gyo:'ま', count:25, last:'2026/11/02' }] };
@@ -2152,7 +2153,7 @@ function drawerItems(){
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', '避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労の実施報告書'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
@@ -2178,8 +2179,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('drawer'
 
 
 /* ===== 施設外就労実施報告書 ===== */
+let JG_TAB = 'report';
 async function showJigai(){
-  setTop({ title:'施設外就労の実施報告書', back:true });
+  setTop({ title:'施設外就労', back:true });
   if (!isAdmin()) { $('view').innerHTML = '<div class="note err">この画面は管理者だけが使えます。</div>'; return; }
   const token = viewToken;
   $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
@@ -2189,13 +2191,33 @@ async function showJigai(){
     const ymL = ym => ym ? ym.replace(/^(\d{4})-0?(\d+)$/, '$1年$2月') : '不明';
     const now = ymd().slice(0, 7);
     const months = j.months.some(m => m.ym === now) ? j.months : [{ ym: now, count: 0 }].concat(j.months);
-    $('view').innerHTML = `<div style="padding-top:12px"><div class="box"><h3>今の報告書：${ymL(j.current)}</h3>
-      <div class="small">「施設外実績記録表」のその月の記録から、報告書（日付・曜日・利用者の〇・支援員の時間・合計）を作り直します。どの月でも作れます。新しい記録を送ったときに月が違えば、自動でその月に切り替わります。</div></div>
-      <div class="sec-title">月を選ぶ</div>${months.map(m => `<div class="list-item" style="--gc:${m.ym === j.current ? 'var(--g1)' : 'var(--rule)'}"><div class="main"><div class="t">${ymL(m.ym)}${m.ym === j.current ? '<span class="pill">表示中</span>' : ''}</div><div class="m">記録 ${m.count}件</div></div>
-        <button class="btn s" data-jb="${m.ym}" style="min-height:40px;padding:0 12px">作り直す</button><button class="btn p" data-jp="${m.ym}" style="min-height:40px;padding:0 12px;--gc:var(--brand)">＋PDF</button></div>`).join('')}</div>`;
-    const go = (ym, pdf) => runAction(() => api({ app:'jigaiBuild', ym, pdf: pdf ? '1' : '' }), () => showJigai());
+    const sheet = JG_TAB === 'sheet';
+    const cur = sheet ? j.sheetYm : j.current;
+    let html = `<div style="padding-top:12px"><div class="tabs mini" role="tablist" style="margin-bottom:12px">${[['report','実施報告書（市へ）'],['sheet','タイムシート（請求）']].map(([k, l]) => `<button class="tab" role="tab" data-jt="${k}" aria-selected="${k === JG_TAB}">${l}</button>`).join('')}</div>
+      <div class="box"><h3>今のシート：${ymL(cur)}</h3><div class="small">${sheet
+        ? `「施設外実績記録表」の記録から、日ごとの就業時間・実務人数・日給（時給 ${Number(j.hourly).toLocaleString()}円 × 労働時間 × 人数）を作ります。企業への請求のもとになります。`
+        : '「施設外実績記録表」のその月の記録から、実施報告書（利用者の〇・支援員の時間・合計）を作り直します。'}　どの月でも作れ、新しい記録の月が違えば自動で切り替わります。</div></div>
+      <div class="sec-title">月を選ぶ</div>${months.map(m => `<div class="list-item" style="--gc:${m.ym === cur ? 'var(--g1)' : 'var(--rule)'}"><div class="main">${sheet ? `<button class="link" data-jv="${m.ym}" style="padding:0;text-align:left;color:var(--ink);font-size:16px"><b>${ymL(m.ym)}</b> <span class="small" style="color:var(--brand)">内容を見る</span></button>` : `<div class="t">${ymL(m.ym)}</div>`}${m.ym === cur ? '<span class="pill">表示中</span>' : ''}<div class="m">記録 ${m.count}件</div></div>
+        <button class="btn s" data-jb="${m.ym}" style="min-height:40px;padding:0 12px">作り直す</button><button class="btn p" data-jp="${m.ym}" style="min-height:40px;padding:0 12px;--gc:var(--brand)">＋PDF</button></div>`).join('')}
+      <div id="jgView"></div></div>`;
+    $('view').innerHTML = html;
+    $('view').querySelectorAll('[data-jt]').forEach(b => b.onclick = () => { JG_TAB = b.dataset.jt; showJigai(); });
+    const go = (ym, pdf) => runAction(() => api({ app:'jigaiBuild', ym, pdf: pdf ? '1' : '', kind: sheet ? 'sheet' : '' }), () => showJigai());
     $('view').querySelectorAll('[data-jb]').forEach(b => b.onclick = () => go(b.dataset.jb, false));
     $('view').querySelectorAll('[data-jp]').forEach(b => b.onclick = () => go(b.dataset.jp, true));
+    const view = async ym => {
+      $('jgView').innerHTML = '<div class="box small">読み込んでいます…</div>';
+      try {
+        const d = await api({ app:'jigaiSheet', ym });
+        if (token !== viewToken) return;
+        $('jgView').innerHTML = `<div class="sec-title">${ymL(d.ym)}の内容${d.company ? '　' + esc(d.company) : ''}</div>
+          <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${d.rows.length}</b><span>実施日数</span></div><div style="background:var(--g2)"><b>${d.totalHours}</b><span>労働時間</span></div><div style="background:var(--g1)"><b>${d.totalYen.toLocaleString()}</b><span>日給合計（円）</span></div></div>
+          ${d.rows.length ? `<div class="tscroll"><table class="at-tbl bk"><thead><tr><th style="width:17%">日</th><th style="width:34%">就業時間</th><th>時間</th><th>人数</th><th style="width:22%">日給計</th></tr></thead><tbody>${d.rows.map(r =>
+            `<tr><td class="n"><b>${r.day}</b><span class="small">${esc(r.wd)}</span></td><td class="n">${esc(r.start)}〜${esc(r.end)}</td><td class="n">${r.hours}</td><td class="n">${r.people}</td><td class="n"><b>${r.total.toLocaleString()}</b></td></tr><tr><td></td><td colspan="4" class="small" style="padding-top:0">${esc(r.names)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">この月の記録はありません。</div>'}`;
+      } catch (e) { $('jgView').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+    };
+    $('view').querySelectorAll('[data-jv]').forEach(b => b.onclick = () => view(b.dataset.jv));
+    if (sheet) view(cur && months.some(m => m.ym === cur) ? cur : months[0].ym);
   } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 
@@ -2213,7 +2235,7 @@ function showWork(){
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
-      <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労の実施報告書</div><div class="m">月を選んで作り直す・PDF保存</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労（報告書・タイムシート）</div><div class="m">実施報告書と請求用タイムシートを月ごとに</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jisseki" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">実績記録のチェック</div><div class="m">紙の実績記録を撮影 → 打刻・支援経過記録と照合</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/deadlines" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">利用者の期限</div><div class="m">受給者証・手帳・計画更新など</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/monthly" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">月別集計</div><div class="m">出勤日数・時間・送迎・有給・欠勤</div></div>${ICON.chev}</a>
