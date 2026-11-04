@@ -393,6 +393,12 @@ body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-
 .ib-row.new .ib-t{font-weight:700}
 .ib-more{display:block;text-align:center;padding:11px;font-size:14px;color:var(--brand);text-decoration:none;font-weight:700}
 .ib-new{font-size:12px;background:var(--g2);color:var(--on);border-radius:99px;padding:2px 9px}
+.inf{background:var(--paper);border-radius:var(--r-m);padding:12px 14px;margin-bottom:12px;border-left:5px solid var(--g1)}
+.inf.amber{border-left-color:var(--warn)}.inf.red{border-left-color:var(--err)}
+.inf summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;list-style:none}.inf summary::-webkit-details-marker{display:none}
+.inf summary b{margin-right:4px}
+.inf-b{font-size:12.5px;font-weight:700;border-radius:99px;padding:2px 10px;background:var(--soft);color:var(--sub)}.inf-b.a{background:var(--warn-bg);color:var(--warn)}.inf-b.r{background:var(--err);color:var(--on)}
+.inf ul{margin:10px 0 6px;padding-left:18px;font-size:14px;line-height:1.6;color:var(--ink);font-weight:400}.inf summary{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -604,6 +610,7 @@ async function demoApi(p){
     all:[{ id:'a1', name:'峰 恭子', kind:'迎え', time:'08:30', place:'自宅（前原東）', staff:'小柳 孝則', on:true, days:'火水木金' }, { id:'a3', name:'峰 恭子', kind:'送り', time:'15:30', place:'自宅（前原東）', staff:'大原 里奈', on:true, days:'火水木金' }, { id:'a2', name:'松川 忠義', kind:'迎え', time:'08:45', place:'筑前前原駅', staff:'小柳 孝則', on:true, days:'水木' }] };
   if (p.app === 'sougeiSave' || p.app === 'sougeiDel' || p.app === 'sougeiAuto') return { message:'（デモ）保存しました' };
   if (p.app === 'inbox') { const t = Date.now(); return { items:[{ view:'disaster', src:'災害時情報共有（WAM）', title:'【福岡県】大雨による被害状況の報告について', date:'2026/11/04 09:12', ts:t - 3600e3 }, { view:'shogai', src:'障がい福祉の連絡メール', title:'令和8年度 報酬改定に関する説明会のご案内', date:'2026/11/03 16:40', ts:t - 864e5 }, { view:'chingin', src:'賃金向上センター', title:'共同受注の案件（清掃作業）のお知らせ', date:'2026/11/02 10:05', ts:t - 2*864e5 }, { view:'weather', src:'天候・警報メール', title:'福岡県　大雨注意報（糸島市）', date:'2026/11/01 06:30', ts:t - 3*864e5 }, { view:'news', src:'福岡市の新着情報', title:'障がい福祉サービス事業所向け研修の募集', date:'2026/10/31 13:00', ts:t - 4*864e5 }] }; }
+  if (p.app === 'infection') return { at:'11/4 15:00', url:'http://www.fihes.pref.fukuoka.jp/~idsc_fukuoka/idwr.html', items:[{ text:'インフルエンザの１定点医療機関当たり報告数が10.02となり、今後４週間以内に大きな流行が発生する可能性が高いとされる基準値：10を超えましたので、本日注意報を発表しました。', level:'注意報', name:'インフルエンザ' }, { text:'伝染性紅斑の警報は解除されました。', level:'解除', name:'伝染性紅斑' }] };
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -1404,6 +1411,24 @@ function bindInbox(j){
   if (!$('ibSeen') || !j) return;
   $('ibSeen').onclick = () => { LS.set('fb_inbox_seen', Math.max(0, ...j.items.map(x => x.ts))); $('ibBox').innerHTML = inboxHtml(j); };
 }
+
+
+/* ===== 感染症の流行情報（福岡県感染症情報センター） ===== */
+const infKey = () => 'fb_inf_' + (isDemo() ? 'demo' : 'live');
+function infHtml(j){
+  if (!j || !(j.items || []).length) return '';
+  const alerts = j.items.filter(x => x.level === '警報' || x.level === '注意報');
+  return `<details class="inf ${alerts.some(x => x.level === '警報') ? 'red' : alerts.length ? 'amber' : ''}"><summary><b>福岡県の流行状況</b>${alerts.length ? alerts.map(x => `<span class="inf-b ${x.level === '警報' ? 'r' : 'a'}">${esc(x.name || '感染症')} ${x.level}</span>`).join('') : '<span class="inf-b">注意報・警報なし</span>'}</summary>
+    <ul>${j.items.map(x => `<li>${esc(x.text)}</li>`).join('')}</ul>
+    <div class="small" style="color:var(--sub)">${esc(j.at || '')} 時点　<a class="link" style="padding:0;min-height:0" href="${esc(j.url)}" target="_blank" rel="noopener">感染症情報センターで見る</a></div></details>`;
+}
+async function loadInfection(){
+  if (!signedIn() || infLoading) return;
+  infLoading = true;
+  try { const j = await api({ app:'infection' }); LS.set(infKey(), j); if ($('infBox')) $('infBox').innerHTML = infHtml(j); } catch (e) {}
+  setTimeout(() => { infLoading = false; }, 60000);
+}
+let infLoading = false;
 
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
@@ -2912,7 +2937,7 @@ function drawQuarantine(j){
   const step = qtRange <= 21 ? 2 : qtRange <= 42 ? 7 : 28;
   const st = x => x.end < today ? 'done' : x.start > today ? 'soon' : 'now';
   const remain = x => dnum(x.end) - T;
-  let html = `<div style="padding-top:12px"><div class="counts" style="grid-template-columns:repeat(2,1fr)"><div style="background:${active.length ? 'var(--err)' : 'var(--g1)'}"><b>${active.length}</b><span>いま待機中</span></div><div style="background:var(--warn)"><b>${soon.length}</b><span>これから待機</span></div></div>`;
+  let html = `<div style="padding-top:12px"><div id="infBox">${infHtml(LS.get(infKey(), null))}</div><div class="counts" style="grid-template-columns:repeat(2,1fr)"><div style="background:${active.length ? 'var(--err)' : 'var(--g1)'}"><b>${active.length}</b><span>いま待機中</span></div><div style="background:var(--warn)"><b>${soon.length}</b><span>これから待機</span></div></div>`;
   if (active.length) html += `<div class="box">${active.map(x => `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0"><span><b>${esc(x.name)}</b><span class="small">　${esc(x.kind)}</span></span><span class="small">${md(dnum(x.end))}まで（${remain(x) ? 'あと' + remain(x) + '日' : '今日まで'}）</span></div>`).join('')}</div>`;
   html += `<div class="chips" style="margin:6px 0 10px">${[[14,'2週間'],[35,'5週間'],[91,'3か月']].map(([n, l]) => `<button class="chip mini" data-rg="${n}" aria-pressed="${n === qtRange}" style="--gc:var(--g2)">${l}</button>`).join('')}</div>`;
   // チャート
@@ -2934,6 +2959,7 @@ function drawQuarantine(j){
   <div class="gt-legend"><span><i class="gt-now"></i>待機中</span><span><i class="gt-soon"></i>これから</span><span><i class="gt-done"></i>終了</span></div>
   <a class="btn p wide" href="#/form/${encodeURIComponent('待機期間管理')}" style="display:grid;place-items:center;text-decoration:none;margin-top:14px;--gc:var(--err)">待機期間を登録する</a></div>`;
   $('view').innerHTML = html;
+  loadInfection();
   $('view').querySelectorAll('[data-rg]').forEach(b => b.onclick = () => { qtRange = Number(b.dataset.rg); drawQuarantine(j); });
   $('view').querySelectorAll('[data-qi]').forEach(b => b.onclick = () => {
     const x = items[Number(b.dataset.qi)];
