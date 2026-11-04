@@ -354,6 +354,37 @@ canvas.sig.on{border-style:solid;border-color:var(--g2)}
 .sg-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;width:100%;text-align:left;background:var(--soft);border:0;border-radius:var(--r-s);padding:10px 12px;margin-top:6px;color:var(--ink)}
 .sg-row:disabled{cursor:default}.sg-row.off{opacity:.55}.sg-row b{font-size:17px;font-variant-numeric:tabular-nums}.sg-row .small{flex-basis:100%;color:var(--sub)}
 .sg-k{font-size:12px;font-weight:800;color:var(--on);background:var(--g2);border-radius:6px;padding:2px 8px}.sg-k.b{background:var(--g3)}
+body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-width:none;padding:0}
+.ks-wrap{min-height:100vh;padding:20px clamp(16px,3vw,40px) 80px;background:var(--bg)}
+.ks-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px}
+.ks-clock{font-size:clamp(40px,7vw,72px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;color:var(--brand)}
+.ks-date{font-size:clamp(16px,2.2vw,22px);color:var(--sub);margin-top:4px}
+.ks-title{font-size:clamp(20px,3vw,32px);font-weight:800;text-align:right}.ks-title small{display:block;font-size:14px;color:var(--warn)}
+.ks-tabs{display:flex;gap:10px;margin-bottom:10px}.ks-tab{flex:1;min-height:56px;font-size:18px;font-weight:700;border-radius:var(--r-m);border:2px solid var(--rule);background:var(--paper);color:var(--ink)}
+.ks-tab[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.ks-rows{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.ks-row{min-width:56px;min-height:52px;font-size:20px;font-weight:700;border-radius:var(--r-m);border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+.ks-row[aria-pressed="true"]{background:var(--g2);border-color:var(--g2);color:var(--on)}
+.ks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.ks-name{display:grid;gap:4px;align-content:center;justify-items:start;text-align:left;min-height:104px;padding:14px 16px;border-radius:var(--r-l);border:0;border-left:8px solid var(--rule);background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.ks-name b{font-size:clamp(20px,2.6vw,26px)}.ks-name small{color:var(--sub);font-size:14px}
+.ks-name.st-in{border-left-color:var(--g1)}.ks-name.st-away{border-left-color:var(--warn)}.ks-name.st-out{border-left-color:var(--sub);opacity:.7}
+.ks-st{font-size:14px;font-weight:700;color:var(--sc)}
+.ks-exit{position:fixed;right:12px;bottom:12px;width:44px;height:44px;border-radius:50%;border:1px solid var(--rule);background:var(--paper);color:var(--sub);font-size:20px;opacity:.6}
+.ks-empty{max-width:520px;margin:15vh auto;text-align:center;display:grid;gap:12px}
+.ks-modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px}
+.ks-card{background:var(--paper);border-radius:24px;padding:28px clamp(18px,4vw,40px);width:min(560px,100%);display:grid;gap:14px;text-align:center;max-height:94vh;overflow:auto}
+.ks-who{font-size:clamp(28px,5vw,40px);font-weight:800}.ks-q{font-size:18px;font-weight:700;color:var(--sub)}
+.ks-picks{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.ks-pick{min-height:60px;font-size:19px;font-weight:700;border-radius:var(--r-m);border:2px solid var(--rule);background:var(--soft);color:var(--ink)}
+.ks-pick[aria-pressed="true"]{background:var(--g2);border-color:var(--g2);color:var(--on)}
+.ks-acts{display:grid;gap:12px}.ks-act{min-height:84px;font-size:clamp(24px,4vw,30px);font-weight:800;border:0;border-radius:var(--r-l);background:var(--ac);color:var(--on)}
+.ks-cancel{min-height:56px;font-size:18px;border-radius:var(--r-m);border:1px solid var(--rule);background:var(--paper);color:var(--ink)}
+.ks-msg{font-size:20px;margin:0;line-height:1.6}.ks-msg.err{color:var(--err);font-weight:700}
+.ks-done{width:96px;height:96px;margin:0 auto;border-radius:50%;background:var(--g1);color:var(--on);display:grid;place-items:center;font-size:56px;font-weight:800}
+.ks-hello{font-size:clamp(24px,4vw,32px);font-weight:800;color:var(--g1)}
+.ks-pinv{font-size:40px;letter-spacing:12px;min-height:52px}
+.ks-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.ks-pad button{min-height:72px;font-size:28px;font-weight:700;border-radius:var(--r-m);border:1px solid var(--rule);background:var(--soft);color:var(--ink)}
+.ks-pad button.ok{background:var(--g1);color:var(--on);border-color:var(--g1)}
+.ks-url{width:100%;margin-top:8px;min-height:40px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 8px;font-size:12px;background:var(--soft);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -1179,6 +1210,156 @@ function sougeiEdit(x){
   if ($('sgDel')) $('sgDel').onclick = () => runAction(() => api({ app:'sougeiDel', id: x.id }), () => showSougei());
 }
 
+
+/* ================= 受付端末（入口のタブレット・PCで出退勤） ================= */
+(function takeKioskFromUrl(){
+  const m = location.search.match(/[?&]kiosk=([A-Za-z0-9]+)/);
+  if (!m) return;
+  LS.set('fb_kiosk', m[1]);
+  history.replaceState(null, '', location.pathname + location.search.replace(/([?&])kiosk=[^&]*&?/, '$1').replace(/[?&]$/, '') + '#/kiosk');
+})();
+const kioskKey = () => isDemo() ? 'demo' : LS.get('fb_kiosk', '');
+async function kioskApi(params){
+  if (isDemo()) return demoKiosk(params);
+  let r;
+  try { r = await fetch(cfg.url + '?' + new URLSearchParams({ ...params, kiosk: kioskKey() })); } catch (e) { throw new Error('通信できませんでした。少し待ってからもう一度お試しください。'); }
+  const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした'); });
+  if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
+  return j;
+}
+let DEMO_KIOSK = null;
+async function demoKiosk(p){
+  await new Promise(r => setTimeout(r, 300));
+  DEMO_KIOSK = DEMO_KIOSK || [['峰 恭子','みね きょうこ','利用者',true,'in','09:00'],['松川 忠義','まつかわ ただよし','利用者',false,'none',''],['平山 菜々','ひらやま なな','利用者',true,'away','08:45'],['安部 法子','あべ のりこ','利用者',false,'out','09:15'],['池松 恵史','いけまつ けいし','利用者',false,'none',''],['吉田 千春','よしだ ちはる','利用者',false,'none',''],['石橋 強','いしばし つよし','スタッフ',false,'in','08:30'],['大原 里奈','おおはら りな','スタッフ',false,'none','']].map(a => ({ name:a[0], kana:a[1], type:a[2], pin:a[3], state:a[4], inTime:a[5], outTime: a[4] === 'out' ? '15:30' : '' }));
+  if (p.app === 'kioskList') return { people: DEMO_KIOSK, test:true };
+  const x = DEMO_KIOSK.find(y => y.name === p.name);
+  if (x.pin && p.pin !== '1234') throw new Error('暗証番号が違います（デモは 1234）');
+  x.state = { in:'in', out:'out', away:'away', back:'in' }[p.kind];
+  const t = jst().toISOString().slice(11, 16);
+  if (p.kind === 'in') x.inTime = t;
+  return { name:x.name, punched:{ message:({ in:'出勤', out:'退勤', away:'離席', back:'着席' })[p.kind] + 'を ' + t + ' で記録しました' } };
+}
+let KS = { tab:'利用者', row:'', list:[], timer:null };
+const KANA_ROWS = [['あ','あいうえおぁぃぅぇぉ'],['か','かきくけこがぎぐげご'],['さ','さしすせそざじずぜぞ'],['た','たちつてとだぢづでど'],['な','なにぬねの'],['は','はひふへほばびぶべぼぱぴぷぺぽ'],['ま','まみむめも'],['や','やゆよゃゅょ'],['ら','らりるれろ'],['わ','わをん']];
+const kanaRow = k => { const c = String(k || '').trim().charAt(0).replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)); const r = KANA_ROWS.find(x => x[1].includes(c)); return r ? r[0] : '他'; };
+const KS_STATE = { in:['出勤中','var(--g1)'], away:['離席中','var(--warn)'], out:['退勤済み','var(--sub)'], none:['',''], notice:['連絡あり','var(--g2)'] };
+function showKiosk(){
+  document.body.classList.add('kiosk');
+  if (!kioskKey()) {
+    $('view').innerHTML = `<div class="ks-wrap"><div class="ks-empty"><h2>受付端末として登録されていません</h2><p>管理者が「出退勤の一覧」→「受付端末を設定」から、この端末を登録してください。</p><a class="btn s" href="#/" onclick="document.body.classList.remove('kiosk')">アプリに戻る</a></div></div>`;
+    return;
+  }
+  $('view').innerHTML = `<div class="ks-wrap"><div class="ks-head"><div><div class="ks-clock" id="ksClock"></div><div class="ks-date" id="ksDate"></div></div><div class="ks-title">出退勤の受付<small id="ksTest"></small></div></div>
+    <div class="ks-tabs" id="ksTabs"></div><div class="ks-rows" id="ksRows"></div><div class="ks-grid" id="ksGrid"><div class="empty">読み込んでいます…</div></div>
+    <button class="ks-exit" id="ksExit" title="長押しで受付端末を終わる">⚙</button></div>`;
+  const tick = () => { if (!$('ksClock')) return; const d = jst(); $('ksClock').textContent = d.toISOString().slice(11, 16); $('ksDate').textContent = `${d.getUTCMonth() + 1}月${d.getUTCDate()}日（${'日月火水木金土'[d.getUTCDay()]}）`; };
+  tick();
+  clearInterval(KS.timer); KS.timer = setInterval(() => { if (!location.hash.startsWith('#/kiosk')) { clearInterval(KS.timer); document.body.classList.remove('kiosk'); return; } tick(); if (!$('ksModal') && Date.now() - (KS.loaded || 0) > 60000) kioskLoad(); }, 5000);
+  let press = 0;
+  $('ksExit').onpointerdown = () => { press = Date.now(); };
+  $('ksExit').onpointerup = () => { if (Date.now() - press < 2000) { toast('2秒以上長押しすると、受付端末を終われます'); return; }
+    confirmSheet('受付端末を終わる', 'この端末の受付端末の登録を外して、ふつうのアプリに戻ります。', '終わる', () => { closeSheet(); LS.del('fb_kiosk'); document.body.classList.remove('kiosk'); location.hash = '#/'; }, true); };
+  kioskLoad();
+}
+async function kioskLoad(){
+  KS.loaded = Date.now();
+  try { const j = await kioskApi({ app:'kioskList' }); KS.list = j.people || []; if ($('ksTest')) $('ksTest').textContent = j.test ? 'テスト中' : ''; kioskDraw(); }
+  catch (e) { if ($('ksGrid')) $('ksGrid').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+function kioskDraw(){
+  if (!$('ksGrid')) return;
+  const types = ['利用者', 'スタッフ'].filter(t => KS.list.some(x => x.type === t));
+  if (!types.includes(KS.tab)) KS.tab = types[0] || '利用者';
+  $('ksTabs').innerHTML = types.length > 1 ? types.map(t => `<button class="ks-tab" aria-pressed="${t === KS.tab}" data-t="${t}">${t === '利用者' ? '利用者のみなさん' : 'スタッフ'}</button>`).join('') : '';
+  const inTab = KS.list.filter(x => x.type === KS.tab);
+  const rows = [...new Set(inTab.map(x => kanaRow(x.kana)))];
+  if (KS.row && !rows.includes(KS.row)) KS.row = '';
+  $('ksRows').innerHTML = inTab.length > 12 ? ['', ...KANA_ROWS.map(r => r[0]), '他'].filter(r => !r || rows.includes(r)).map(r => `<button class="ks-row" aria-pressed="${r === KS.row}" data-r="${r}">${r || 'ぜんぶ'}</button>`).join('') : '';
+  const list = inTab.filter(x => !KS.row || kanaRow(x.kana) === KS.row);
+  $('ksGrid').innerHTML = list.length ? list.map(x => { const st = KS_STATE[x.state] || KS_STATE.none;
+    return `<button class="ks-name st-${x.state}" data-n="${esc(x.name)}"><b>${esc(x.name)}</b>${x.kana ? `<small>${esc(x.kana)}</small>` : ''}${st[0] ? `<span class="ks-st" style="--sc:${st[1]}">${st[0]}${x.state === 'in' || x.state === 'away' ? ' ' + esc(x.inTime) : x.state === 'out' ? ' ' + esc(x.outTime || '') : ''}</span>` : ''}</button>`; }).join('') : '<div class="empty">名前がありません</div>';
+  $('ksTabs').querySelectorAll('[data-t]').forEach(b => b.onclick = () => { KS.tab = b.dataset.t; KS.row = ''; kioskDraw(); });
+  $('ksRows').querySelectorAll('[data-r]').forEach(b => b.onclick = () => { KS.row = b.dataset.r; kioskDraw(); });
+  $('ksGrid').querySelectorAll('[data-n]').forEach(b => b.onclick = () => kioskPerson(KS.list.find(x => x.name === b.dataset.n)));
+}
+function kioskModal(html){
+  kioskClose();
+  const m = document.createElement('div'); m.className = 'ks-modal'; m.id = 'ksModal';
+  m.innerHTML = `<div class="ks-card">${html}</div>`;
+  m.onclick = e => { if (e.target === m) kioskClose(); };
+  document.body.appendChild(m);
+  clearTimeout(KS.idle); KS.idle = setTimeout(kioskClose, 60000);
+  return m;
+}
+function kioskClose(){ clearTimeout(KS.idle); const m = $('ksModal'); if (m) m.remove(); }
+function kioskPerson(x, pin){
+  if (x.pin && !pin) return kioskPin(x);
+  const mem = x.type === '利用者';
+  let acts;
+  if (x.state === 'none' || x.state === 'notice') acts = [['in', '出勤する', 'var(--g1)']];
+  else if (x.state === 'in') acts = [['out', '退勤する', 'var(--g2)'], ['away', '離席する', 'var(--warn)']];
+  else if (x.state === 'away') acts = [['back', '席にもどる', 'var(--g1)'], ['out', '退勤する', 'var(--g2)']];
+  else acts = [];
+  let pick = LS.get('fb_ks_pick_' + x.name, '往復');
+  const m = kioskModal(`<div class="ks-who">${esc(x.name)} さん</div>
+    ${x.state === 'out' ? '<p class="ks-msg">今日は退勤済みです。おつかれさまでした。</p>' : ''}
+    ${mem && acts[0] && acts[0][0] === 'in' ? `<div class="ks-q">今日の送迎は？</div><div class="ks-picks">${['往復', '往', '復', '無し'].map(k => `<button class="ks-pick" data-p="${k}" aria-pressed="${k === pick}">${k === '往' ? '往（行きだけ）' : k === '復' ? '復（帰りだけ）' : k === '無し' ? 'なし' : '往復'}</button>`).join('')}</div>` : ''}
+    <div class="ks-acts">${acts.map(a => `<button class="ks-act" data-k="${a[0]}" style="--ac:${a[2]}">${a[1]}</button>`).join('')}</div>
+    <button class="ks-cancel" id="ksCancel">${acts.length ? 'やめる' : 'とじる'}</button>`);
+  m.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { pick = b.dataset.p; m.querySelectorAll('[data-p]').forEach(c => c.setAttribute('aria-pressed', c === b)); });
+  $('ksCancel').onclick = kioskClose;
+  m.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
+    m.querySelectorAll('button').forEach(c => c.disabled = true);
+    b.textContent = '記録しています…';
+    try {
+      const j = await kioskApi({ app:'kioskPunch', name: x.name, pin: pin || '', kind: b.dataset.k, pickup: mem ? pick : '' });
+      if (mem) LS.set('fb_ks_pick_' + x.name, pick);
+      const k = b.dataset.k, hello = k === 'in' ? 'おはようございます' : k === 'out' ? 'おつかれさまでした' : k === 'away' ? 'いってらっしゃい' : 'おかえりなさい';
+      kioskModal(`<div class="ks-done">✓</div><div class="ks-who">${esc(x.name)} さん</div><div class="ks-hello">${hello}</div><p class="ks-msg">${esc((j.punched && j.punched.message) || '記録しました')}</p>`);
+      setTimeout(kioskClose, 3500);
+      kioskLoad();
+    } catch (e) {
+      kioskModal(`<div class="ks-who">${esc(x.name)} さん</div><p class="ks-msg err">${esc(e.message)}</p><button class="ks-cancel" id="ksCancel">とじる</button>`);
+      $('ksCancel').onclick = kioskClose;
+    }
+  });
+}
+function kioskPin(x){
+  let v = '';
+  const m = kioskModal(`<div class="ks-who">${esc(x.name)} さん</div><div class="ks-q">暗証番号を入れてください</div><div class="ks-pinv" id="ksPinV"></div>
+    <div class="ks-pad">${[1,2,3,4,5,6,7,8,9,'消',0,'OK'].map(k => `<button data-v="${k}"${k === 'OK' ? ' class="ok"' : ''}>${k}</button>`).join('')}</div><button class="ks-cancel" id="ksCancel">やめる</button>`);
+  const show = () => $('ksPinV').textContent = v ? '●'.repeat(v.length) : '　';
+  show();
+  $('ksCancel').onclick = kioskClose;
+  m.querySelectorAll('[data-v]').forEach(b => b.onclick = () => {
+    const k = b.dataset.v;
+    if (k === '消') v = v.slice(0, -1);
+    else if (k === 'OK') { if (v) kioskPerson(x, v); return; }
+    else if (v.length < 8) v += k;
+    show();
+  });
+}
+/* 管理者：受付端末の登録 */
+async function kioskSetupBox(){
+  const box = $('ksSetup'); if (!box) return;
+  box.innerHTML = `<div class="small">入口に置くタブレットやPCで、名前を選んで出勤・退勤できるようにします（LINEを使っていない方向け）。</div>
+    <div class="row2"><button class="btn p" id="ksHere">この端末を受付に</button><button class="btn s" id="ksShow">別の端末用QR</button></div><div id="ksOut"></div>`;
+  $('ksHere').onclick = () => confirmSheet('この端末を受付端末にする', 'この端末は、名前を選んで出退勤するだけの画面になります。終わるときは右下の ⚙ を2秒長押しします。', '受付端末にする', async () => {
+    closeSheet();
+    try { const j = isDemo() ? { key:'demo' } : await api({ app:'kioskSetup' }); LS.set('fb_kiosk', j.key); location.hash = '#/kiosk'; } catch (e) { msgSheet('できませんでした', e.message); }
+  });
+  $('ksShow').onclick = async () => {
+    try {
+      const j = isDemo() ? { key:'demo' } : await api({ app:'kioskSetup' });
+      const url = location.origin + location.pathname + '?kiosk=' + j.key + '#/kiosk';
+      $('ksOut').innerHTML = `<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;margin-top:10px"><div style="background:#fff;padding:6px;border-radius:var(--r-s)">${await qrSvg(url, 4)}</div>
+        <div class="small">受付にするタブレットのカメラでこのQRを読み取るか、下のURLをブラウザで開いてください。<br><b>このURLは事業所の外に出さないでください。</b></div></div>
+        <input class="ks-url" readonly value="${esc(url)}" onclick="this.select()"><div class="row2"><button class="btn s" id="ksReset" style="color:var(--err)">端末キーを作り直す</button></div>`;
+      $('ksReset').onclick = () => confirmSheet('端末キーを作り直す', '今までの受付端末は使えなくなります。端末をなくしたときなどに使います。', '作り直す', async () => { closeSheet(); await api({ app:'kioskSetup', reset:'1' }); $('ksShow').click(); toast('作り直しました'); }, true);
+    } catch (e) { $('ksOut').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+  };
+}
+
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
 function route(){
@@ -1187,6 +1368,9 @@ function route(){
   const h = decodeURIComponent(location.hash.replace(/^#\/?/, ''));
   const [page, ...rest] = h.split('/');
   const arg = rest.join('/');
+  if (page === 'kiosk') { $('nav').hidden = true; return showKiosk(); }
+  document.body.classList.remove('kiosk');
+  if (!page && !signedIn() && kioskKey()) { location.replace('#/kiosk'); return; }
   if (isMember() && !['attend', 'info', 'settings', 'book', 'manual'].includes(page)) { location.replace('#/attend'); return; }
   document.body.classList.toggle('member', isMember());
   const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'contact', admin:'work', quarantine:'work', sougei:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home', manual: isMember() ? 'info' : 'contact' })[page] || page || 'home');
@@ -2429,9 +2613,10 @@ async function showAttendDay(date){
     html += rows.length ? sec('スタッフ', rows.filter(r => r.kubun !== '利用者')) + sec('利用者', rows.filter(r => r.kubun === '利用者')) : '<div class="empty">この日の打刻はありません。</div>';
     html += `<div class="sec-title">事業所の位置</div><div class="box"><div class="small">${j.office ? '設定済みです。事業所から離れた場所での打刻には印が付きます。' : 'まだ設定していません。事業所にいるときに下のボタンを押すと、今いる場所を事業所として登録します。'}</div>
       <div class="row2"><button class="btn s" id="adOffice">今いる場所を事業所にする</button></div></div>
-      <div class="sec-title">打刻用QRコード</div><div class="box" id="qrBox"><div class="small">読み込んでいます…</div></div>`;
+      <div class="sec-title">打刻用QRコード</div><div class="box" id="qrBox"><div class="small">読み込んでいます…</div></div>
+      <div class="sec-title">受付端末（入口のタブレット・PC）</div><div class="box" id="ksSetup"></div>`;
     $('adBox').innerHTML = html;
-    loadOfficeQr(false);
+    loadOfficeQr(false); kioskSetupBox();
     $('adOffice').onclick = () => confirmSheet('事業所の位置を設定', '今いる場所を事業所の位置として登録します。半径300m以内での打刻を「事業所」と判定します。', '登録する', async () => {
       const pos = await getPos();
       if (!pos) { toast('位置が取れませんでした。位置情報の利用を許可してください'); return; }
