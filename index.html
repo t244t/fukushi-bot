@@ -227,6 +227,12 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .step .n{width:36px;height:36px;border-radius:50%;background:var(--gc);color:var(--on);display:grid;place-items:center;font-weight:700}
 .step img{width:100%;max-height:240px;object-fit:contain;border-radius:var(--r-s);margin-top:8px;background:var(--soft)}
 .step .b{white-space:pre-wrap;font-size:15px;margin-top:4px}
+.pmap-wrap{position:relative;margin:0 0 10px}
+.pmap{height:300px;border-radius:var(--r-m);overflow:hidden;background:var(--soft);border:1px solid var(--rule);z-index:0}
+.pmap-msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--sub);font-size:14px;pointer-events:none}
+.pmap-bar{display:flex;align-items:center;gap:10px;margin:0 0 10px}.pmap-bar .btn{min-height:44px;padding:0 16px;font-size:15px}.pmap-bar .small{color:var(--sub)}
+.pill.near{background:var(--g2-bg);color:var(--g2)}
+.leaflet-popup-content{font-size:14px;line-height:1.5}
 .place .addr{font-size:14px;color:var(--sub)}
 .place details{margin-top:8px;font-size:14px}
 .place summary{cursor:pointer;color:var(--gc);font-weight:700;padding:4px 0}
@@ -446,7 +452,7 @@ const DEMO_VIEW = {
     { step:'Step4', title:'回復', cond:'回復', body:'😊 よかったです。引き続き安静にしてください。' },
     { step:'Step4', title:'回復しない／症状悪化 → 搬送', cond:'医療機関搬送', body:'🚑 回復しない場合、または悪化した場合は医療機関へ搬送を検討してください。' }] },
   weather:{ kind:'feed', items:[{ date:'2026/03/12 10:30', title:'【福岡地方】注警報メール', body:'■発表日時 令和８年３月１２日１０時２８分 福岡管区気象台 発表\n■概要 福岡地方では、落雷や竜巻などの激しい突風に注意してください。' }] },
-  shelter:{ kind:'places', items:[{ area:'糸島市井田', title:'前原東中学校', addr:'糸島市井田658', tag:'指定避難所', geo:'33.5465, 130.2312', reviews:[{ who:'いしどん', text:'水がとどきました。', date:'3/18' }], needs:[{ what:'飲料水', level:'2' }], comments:[] }] },
+  shelter:{ kind:'places', items:[{ area:'糸島市井田', title:'前原東中学校', addr:'糸島市井田658', tag:'指定避難所', geo:'33.5465, 130.2312', reviews:[{ who:'いしどん', text:'水がとどきました。', date:'3/18' }], needs:[{ what:'飲料水', level:'2' }], comments:[] }, { area:'糸島市前原', title:'糸島市健康福祉センターあごら', addr:'糸島市潤1-22-1', tag:'指定避難所', geo:'33.5579, 130.2005', reviews:[], needs:[], comments:[] }, { area:'糸島市志摩', title:'志摩中学校', addr:'糸島市志摩初1', tag:'指定避難所', geo:'33.5876, 130.1712', reviews:[], needs:[], comments:[] }, { area:'糸島市二丈', title:'二丈中学校', addr:'糸島市二丈深江', tag:'指定緊急避難場所', geo:'33.5162, 130.1290', reviews:[], needs:[], comments:[] }] },
   bousai:{ kind:'links', items:[{ title:'気象庁　防災情報', url:'https://www.jma.go.jp/bosai/', reviews:[{ who:'いしどん', title:'', text:'雨雲レーダーが見やすい', date:'11/1' }] }, { title:'yahoo 天気・災害', url:'https://weather.yahoo.co.jp/', reviews:[] }] },
   livecam:{ kind:'links', items:[{ title:'NHKニュースLIVE', sub:'災害情報全般', url:'https://www.youtube.com/watch?v=coYw-eVU' }, { title:'福岡県 河川カメラ', sub:'県内各地の水位状況', url:'https://bousai.pref.fukuoka.jp/' }] },
   video:{ kind:'links', items:[{ title:'共通講義Ⅰ', url:'https://youtu.be/KtUFulk6UJE' }, { title:'共通講義Ⅱ', url:'https://youtu.be/6ypJkcWXUOQ' }] },
@@ -948,7 +954,7 @@ function mnRender(){
     if (next.length) html += `<div class="sec-title">続けて記録する</div><div class="mn-next">${next.map(s =>
       `<a class="row" href="#/form/${encodeURIComponent(s)}" style="color:inherit;text-decoration:none"><span class="name">${esc(s)}</span>${ICON.chev}</a>`).join('')}</div>
       <button class="btn s wide" id="mnCopy" style="margin-top:8px">経過をコピー（記録に貼り付け用）</button>`;
-    if (c.key === 'quake' || c.key === 'fire') html += `<a class="btn s wide" href="#/contact" style="display:grid;place-items:center;text-decoration:none;margin-top:8px">安否を報告する</a>`;
+    if (c.key === 'quake' || c.key === 'fire') html += `<div class="mn-nav" style="margin-top:10px"><a class="btn s" href="#/info/shelter">🗺 避難場所の地図</a><a class="btn s" href="#/contact">安否を報告する</a></div>`;
   }
   html += `<div class="mn-nav">${MN.stack.length > 1 ? '<button class="btn s" id="mnBack">ひとつ戻る</button>' : ''}<button class="btn s" id="mnRestart">最初から</button><a class="btn s" href="#/manual">メニュー</a></div>`;
   $('view').innerHTML = html;
@@ -1722,7 +1728,9 @@ function renderView(id, data){
       ${(it.fields || []).length ? `<dl class="kv">${it.fields.map(f => `<dt>${esc(f.k)}</dt><dd>${esc(f.v)}</dd>`).join('')}</dl>` : ''}</div>`).join('');
   } else if (data.kind === 'places') {
     const areas = [...new Set(items.map(it => (String(it.area).match(/^.+?[市町村]/) || [it.area])[0]).filter(Boolean))];
-    html += `<label class="search" style="margin-top:0">${ICON.search}<input id="pq2" type="search" placeholder="避難場所・住所でさがす" aria-label="避難場所をさがす"></label>
+    html += `<div class="pmap-wrap"><div id="pmap" class="pmap" role="region" aria-label="避難場所の地図"></div><div id="pmapMsg" class="pmap-msg">地図を読み込んでいます…</div></div>
+      <div class="pmap-bar"><button class="btn p" id="pNear">📍 現在地から近い順</button><span class="small"><span id="pCount"></span><br><span style="color:var(--err)">●</span> 今必要なものあり</span></div>
+      <label class="search" style="margin-top:0">${ICON.search}<input id="pq2" type="search" placeholder="避難場所・住所でさがす" aria-label="避難場所をさがす"></label>
       ${areas.length > 1 ? `<div class="chips" style="margin:8px 0 12px">${areas.map(a => `<button class="chip mini" data-area="${esc(a)}" aria-pressed="false">${esc(a)}</button>`).join('')}</div>` : ''}<div id="plist2"></div>`;
   } else {
     html += items.map((it, i) => `<div class="card" id="c${i}"><div class="d">${esc(it.date || '')}${it.tag && it.tag !== '不明' ? `<span class="pill">${esc(it.tag)}</span>` : ''}</div>
@@ -1825,28 +1833,98 @@ function openPost(kind, target, viewId){
   };
 }
 
+/* 「33.5465, 130.2312」→ [緯度, 経度]（順番が逆でも直す） */
+function parseGeo(g){
+  const m = String(g || '').match(/-?\d+(?:\.\d+)?/g);
+  if (!m || m.length < 2) return null;
+  let a = Number(m[0]), b = Number(m[1]);
+  if (Math.abs(a) > 90) [a, b] = [b, a];
+  return isFinite(a) && isFinite(b) && (a || b) ? [a, b] : null;
+}
+function geoKm(p, q){
+  const R = 6371, r = x => x * Math.PI / 180, dLa = r(q[0] - p[0]), dLo = r(q[1] - p[1]);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(p[0])) * Math.cos(r(q[0])) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+async function loadLeaflet(){
+  if (!document.getElementById('lfCss')) { const l = document.createElement('link'); l.id = 'lfCss'; l.rel = 'stylesheet'; l.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(l); }
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js', () => window.L && L.map);
+}
+const PLACE_CAP = 80;
 function bindPlaces(items){
-  let area = '';
-  const draw = () => {
+  let area = '', here = null, cap = PLACE_CAP, map = null, layer = null, hereMk = null, fitted = false;
+  items.forEach((it, i) => { it._i = i; it._ll = parseGeo(it.geo); });
+  const filtered = () => {
     const q = ($('pq2').value || '').trim();
-    const list = items.filter(it => (!area || String(it.area).indexOf(area) === 0) && (!q || (it.title + it.addr + it.area + (it.sub || '')).includes(q)));
-    $('plist2').innerHTML = list.length ? list.map(it => {
+    let list = items.filter(it => (!area || String(it.area).indexOf(area) === 0) && (!q || (it.title + it.addr + it.area + (it.sub || '')).includes(q)));
+    if (here) { list.forEach(it => it._km = it._ll ? geoKm(here, it._ll) : 1e9); list = list.slice().sort((a, b) => a._km - b._km); }
+    return list;
+  };
+  const drawMap = list => {
+    if (!map) return;
+    layer.clearLayers();
+    const pts = [];
+    list.forEach(it => {
+      if (!it._ll) return;
+      const need = (it.needs || []).length;
+      const mk = L.circleMarker(it._ll, { radius: need ? 9 : 7, weight: 2, color: '#fff', fillColor: need ? '#b3352b' : '#2f6b4f', fillOpacity: .95 });
+      mk.bindPopup(`<b>${esc(it.title)}</b>${it.tag ? `<br><small>${esc(it.tag)}</small>` : ''}<br>${esc(it.addr || '')}${need ? `<br><span style="color:#b3352b">今必要なもの ${need}件</span>` : ''}${here && it._km < 1e8 ? `<br>約${it._km.toFixed(1)}km` : ''}
+        <div style="margin-top:6px;display:flex;gap:10px"><a href="https://www.google.com/maps/dir/?api=1&destination=${it._ll.join(',')}" target="_blank" rel="noopener">経路を見る</a><a href="#" data-goto="${it._i}">詳しく</a></div>`);
+      mk.addTo(layer); pts.push(it._ll);
+    });
+    if (here) pts.push(here);
+    if (here && list[0] && list[0]._ll) map.fitBounds(L.latLngBounds([here, ...list.slice(0, 5).filter(x => x._ll).map(x => x._ll)]).pad(.2), { maxZoom: 15 });
+    else if (pts.length && (!fitted || area || $('pq2').value)) { map.fitBounds(L.latLngBounds(pts).pad(.1), { maxZoom: 15 }); fitted = true; }
+  };
+  const draw = () => {
+    const all = filtered();
+    const list = all.slice(0, cap);
+    $('pCount').textContent = all.length + '件' + (all.filter(x => x._ll).length < all.length ? '（地図に出ないもの ' + (all.length - all.filter(x => x._ll).length) + '件）' : '');
+    drawMap(all);
+    $('plist2').innerHTML = (list.length ? list.map(it => {
       const map = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((it.geo || '').replace(/\s/g, '') || it.addr || it.title);
       const needs = it.needs || [], revs = it.reviews || [], coms = it.comments || [];
       const pic = x => x.img && /^https?:/.test(x.img) ? ` <a class="link" style="padding:0" href="${esc(x.img)}" target="_blank" rel="noopener">写真</a>` : '';
-      return `<div class="card place"><div class="t">${esc(it.title)}${it.tag ? `<span class="pill">${esc(it.tag)}</span>` : ''}</div>
+      return `<div class="card place" id="pl${it._i}"><div class="t">${esc(it.title)}${it.tag ? `<span class="pill">${esc(it.tag)}</span>` : ''}${here && it._km < 1e8 ? `<span class="pill near">約${it._km.toFixed(1)}km</span>` : ''}</div>
         <div class="addr">${esc(it.addr || it.area)}</div>${it.sub ? `<div class="small">対象：${esc(it.sub)}</div>` : ''}
         ${needs.length ? `<details open><summary>今必要なもの（${needs.length}件）</summary><ul>${needs.map(n => `<li>${esc(n.what)}${n.level ? `（緊急度${esc(n.level)}）` : ''}${pic(n)}<span class="small">　${esc(n.who || '')} ${esc(n.date || '')}</span></li>`).join('')}</ul></details>` : ''}
         ${coms.length ? `<details><summary>届けます・応援（${coms.length}件）</summary><ul>${coms.map(r => `<li>${esc(r.text)}${pic(r)}<span class="small">　${esc(r.who || '')} ${esc(r.date || '')}</span></li>`).join('')}</ul></details>` : ''}
         ${revs.length ? `<details><summary>現地の声（${revs.length}件）</summary><ul>${revs.map(r => `<li>${r.title ? '<b>' + esc(r.title) + '</b> ' : ''}${esc(r.text)}${pic(r)}<span class="small">　${esc(r.who || '')} ${esc(r.date || '')}</span></li>`).join('')}</ul></details>` : ''}
-        <div class="acts"><a class="link" href="${map}" target="_blank" rel="noopener">地図で見る</a>
+        <div class="acts">${it._ll ? `<button class="link" data-fly="${it._i}">地図で場所を見る</button>` : ''}<a class="link" href="${map}" target="_blank" rel="noopener">Googleマップ</a>
           <button class="link" data-post="shelterReview" data-target="${esc(it.title)}">口コミを書く</button>
           <button class="link" data-post="shelterNeed" data-target="${esc(it.title)}">必要なものを登録</button>
           ${needs.length ? `<button class="link" data-post="needComment" data-target="${esc(it.title)}">届けます・応える</button>` : ''}</div></div>`;
-    }).join('') : '<div class="empty">合う避難場所はありません。</div>';
+    }).join('') : '<div class="empty">合う避難場所はありません。</div>') + (all.length > cap ? `<button class="btn s wide" id="pMore">あと${all.length - cap}件を表示</button>` : '');
     bindPosts('shelter');
+    if ($('pMore')) $('pMore').onclick = () => { cap += PLACE_CAP * 2; draw(); };
+    $('plist2').querySelectorAll('[data-fly]').forEach(b => b.onclick = () => {
+      const it = items[Number(b.dataset.fly)]; if (!map || !it._ll) return;
+      $('pmap').scrollIntoView({ behavior:'smooth', block:'center' });
+      map.setView(it._ll, 16);
+      layer.eachLayer(m => { const ll = m.getLatLng(); if (ll.lat === it._ll[0] && ll.lng === it._ll[1]) m.openPopup(); });
+    });
   };
-  $('pq2').oninput = draw;
+  $('pq2').oninput = () => { cap = PLACE_CAP; draw(); };
+  $('pNear').onclick = () => {
+    if (!navigator.geolocation) { toast('この端末では現在地を使えません'); return; }
+    $('pNear').disabled = true; $('pNear').textContent = '📍 現在地を確認中…';
+    navigator.geolocation.getCurrentPosition(pos => {
+      here = [pos.coords.latitude, pos.coords.longitude]; cap = PLACE_CAP;
+      $('pNear').disabled = false; $('pNear').textContent = '📍 現在地を更新';
+      if (map) { if (hereMk) hereMk.remove(); hereMk = L.circleMarker(here, { radius: 8, weight: 3, color: '#fff', fillColor: '#2e6fd8', fillOpacity: 1 }).bindTooltip('現在地').addTo(map); }
+      draw();
+    }, e => { $('pNear').disabled = false; $('pNear').textContent = '📍 現在地から近い順'; toast(e.code === 1 ? '位置情報の利用が許可されていません（設定で許可してください）' : '現在地を取得できませんでした'); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  };
+  $('pmap').addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (!g) return; e.preventDefault(); const el = $('pl' + g.dataset.goto); if (el) { if (!el.isConnected) return; el.scrollIntoView({ behavior:'smooth', block:'start' }); } else { cap = 1e6; draw(); const el2 = $('pl' + g.dataset.goto); if (el2) el2.scrollIntoView({ behavior:'smooth', block:'start' }); } });
+  const token = viewToken;
+  loadLeaflet().then(() => {
+    if (token !== viewToken || !$('pmap')) return;
+    map = L.map('pmap', { preferCanvas: true, zoomControl: true, attributionControl: true }).setView([33.557, 130.196], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    layer = L.layerGroup().addTo(map);
+    $('pmapMsg').remove();
+    draw();
+  }).catch(e => { if ($('pmapMsg')) $('pmapMsg').textContent = '地図を表示できませんでした（' + e.message + '）'; });
   $('view').querySelectorAll('[data-area]').forEach(b => b.onclick = () => {
     area = area === b.dataset.area ? '' : b.dataset.area;
     $('view').querySelectorAll('[data-area]').forEach(x => x.setAttribute('aria-pressed', x.dataset.area === area));
