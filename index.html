@@ -332,6 +332,14 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .mn-next{background:var(--paper);border-radius:var(--r-m);overflow:hidden}
 .mn-log{border-left-color:var(--g2)}.mn-log.danger{border-left-color:var(--err)}.mn-log.warn{border-left-color:var(--warn)}.mn-log.ok{border-left-color:var(--g1)}
 .mn-log-h{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px}.mn-log-h span{color:var(--sub);font-size:13px}.mn-log-r{font-size:13px;margin-top:4px}
+.js-f{display:grid;gap:4px;margin:8px 0}.js-f span{font-size:14px;color:var(--sub);font-weight:700}.js-f em{font-style:normal;color:var(--err);font-size:12px;margin-left:6px}
+.js-f input{min-height:48px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 12px;font-size:16px;background:var(--paper);color:var(--ink)}
+.sig-box{background:var(--paper);border-radius:var(--r-m);padding:12px;margin-bottom:10px}
+.sig-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}.sig-h b{font-size:16px}.sig-h em{font-style:normal;color:var(--err);font-size:12px}.sig-h .small{color:var(--sub)}.sig-h .link{margin-left:auto}
+canvas.sig{display:block;width:100%;height:170px;background:#fff;border:2px dashed var(--rule);border-radius:var(--r-s);touch-action:none;cursor:crosshair}
+canvas.sig.on{border-style:solid;border-color:var(--g2)}
+.sig-hint{font-size:12.5px;color:var(--sub);margin-top:6px}
+.js-ok{display:flex;gap:10px;align-items:flex-start;background:var(--paper);border-radius:var(--r-m);padding:14px;font-size:15px;line-height:1.5}.js-ok input{width:22px;height:22px;flex:none;margin-top:1px}
 </style>
 </head>
 <body>
@@ -531,6 +539,8 @@ function demoAttend(p){
 async function demoApi(p){
   await new Promise(r => setTimeout(r, 250));
   if (p.app === 'train') return { at:'11/4 08:15', lines:[{ name:'JR筑肥線', ok:false, status:'列車遅延', detail:'大雨の影響で、筑前前原〜唐津駅間の一部列車に遅れが出ています。', link:'https://www.jrkyushu.co.jp/trains/info/' }] };
+  if (p.app === 'jusetsuInfo') return { template:'重要事項説明書（ひな形）', names:['大原 里奈','坂東 麻衣子','平山 菜々'], recent:[{ at:'2026/10/01 10:20', name:'坂東 麻衣子', staff:'石橋 強', date:'令和8年10月1日', url:'#' }] };
+  if (p.app === 'jusetsuMake') { await new Promise(r => setTimeout(r, 800)); return { message: p.sign ? '署名済みのPDFを保存しました' : '', url: p.sign ? '#' : '', files:[{ name:'重要事項説明書.pdf', b64: window.DEMO_PDF || '' }] }; }
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -998,6 +1008,87 @@ async function mnLog(node){
   } catch (e) { MN.lastLog = ''; note('記録できませんでした（' + e.message + '）'); }
 }
 
+
+/* ================= 重要事項説明書（署名） ================= */
+const JS_SECTIONS = [
+  ['利用者', [['利用者氏名', '氏名', true], ['利用者住所', '住所']]],
+  ['日付', [['説明日', '説明・同意の日', true, 'date']]],
+  ['かかりつけ医療機関', [['医療機関名', '医療機関名'], ['診療科', '診療科'], ['主治医', '主治医'], ['医療機関所在地', '所在地'], ['医療機関電話', '電話番号', false, 'tel']]],
+  ['緊急連絡先', [['緊急氏名', '氏名'], ['緊急続柄', '続柄'], ['緊急住所', '住所'], ['緊急電話', '電話番号', false, 'tel']]],
+  ['ご家族（必要なときだけ）', [['家族氏名', '氏名'], ['家族住所', '住所']]]
+];
+let JS_DRAFT = null;
+async function showJusetsu(){
+  setTop({ title:'重要事項説明書（署名）', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">管理者だけが使えます</div>'; return; }
+  const token = viewToken;
+  JS_DRAFT = JS_DRAFT || LS.get('fb_jusetsu', null) || {};
+  if (!JS_DRAFT['説明日']) JS_DRAFT['説明日'] = ymd().replace(/\//g, '-');
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  let info;
+  try { info = await api({ app:'jusetsuInfo' }); } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+  if (token !== viewToken) return;
+  let html = `<p class="small" style="color:var(--sub);margin:12px 2px">①内容を入れる → ②書面を見ながら説明 → ③利用者さんに指やマウスで署名してもらう → 署名入りのPDFをドライブに保存します。</p>`;
+  if (!info.template) html += `<div class="note err">ひな形が未設定です。Googleドキュメントのひな形のIDを、スクリプトプロパティ <b>JUSETSU_TEMPLATE_ID</b> に登録してください。</div>`;
+  html += `<div class="sec-title">① 内容を入れる</div><datalist id="jsNames">${(info.names || []).map(n => `<option value="${esc(n)}">`).join('')}</datalist>`;
+  JS_SECTIONS.forEach(([g, fs]) => {
+    html += `<div class="box"><h3>${esc(g)}</h3>${fs.map(([k, label, req, type]) => `<label class="js-f"><span>${esc(label)}${req ? '<em>必須</em>' : ''}</span><input data-k="${k}" type="${type || 'text'}" ${k === '利用者氏名' ? 'list="jsNames"' : ''} value="${esc(JS_DRAFT[k] || '')}" autocomplete="off"></label>`).join('')}</div>`;
+  });
+  html += `<div class="sec-title">② 書面を見ながら説明する</div><button class="btn s wide" id="jsPrev">📄 書面を表示して説明する</button>`;
+  html += `<div class="sec-title">③ 署名</div>
+    <div class="sig-box"><div class="sig-h"><b>利用者さんの署名</b><em>必須</em><button class="link" data-clear="user">書き直す</button></div><canvas class="sig" data-sig="user"></canvas><div class="sig-hint">この枠の中に、指・ペン・マウスでお名前を書いてください</div></div>
+    <div class="sig-box"><div class="sig-h"><b>ご家族の署名</b><span class="small">必要なときだけ</span><button class="link" data-clear="family">書き直す</button></div><canvas class="sig" data-sig="family"></canvas></div>
+    <div class="sig-box"><div class="sig-h"><b>説明者の署名</b><span class="small">${esc(ME && ME.name || '')}</span><button class="link" data-clear="staff">書き直す</button></div><canvas class="sig" data-sig="staff"></canvas></div>
+    <label class="js-ok"><input type="checkbox" id="jsAgree"> 書面に基づいて説明し、利用者さんの同意を得ました</label>
+    <button class="btn p wide" id="jsSave" style="margin-top:10px">署名して保存する（PDF）</button>`;
+  if ((info.recent || []).length) html += `<div class="sec-title">これまでの署名</div><div class="sheet" style="border-radius:var(--r-m)">${info.recent.map(r =>
+    `<a class="row" href="${esc(r.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none"><span class="name">${esc(r.name)}<small style="display:block;color:var(--sub);font-weight:400">${esc(r.date)}　説明：${esc(r.staff)}</small></span>${ICON.chev}</a>`).join('')}</div>`;
+  $('view').innerHTML = html;
+  $('view').querySelectorAll('[data-k]').forEach(i => i.oninput = () => { JS_DRAFT[i.dataset.k] = i.value; LS.set('fb_jusetsu', JS_DRAFT); });
+  const pads = {};
+  $('view').querySelectorAll('canvas.sig').forEach(c => pads[c.dataset.sig] = sigPad(c));
+  $('view').querySelectorAll('[data-clear]').forEach(b => b.onclick = () => pads[b.dataset.clear].clear());
+  const data = () => ({ ...JS_DRAFT, 説明日: JS_DRAFT['説明日'] || '', 同意日: JS_DRAFT['説明日'] || '' });
+  const need = () => { if (!String(JS_DRAFT['利用者氏名'] || '').trim()) { toast('利用者の氏名を入れてください'); $('view').querySelector('[data-k="利用者氏名"]').focus(); return false; } return true; };
+  $('jsPrev').onclick = () => { if (need()) pdfOverlay('重要事項説明書', () => apiPost({ app:'jusetsuMake', data: data() }), '書面を作っています…'); };
+  $('jsSave').onclick = () => {
+    if (!need()) return;
+    if (pads.user.empty()) { toast('利用者さんの署名がありません'); pads.user.el.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+    if (!$('jsAgree').checked) { toast('「説明し、同意を得ました」にチェックを入れてください'); return; }
+    const sign = { user: pads.user.png(), family: pads.family.empty() ? '' : pads.family.png(), staff: pads.staff.empty() ? '' : pads.staff.png() };
+    pdfOverlay('重要事項説明書（署名済み）', async () => {
+      const j = await apiPost({ app:'jusetsuMake', data: data(), sign });
+      JS_DRAFT = null; LS.del('fb_jusetsu');
+      return j;
+    }, '署名を入れて保存しています…').then(() => {});
+  };
+}
+/* 署名パッド：指・ペン・マウス。保存時は余白を切り取ったPNG */
+function sigPad(c){
+  const ctx = c.getContext('2d'); let drawing = false, dirty = false, last = null;
+  const fit = () => { const r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1; const old = dirty ? c.toDataURL() : null; c.width = r.width * d; c.height = r.height * d; ctx.setTransform(d, 0, 0, d, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111'; ctx.lineWidth = 2.6; if (old) { const im = new Image(); im.onload = () => ctx.drawImage(im, 0, 0, r.width, r.height); im.src = old; } };
+  fit();
+  const pt = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top, e.pressure || .5]; };
+  c.addEventListener('pointerdown', e => { e.preventDefault(); c.setPointerCapture(e.pointerId); drawing = true; last = pt(e); ctx.beginPath(); ctx.arc(last[0], last[1], 1.2, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill(); dirty = true; c.classList.add('on'); });
+  c.addEventListener('pointermove', e => { if (!drawing) return; e.preventDefault(); const p = pt(e); ctx.lineWidth = e.pointerType === 'pen' ? 1.4 + p[2] * 2.6 : 2.6; ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p; });
+  const end = () => { drawing = false; };
+  c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end); c.addEventListener('pointerleave', end);
+  return {
+    el: c, empty: () => !dirty,
+    clear(){ ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, c.width, c.height); ctx.restore(); dirty = false; c.classList.remove('on'); },
+    png(){
+      const w = c.width, h = c.height, d = ctx.getImageData(0, 0, w, h).data;
+      let x0 = w, y0 = h, x1 = 0, y1 = 0;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < x0) return '';
+      const pad = 8 * (window.devicePixelRatio || 1); x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w, x1 + pad); y1 = Math.min(h, y1 + pad);
+      const o = document.createElement('canvas'); o.width = x1 - x0; o.height = y1 - y0;
+      o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+      return o.toDataURL('image/png');
+    }
+  };
+}
+
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
 function route(){
@@ -1028,6 +1119,7 @@ function route(){
   if (page === 'admin' && arg === 'jisseki') return showJisseki();
   if (page === 'admin' && arg === 'jigai') return showJigai();
   if (page === 'admin' && arg === 'tenken') return showTenken();
+  if (page === 'admin' && arg === 'jusetsu') return showJusetsu();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
@@ -1543,17 +1635,18 @@ async function loadPdfJs(){
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   return window.pdfjsLib;
 }
-async function previewRecord(sheet, row){
+function previewRecord(sheet, row){ return pdfOverlay(sheet, () => api({ app:'recordPdf', sheet, row })); }
+async function pdfOverlay(title, loader, msg){
   const ov = document.createElement('div');
   ov.className = 'pv'; ov.id = 'pv';
-  ov.innerHTML = `<div class="pv-bar"><button class="btn s" id="pvClose">閉じる</button><span class="pv-t">${esc(sheet)}</span><button class="btn p" id="pvPrint" style="--gc:var(--brand)" disabled>印刷</button></div>
-    <div class="pv-body" id="pvBody"><div class="empty" style="color:#fff"><div class="spin" style="margin:0 auto 12px"></div>テンプレートに書いています…<br><span class="small" style="color:#ddd">10〜20秒ほどかかります</span></div></div>`;
+  ov.innerHTML = `<div class="pv-bar"><button class="btn s" id="pvClose">閉じる</button><span class="pv-t">${esc(title)}</span><button class="btn p" id="pvPrint" style="--gc:var(--brand)" disabled>印刷</button></div>
+    <div class="pv-body" id="pvBody"><div class="empty" style="color:#fff"><div class="spin" style="margin:0 auto 12px"></div>${msg || 'テンプレートに書いています…'}<br><span class="small" style="color:#ddd">10〜20秒ほどかかります</span></div></div>`;
   document.body.appendChild(ov);
   document.body.classList.add('pv-on');
   const close = () => { ov.remove(); document.body.classList.remove('pv-on'); };
   $('pvClose').onclick = close;
   try {
-    const [j, lib] = await Promise.all([api({ app:'recordPdf', sheet, row }), loadPdfJs()]);
+    const [j, lib] = await Promise.all([loader(), loadPdfJs()]);
     if (!document.getElementById('pv')) return;
     const body = $('pvBody'); body.innerHTML = '';
     let blobUrl = '';
@@ -1570,6 +1663,7 @@ async function previewRecord(sheet, row){
         body.appendChild(img);
       }
     }
+    if (j.url) body.insertAdjacentHTML('afterbegin', `<div class="note" style="margin:0 0 12px;background:var(--g1-bg);color:var(--g1)">${esc(j.message || '保存しました')}　<a class="link" style="padding:0" href="${esc(j.url)}" target="_blank" rel="noopener">ドライブで開く</a></div>`);
     if (blobUrl) body.insertAdjacentHTML('beforeend', `<a class="pv-open" href="${blobUrl}" target="_blank" rel="noopener" download="${esc((j.files[0] || {}).name || 'preview.pdf')}">PDFファイルとして開く・保存</a>`);
     $('pvPrint').disabled = false;
     $('pvPrint').onclick = () => window.print();
@@ -2739,7 +2833,7 @@ function drawerItems(){
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', 'ハザードマップ・避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
@@ -2899,6 +2993,7 @@ function showWork(){
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/jusetsu" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">重要事項説明書（署名）</div><div class="m">契約のとき、タッチ・マウスで署名 → 署名入りPDFを保存</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/tenken" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">運営指導 自己点検表</div><div class="m">項目ごとに 適・否 と関係書類を点検 → PDF</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労（報告書・タイムシート）</div><div class="m">実施報告書と請求用タイムシートを月ごとに</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jisseki" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">実績記録のチェック</div><div class="m">紙の実績記録を撮影 → 打刻・支援経過記録と照合</div></div>${ICON.chev}</a>
