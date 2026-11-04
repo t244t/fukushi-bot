@@ -227,6 +227,12 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .step .n{width:36px;height:36px;border-radius:50%;background:var(--gc);color:var(--on);display:grid;place-items:center;font-weight:700}
 .step img{width:100%;max-height:240px;object-fit:contain;border-radius:var(--r-s);margin-top:8px;background:var(--soft)}
 .step .b{white-space:pre-wrap;font-size:15px;margin-top:4px}
+.hz-chips{margin:0 0 8px}
+.hz-legend{background:var(--paper);border-radius:var(--r-s);padding:8px 10px;margin:0 0 8px;color:var(--sub);display:grid;gap:4px;line-height:1.5}
+.train{background:var(--paper);border-radius:var(--r-m);padding:12px 14px;margin-bottom:8px;border-left:5px solid var(--sub)}
+.train.ok{border-left-color:var(--g1)}.train.ng{border-left-color:var(--err);background:var(--err-bg)}
+.train-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.train-st{font-weight:700}.train.ok .train-st{color:var(--g1)}.train.ng .train-st{color:var(--err)}
+.train-d{font-size:14px;margin-top:6px;line-height:1.6}.train-f{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12.5px;color:var(--sub)}
 .pmap-wrap{position:relative;margin:0 0 10px}
 .pmap{height:300px;border-radius:var(--r-m);overflow:hidden;background:var(--soft);border:1px solid var(--rule);z-index:0}
 .pmap-msg{position:absolute;inset:0;display:grid;place-items:center;color:var(--sub);font-size:14px;pointer-events:none}
@@ -524,6 +530,7 @@ function demoAttend(p){
 }
 async function demoApi(p){
   await new Promise(r => setTimeout(r, 250));
+  if (p.app === 'train') return { at:'11/4 08:15', lines:[{ name:'JR筑肥線', ok:false, status:'列車遅延', detail:'大雨の影響で、筑前前原〜唐津駅間の一部列車に遅れが出ています。', link:'https://www.jrkyushu.co.jp/trains/info/' }] };
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -907,7 +914,9 @@ function showManual(arg){
 function mnMenu(){
   setTop({ title:'緊急・対応マニュアル', back: true });
   let html = `<div class="mn-call"><span>緊急時はまず通報</span><a href="tel:119">119</a><a href="tel:110">110</a></div>`;
+  html += `<a class="mn-entry" href="#/info/shelter" style="border-color:var(--g2);background:var(--g2-bg)"><span class="ic" aria-hidden="true">🗺</span><span><b style="color:var(--g2)">ハザードマップ・避難場所</b><small>浸水・土砂災害・津波の区域と避難場所を地図で</small></span>${ICON.chev}</a>`;
   let cur = '';
+  html += trainBox();
   mnMenuFor().forEach(m => {
     if (m.group !== cur) { if (cur) html += '</div>'; html += `<div class="sec-title">${esc(m.group)}</div><div class="mn-grid">`; cur = m.group; }
     html += `<a class="mn-tile${m.group === '緊急・災害' ? ' em' : ''}" href="#/manual/${m.key}"><span class="ic" aria-hidden="true">${m.icon}</span><b>${esc(m.title)}</b><small>${esc(m.desc)}</small></a>`;
@@ -1728,7 +1737,9 @@ function renderView(id, data){
       ${(it.fields || []).length ? `<dl class="kv">${it.fields.map(f => `<dt>${esc(f.k)}</dt><dd>${esc(f.v)}</dd>`).join('')}</dl>` : ''}</div>`).join('');
   } else if (data.kind === 'places') {
     const areas = [...new Set(items.map(it => (String(it.area).match(/^.+?[市町村]/) || [it.area])[0]).filter(Boolean))];
-    html += `<div class="pmap-wrap"><div id="pmap" class="pmap" role="region" aria-label="避難場所の地図"></div><div id="pmapMsg" class="pmap-msg">地図を読み込んでいます…</div></div>
+    html += `<div class="chips hz-chips" role="group" aria-label="ハザードマップを重ねる">${HZ_LAYERS.map(h => `<button class="chip mini" data-hz="${h.id}" aria-pressed="false" style="--gc:${h.c}">${h.label}</button>`).join('')}</div>
+      <div class="hz-legend small" id="hzLegend" hidden></div>
+      <div class="pmap-wrap"><div id="pmap" class="pmap" role="region" aria-label="避難場所の地図"></div><div id="pmapMsg" class="pmap-msg">地図を読み込んでいます…</div></div>
       <div class="pmap-bar"><button class="btn p" id="pNear">📍 現在地から近い順</button><span class="small"><span id="pCount"></span><br><span style="color:var(--err)">●</span> 今必要なものあり</span></div>
       <label class="search" style="margin-top:0">${ICON.search}<input id="pq2" type="search" placeholder="避難場所・住所でさがす" aria-label="避難場所をさがす"></label>
       ${areas.length > 1 ? `<div class="chips" style="margin:8px 0 12px">${areas.map(a => `<button class="chip mini" data-area="${esc(a)}" aria-pressed="false">${esc(a)}</button>`).join('')}</div>` : ''}<div id="plist2"></div>`;
@@ -1850,7 +1861,37 @@ async function loadLeaflet(){
   if (!document.getElementById('lfCss')) { const l = document.createElement('link'); l.id = 'lfCss'; l.rel = 'stylesheet'; l.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(l); }
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js', () => window.L && L.map);
 }
+const HZ_SRC = 'https://disaportaldata.gsi.go.jp/raster/';
+const HZ_LAYERS = [
+  { id:'flood', label:'🌊 洪水', c:'#2e5b88', tiles:['01_flood_l2_shinsuishin_data'], legend:'川があふれたときに浸水が想定される区域（想定最大規模）。黄色は浅く、ピンク・赤・紫と濃くなるほど深くなります。' },
+  { id:'dosha', label:'⛰ 土砂災害', c:'#a9741a', tiles:['05_dosekiryukeikaikuiki', '05_kyukeishakeikaikuiki', '05_jisuberikeikaikuiki'], legend:'土砂災害警戒区域（土石流・がけ崩れ・地すべり）。色の付いた場所は大雨のとき早めの避難が必要です。' },
+  { id:'tsunami', label:'🌀 津波', c:'#8a4767', tiles:['04_tsunami_newlegend_data'], legend:'津波で浸水が想定される区域。色が濃いほど深くなります。' },
+  { id:'takashio', label:'🌬 高潮', c:'#3c8a5a', tiles:['03_hightide_l2_shinsuishin_data'], legend:'高潮で浸水が想定される区域（想定最大規模）。色が濃いほど深くなります。' }
+];
 const PLACE_CAP = 80;
+/* 交通の運行状況（GASが運行情報ページを読み取る。5分ごと） */
+function trainBox(){
+  const c = LS.get('fb_train', null);
+  setTimeout(loadTrain, 0);
+  return `<div class="sec-title">交通の運行状況</div><div id="trainBox">${c ? trainHtml(c) : '<div class="box small">読み込んでいます…</div>'}</div>`;
+}
+function trainHtml(j){
+  return (j.lines || []).map(l => {
+    const cls = l.ok === true ? 'ok' : l.ok === false ? 'ng' : 'unk';
+    return `<div class="train ${cls}"><div class="train-h"><b>${esc(l.name)}</b><span class="train-st">${l.ok === true ? '● ' : l.ok === false ? '▲ ' : ''}${esc(l.status || '')}</span></div>
+      ${l.detail && l.ok !== true ? `<div class="train-d">${esc(l.detail)}</div>` : ''}
+      <div class="train-f"><span>${esc(j.at || '')} 時点</span>${l.link ? `<a class="link" style="padding:0" href="${esc(l.link)}" target="_blank" rel="noopener">公式ページで確認</a>` : ''}</div></div>`;
+  }).join('') || '<div class="box small">路線が設定されていません</div>';
+}
+async function loadTrain(fresh){
+  if (!signedIn() || !$('trainBox')) return;
+  const token = viewToken;
+  try {
+    const j = await api(fresh ? { app:'train', fresh:'1' } : { app:'train' });
+    LS.set('fb_train', j);
+    if (token === viewToken && $('trainBox')) $('trainBox').innerHTML = trainHtml(j);
+  } catch (e) { if (token === viewToken && $('trainBox') && !LS.get('fb_train', null)) $('trainBox').innerHTML = `<div class="box small">運行状況を読み込めませんでした（${esc(e.message)}）</div>`; }
+}
 function bindPlaces(items){
   let area = '', here = null, cap = PLACE_CAP, map = null, layer = null, hereMk = null, fitted = false;
   items.forEach((it, i) => { it._i = i; it._ll = parseGeo(it.geo); });
@@ -1920,8 +1961,21 @@ function bindPlaces(items){
   loadLeaflet().then(() => {
     if (token !== viewToken || !$('pmap')) return;
     map = L.map('pmap', { preferCanvas: true, zoomControl: true, attributionControl: true }).setView([33.557, 130.196], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(map);
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>' }).addTo(map);
+    const hz = {};
+    HZ_LAYERS.forEach(h => { hz[h.id] = L.layerGroup(h.tiles.map(t => L.tileLayer(HZ_SRC + t + '/{z}/{x}/{y}.png', { maxNativeZoom: 17, maxZoom: 18, opacity: .65, attribution: '<a href="https://disaportal.gsi.go.jp/hazardmap/copyright/opendata.html" target="_blank" rel="noopener">ハザードマップポータル</a>' }))); });
+    const on = new Set(LS.get('fb_hz', []));
+    const syncHz = () => {
+      HZ_LAYERS.forEach(h => { const b = $('view').querySelector(`[data-hz="${h.id}"]`); if (b) b.setAttribute('aria-pressed', on.has(h.id)); if (on.has(h.id)) hz[h.id].addTo(map); else hz[h.id].remove(); });
+      const lg = HZ_LAYERS.filter(h => on.has(h.id));
+      $('hzLegend').hidden = !lg.length;
+      $('hzLegend').innerHTML = lg.map(h => `<div><b style="color:${h.c}">${h.label}</b>　${esc(h.legend)}</div>`).join('') + (lg.length ? '<div>出典：国土交通省・国土地理院「重ねるハザードマップ」（<a class="link" style="padding:0;min-height:0" href="https://disaportal.gsi.go.jp/maps/" target="_blank" rel="noopener">詳しい凡例はこちら</a>）。市のハザードマップもあわせて確認してください。</div>' : '');
+      LS.set('fb_hz', [...on]);
+      if (layer) layer.eachLayer(m => m.bringToFront && m.bringToFront());
+    };
+    $('view').querySelectorAll('[data-hz]').forEach(b => b.onclick = () => { const id = b.dataset.hz; if (on.has(id)) on.delete(id); else on.add(id); syncHz(); });
     layer = L.layerGroup().addTo(map);
+    syncHz();
     $('pmapMsg').remove();
     draw();
   }).catch(e => { if ($('pmapMsg')) $('pmapMsg').textContent = '地図を表示できませんでした（' + e.message + '）'; });
@@ -1991,9 +2045,10 @@ async function showContact(){
   if (isAdmin()) {
     html += `<div class="sec-title">安否確認の状況<span class="admin-mark">管理者</span></div><div class="box" id="safetyBox"><div class="small">読み込んでいます…</div></div>`;
   }
+  html += trainBox();
   html += `<div class="sec-title">災害への備え</div>
     <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">災害時の備蓄品</div><div class="m">在庫の確認・入庫・出庫（QRコード対応）</div></div>${ICON.chev}</a>
-    <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">避難場所</div><div class="m">近くの避難場所・口コミ・今必要なもの</div></div>${ICON.chev}</a>`;
+    <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">ハザードマップ・避難場所</div><div class="m">浸水・土砂災害・津波の危険区域と、近くの避難場所</div></div>${ICON.chev}</a>`;
   html += `<div class="sec-title">イベント${isAdmin() ? '<span class="admin-mark">管理者</span>' : 'の出欠'}</div><div id="evBox"><div class="box small">読み込んでいます…</div></div>`;
   if (isAdmin()) {
     html += `<div class="sec-title">スタッフへの連絡<span class="admin-mark">管理者</span></div>
@@ -2682,7 +2737,7 @@ function drawerItems(){
   if (m) return [['毎日', [it('#/attend', '出退勤'), ME && ME.name ? it('#/book/' + encodeURIComponent(ME.name), '自分の出勤簿') : null]], ['見る', [it('#/manual', '緊急・対応マニュアル'), it('#/info', '情報')]], ['', [it('#/settings', '設定')]]];
   return [
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
-    ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', '避難場所')]],
+    ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', 'ハザードマップ・避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
     a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計'), it('#/admin/deadlines', '利用者の期限')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
