@@ -418,7 +418,7 @@ body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-
 <div class="busy" id="busy"><div><div class="spin"></div><b>送信しています</b><p class="small">記録・PDF作成・通知まで少しかかります。<br>画面を閉じずにお待ちください。</p></div></div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js" charset="utf-8"></script>
+<script async id="liffSdk" src="https://static.line-scdn.net/liff/edge/2/sdk.js" charset="utf-8"></script>
 <script>
 /* ================= 設定・保存 ================= */
 const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbyPznpZt8AAQ5-K1ZGfDol4YUTaJ323lp7aHeaj2RfM08fEyIEBq-qgUgTfqrsFGDEF/exec';
@@ -437,17 +437,21 @@ let ME = null;          // { name, role, userId, via }
 let authError = '';
 const isAdmin = () => !!ME && ME.role === 'admin';
 const isMember = () => !!ME && ME.role === 'member';
-const signedIn = () => isDemo() || !!idToken || !!cfg.key;
+const CACHED_ME = isDemo() ? null : LS.get('fb_me', null);
+let authPending = true, AUTH = null;
+const signedIn = () => isDemo() || !!idToken || !!cfg.key || (authPending && !!CACHED_ME);
 const liffReady = () => !!(window.liff && liff.id);
 async function initAuth(){
   if (isDemo()) { const mb = /member/.test(location.search); ME = { name: mb ? '峰 恭子' : '石橋 強', role: /admin/.test(location.search) ? 'admin' : mb ? 'member' : 'staff', kubun: mb ? '利用者' : '正社員', userId:'Udemo', via:'line' }; return; }
+  // LINEの部品は後から読み込む（画面の表示を待たせない）
+  if (!window.liff) await new Promise(r => { const sc = document.getElementById('liffSdk'); if (!sc) return r(); sc.addEventListener('load', r); sc.addEventListener('error', r); setTimeout(r, 6000); });
   if (window.liff) {
     try { await liff.init({ liffId: LIFF_ID }); if (liff.isLoggedIn()) idToken = liff.getIDToken() || ''; }
     catch (e) { console.warn('LIFF', e); }
   }
   if (!signedIn()) return;
   try { ME = await api({ app:'me' }); LS.set('fb_me', ME); authError = ''; }
-  catch (e) { ME = null; authError = e.message; }
+  catch (e) { ME = null; authError = e.message; LS.del('fb_me'); }
 }
 function lineLogin(){ if (window.liff && liff.id) liff.login({ redirectUri: location.href.split('#')[0] }); }
 const $ = id => document.getElementById(id);
@@ -655,6 +659,7 @@ async function demoApi(p){
 /* ================= サーバー呼び出し（GETのみ） ================= */
 async function api(params, override){
   if (isDemo()) return demoApi(params);
+  if (authPending && AUTH && params.app !== 'me' && !override) await AUTH;
   const c = override || cfg;
   const auth = idToken && !override ? { idt:idToken } : { key:c.key };
   const url = c.url + '?' + new URLSearchParams({ ...params, ...auth });
@@ -668,6 +673,7 @@ async function api(params, override){
 
 async function apiPost(body){
   if (isDemo()) return demoApi(body);
+  if (authPending && AUTH) await AUTH;
   let r;
   const auth = idToken ? { idt:idToken } : { key:cfg.key };
   try { r = await fetch(cfg.url, { method:'POST', body: JSON.stringify({ ...body, ...auth }) }); }
@@ -3691,7 +3697,12 @@ function takeQrFromUrl(){
   sp.delete('qr'); sp.delete('liff.state');
   history.replaceState(null, '', location.pathname + (sp.toString() ? '?' + sp : '') + '#/attend');
 }
-initAuth().then(() => { takeQrFromUrl(); route(); });
+AUTH = initAuth().finally(() => { authPending = false; });
+if (CACHED_ME && !/[?&](qr|liff\.state)=/.test(location.search)) {
+  // 前回のログイン情報で先に画面を出し、確認が終わったら必要なときだけ描き直す
+  ME = CACHED_ME; route();
+  AUTH.then(() => { if (authError || JSON.stringify(ME) !== JSON.stringify(CACHED_ME)) route(); });
+} else AUTH.then(() => { takeQrFromUrl(); route(); });
 </script>
 </body>
 </html>
