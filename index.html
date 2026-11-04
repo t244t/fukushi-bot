@@ -1416,7 +1416,9 @@ function bindInbox(j){
 /* ===== 感染症の流行情報（福岡県感染症情報センター） ===== */
 const infKey = () => 'fb_inf_' + (isDemo() ? 'demo' : 'live');
 function infHtml(j){
-  if (!j || !(j.items || []).length) return '';
+  if (!j) return '<div class="inf"><span class="small" style="color:var(--sub)">福岡県の流行状況を読み込んでいます…</span></div>';
+  if (j.err) return `<div class="inf amber"><b>福岡県の流行状況</b><div class="small" style="color:var(--warn);margin-top:4px">読み込めませんでした：${esc(j.err)}</div></div>`;
+  if (!(j.items || []).length) return `<div class="inf amber"><b>福岡県の流行状況</b><div class="small" style="color:var(--warn);margin-top:4px">県のページを読み取れませんでした${j.error ? '（' + esc(j.error) + (j.detail ? '：' + esc(j.detail) : '') + '）' : ''}。<a class="link" style="padding:0;min-height:0" href="${esc(j.url || 'http://www.fihes.pref.fukuoka.jp/~idsc_fukuoka/')}" target="_blank" rel="noopener">感染症情報センターを開く</a></div></div>`;
   const alerts = j.items.filter(x => x.level === '警報' || x.level === '注意報');
   return `<details class="inf ${alerts.some(x => x.level === '警報') ? 'red' : alerts.length ? 'amber' : ''}"><summary><b>福岡県の流行状況</b>${alerts.length ? alerts.map(x => `<span class="inf-b ${x.level === '警報' ? 'r' : 'a'}">${esc(x.name || '感染症')} ${x.level}</span>`).join('') : '<span class="inf-b">注意報・警報なし</span>'}</summary>
     <ul>${j.items.map(x => `<li>${esc(x.text)}</li>`).join('')}</ul>
@@ -1425,7 +1427,8 @@ function infHtml(j){
 async function loadInfection(){
   if (!signedIn() || infLoading) return;
   infLoading = true;
-  try { const j = await api({ app:'infection' }); LS.set(infKey(), j); if ($('infBox')) $('infBox').innerHTML = infHtml(j); } catch (e) {}
+  try { const j = await api({ app:'infection' }); LS.set(infKey(), j); if ($('infBox')) $('infBox').innerHTML = infHtml(j); }
+  catch (e) { if ($('infBox') && !LS.get(infKey(), null)) $('infBox').innerHTML = infHtml({ err: e.message }); infLoading = false; return; }
   setTimeout(() => { infLoading = false; }, 60000);
 }
 let infLoading = false;
