@@ -1421,7 +1421,8 @@ function infHtml(j){
   if (!(j.items || []).length) return `<div class="inf amber"><b>福岡県の流行状況</b><div class="small" style="color:var(--warn);margin-top:4px">県のページを読み取れませんでした${j.error ? '（' + esc(j.error) + (j.detail ? '：' + esc(j.detail) : '') + '）' : ''}。<a class="link" style="padding:0;min-height:0" href="${esc(j.url || 'http://www.fihes.pref.fukuoka.jp/~idsc_fukuoka/')}" target="_blank" rel="noopener">感染症情報センターを開く</a></div></div>`;
   const alerts = j.items.filter(x => x.level === '警報' || x.level === '注意報');
   return `<details class="inf ${alerts.some(x => x.level === '警報') ? 'red' : alerts.length ? 'amber' : ''}"><summary><b>福岡県の流行状況</b>${alerts.length ? alerts.map(x => `<span class="inf-b ${x.level === '警報' ? 'r' : 'a'}">${esc(x.name || '感染症')} ${x.level}</span>`).join('') : '<span class="inf-b">注意報・警報なし</span>'}</summary>
-    <ul>${j.items.map(x => `<li>${esc(x.text)}</li>`).join('')}</ul>
+    ${j.week ? `<div class="small" style="color:var(--sub);margin-top:8px">${esc(j.week)}</div>` : ''}
+    <ul>${j.items.map(x => `<li${x.level ? ' style="font-weight:700"' : ''}>${esc(x.text)}</li>`).join('')}</ul>
     <div class="small" style="color:var(--sub)">${esc(j.at || '')} 時点　<a class="link" style="padding:0;min-height:0" href="${esc(j.url)}" target="_blank" rel="noopener">感染症情報センターで見る</a></div></details>`;
 }
 async function loadInfection(){
