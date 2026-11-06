@@ -399,6 +399,15 @@ body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-
 .inf summary b{margin-right:4px}
 .inf-b{font-size:12.5px;font-weight:700;border-radius:99px;padding:2px 10px;background:var(--soft);color:var(--sub)}.inf-b.a{background:var(--warn-bg);color:var(--warn)}.inf-b.r{background:var(--err);color:var(--on)}
 .inf ul{margin:10px 0 6px;padding-left:18px;font-size:14px;line-height:1.6;color:var(--ink);font-weight:400}.inf summary{color:var(--ink)}
+.ro-legend{color:var(--sub);margin:0 2px 6px}
+.ro-list{display:grid;gap:8px}
+.ro-row{display:grid;gap:6px;text-align:left;width:100%;background:var(--paper);border:0;border-radius:var(--r-m);padding:12px 14px;color:var(--ink)}
+.ro-row.off{opacity:.55}.ro-n b{font-size:16px}.ro-n small{display:block;color:var(--sub);font-size:12.5px;margin-top:2px}
+.ro-m{display:flex;flex-wrap:wrap;gap:4px}.ro-m span{font-size:12px;border-radius:6px;padding:2px 7px;background:var(--soft);color:var(--sub)}
+.ro-m span.on{background:var(--g1-bg);color:var(--g1);font-weight:700}.ro-m span.bad{background:var(--err-bg);color:var(--err);font-weight:700}
+.ro-sec{background:var(--soft);border-radius:var(--r-m);padding:10px 12px;margin-bottom:8px}
+.ro-sec summary{cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px}.ro-sec summary span{font-size:13px;color:var(--sub)}.ro-sec summary small{grid-column:1/3;color:var(--sub);font-size:12px}
+.ro-body{margin-top:8px}
 </style>
 </head>
 <body>
@@ -611,6 +620,14 @@ async function demoApi(p){
   if (p.app === 'sougeiSave' || p.app === 'sougeiDel' || p.app === 'sougeiAuto') return { message:'（デモ）保存しました' };
   if (p.app === 'inbox') { const t = Date.now(); return { items:[{ view:'disaster', src:'災害時情報共有（WAM）', title:'【福岡県】大雨による被害状況の報告について', date:'2026/11/04 09:12', ts:t - 3600e3 }, { view:'shogai', src:'障がい福祉の連絡メール', title:'令和8年度 報酬改定に関する説明会のご案内', date:'2026/11/03 16:40', ts:t - 864e5 }, { view:'chingin', src:'賃金向上センター', title:'共同受注の案件（清掃作業）のお知らせ', date:'2026/11/02 10:05', ts:t - 2*864e5 }, { view:'weather', src:'天候・警報メール', title:'福岡県　大雨注意報（糸島市）', date:'2026/11/01 06:30', ts:t - 3*864e5 }, { view:'news', src:'福岡市の新着情報', title:'障がい福祉サービス事業所向け研修の募集', date:'2026/10/31 13:00', ts:t - 4*864e5 }] }; }
   if (p.app === 'infection') return { at:'11/4 15:00', url:'http://www.fihes.pref.fukuoka.jp/~idsc_fukuoka/idwr.html', items:[{ text:'インフルエンザの１定点医療機関当たり報告数が10.02となり、今後４週間以内に大きな流行が発生する可能性が高いとされる基準値：10を超えましたので、本日注意報を発表しました。', level:'注意報', name:'インフルエンザ' }, { text:'伝染性紅斑の警報は解除されました。', level:'解除', name:'伝染性紅斑' }] };
+  if (p.app === 'roster') return { sheets:[{key:'staff',label:'スタッフ一覧',note:'LINE・一斉連絡・権限',only:''},{key:'users',label:'利用者管理',note:'受給者証などの期限',only:'利用者'},{key:'mail',label:'メールアドレスリスト',note:'会議の招待',only:''},{key:'kana',label:'ふりがな',note:'あいうえお順の並び',only:''}],
+    people:[{name:'安部 法子',key:'安部法子',kana:'あべ のりこ',kubun:'利用者',store:'伊都国即売会',in:{staff:1,users:1,kana:1,punch:1},line:true,mail:false,active:true,miss:[]},
+      {name:'池松 恵史',key:'池松恵史',kana:'いけまつ けいし',kubun:'利用者',store:'ねぎぼうず',in:{staff:1,punch:1},line:false,mail:false,active:true,miss:['利用者管理','LINE']},
+      {name:'石橋 強',key:'石橋強',kana:'いしばし つよし',kubun:'スタッフ',store:'伊都国即売会',in:{staff:1,mail:1,kana:1,punch:1},line:true,mail:true,active:true,miss:[]},
+      {name:'大原 里奈',key:'大原里奈',kana:'おおはら りな',kubun:'スタッフ',store:'伊都国即売会',in:{staff:1,punch:1},line:true,mail:false,active:true,miss:['メール']},
+      {name:'松川 忠義',key:'松川忠義',kana:'まつかわ ただよし',kubun:'利用者',store:'イオン笹丘',in:{staff:1,users:1,punch:1},line:true,mail:false,active:true,miss:[]}] };
+  if (p.app === 'rosterRow') return { exists: p.key !== 'users', label:'', fields: p.key === 'staff' ? [{h:'スタッフID',type:'text',v:'R004'},{h:'スタッフ名',type:'text',v:p.name,name:true},{h:'店舗名',type:'text',v:'ねぎぼうず'},{h:'所属区分',type:'text',v:'利用者'},{h:'LINEユーザーID',type:'text',v:''},{h:'メールアドレス',type:'text',v:''},{h:'有効フラグ',type:'bool',v:true}] : [{h:'氏名',type:'text',v:p.name,name:true},{h:'受給者証支給終了',type:'date',v:''},{h:'手帳有効期限',type:'date',v:''}] };
+  if (p.app === 'rosterSave' || p.app === 'rosterAdd') return { message:'（デモ）保存しました' };
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -1434,6 +1451,89 @@ async function loadInfection(){
 }
 let infLoading = false;
 
+
+/* ================= 名簿の管理（管理者） ================= */
+let RO = { tab:'利用者', q:'', data:null, onlyMiss:false };
+async function showRoster(){
+  setTop({ title:'名簿の管理', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">管理者だけが使えます</div>'; return; }
+  const token = viewToken;
+  const c = LS.get('fb_roster', null);
+  if (c) drawRoster(c); else $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try { const j = await api({ app:'roster' }); LS.set('fb_roster', j); if (token === viewToken) drawRoster(j); }
+  catch (e) { if (token === viewToken && !c) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+const RO_MARKS = [['staff', '名簿'], ['users', '期限'], ['mail', 'メール'], ['kana', 'かな'], ['punch', '打刻'], ['line', 'LINE']];
+function drawRoster(j){
+  RO.data = j;
+  const isU = p => p.kubun === '利用者';
+  const inTab = j.people.filter(p => RO.tab === 'すべて' || (RO.tab === '利用者') === isU(p));
+  const missN = inTab.filter(p => p.miss.length).length;
+  const list = inTab.filter(p => (!RO.onlyMiss || p.miss.length) && (!RO.q || (p.name + p.kana + p.store).includes(RO.q)));
+  let html = `<p class="small" style="color:var(--sub);margin:12px 2px 8px">名簿のシート（スタッフ一覧・利用者管理・メールアドレスリスト・ふりがな）を、1人ずつまとめて確認・追加・修正できます。出退勤ボットの「メンバー」は見るだけです。</p>
+    <button class="btn p wide" id="roAdd">＋ 新しい人を登録</button>
+    <div class="chips" style="margin:12px 0 8px">${['利用者', 'スタッフ', 'すべて'].map(t => `<button class="chip" data-t="${t}" aria-pressed="${t === RO.tab}" style="--gc:var(--brand)">${t}（${j.people.filter(p => t === 'すべて' || (t === '利用者') === isU(p)).length}）</button>`).join('')}</div>
+    <label class="search" style="margin:0 0 8px">${ICON.search}<input id="roQ" type="search" placeholder="名前でさがす" value="${esc(RO.q)}"></label>
+    <label class="js-ok" style="padding:10px 12px;margin-bottom:10px"><input type="checkbox" id="roMiss"${RO.onlyMiss ? ' checked' : ''}> 足りないものがある人だけ（${missN}人）</label>
+    <div class="ro-legend small">✓＝載っている　－＝載っていない　<span style="color:var(--err)">赤</span>＝要確認</div>
+    <div class="ro-list">${list.map(p => `<button class="ro-row${p.active ? '' : ' off'}" data-k="${esc(p.key)}">
+      <div class="ro-n"><b>${esc(p.name)}</b><small>${esc(p.kana || '')}${p.kubun ? '　' + esc(p.kubun) : ''}${p.store ? '　' + esc(p.store) : ''}${p.active ? '' : '　（無効）'}</small></div>
+      <div class="ro-m">${RO_MARKS.filter(([k]) => k !== 'users' || isU(p)).map(([k, l]) => { const on = k === 'line' ? p.line : k === 'mail' ? p.mail : !!p.in[k];
+        const bad = !on && p.miss.some(m => (k === 'staff' && m === 'スタッフ一覧') || (k === 'users' && m === '利用者管理') || (k === 'mail' && m === 'メール') || (k === 'line' && m === 'LINE') || (k === 'kana' && m === 'ふりがな'));
+        return `<span class="${on ? 'on' : bad ? 'bad' : ''}">${on ? '✓' : '－'}${l}</span>`; }).join('')}</div></button>`).join('') || '<div class="empty">該当する人はいません</div>'}</div>`;
+  $('view').innerHTML = html;
+  $('view').querySelectorAll('[data-t]').forEach(b => b.onclick = () => { RO.tab = b.dataset.t; drawRoster(j); });
+  $('roQ').oninput = e => { RO.q = e.target.value.trim(); const pos = e.target.selectionStart; drawRoster(j); $('roQ').focus(); $('roQ').setSelectionRange(pos, pos); };
+  $('roMiss').onchange = e => { RO.onlyMiss = e.target.checked; drawRoster(j); };
+  $('roAdd').onclick = rosterAdd;
+  $('view').querySelectorAll('.ro-row').forEach(b => b.onclick = () => rosterPerson(j.people.find(p => p.key === b.dataset.k)));
+}
+function rosterPerson(p){
+  const isU = p.kubun === '利用者';
+  const sheets = RO.data.sheets.filter(s => !s.only || (s.only === '利用者' && isU));
+  openSheet(p.name + ' さん', `<div class="small" style="color:var(--sub);margin-bottom:8px">${p.miss.length ? '<b style="color:var(--err)">要確認：' + esc(p.miss.join('・')) + '</b>' : '名簿はそろっています'}${p.in.punch ? '' : '<br>出退勤ボットの「メンバー」にはまだいません（LINEか受付端末で初めて打刻すると入ります）'}</div>
+    ${sheets.map(s => `<details class="ro-sec" data-key="${s.key}"><summary><b>${esc(s.label)}</b><span>${p.in[s.key] ? '✓ 載っている' : '－ 載っていない'}</span><small>${esc(s.note)}</small></summary><div class="ro-body">開くと読み込みます…</div></details>`).join('')}`, '<button class="btn s wide" onclick="closeSheet()">閉じる</button>');
+  $('bsBody').querySelectorAll('.ro-sec').forEach(d => d.addEventListener('toggle', async () => {
+    if (!d.open || d.dataset.loaded) return;
+    d.dataset.loaded = '1';
+    const box = d.querySelector('.ro-body');
+    try {
+      const r = await api({ app:'rosterRow', key: d.dataset.key, name: p.name });
+      box.innerHTML = r.fields.length ? r.fields.map(f => f.name ? `<div class="js-f"><span>${esc(f.h)}</span><b>${esc(p.name)}</b></div>`
+        : f.type === 'bool' ? `<label class="js-ok" style="padding:6px 0"><input type="checkbox" data-h="${esc(f.h)}"${f.v === true || String(f.v).toUpperCase() === 'TRUE' ? ' checked' : ''}> ${esc(f.h)}</label>`
+        : `<label class="js-f"><span>${esc(f.h)}</span><input data-h="${esc(f.h)}" type="${f.type === 'date' ? 'date' : 'text'}" value="${esc(f.v)}"${/LINEユーザーID/.test(f.h) ? ' placeholder="アプリやLINEで登録すると自動で入ります"' : ''}></label>`).join('')
+        + `<button class="btn p wide ro-save" style="margin-top:10px">${r.exists ? 'この表を保存' : 'この表に追加して保存'}</button>`
+        : `<div class="small">表の見出しが読めません${r.sheetMissing ? '（シートがありません）' : ''}</div>`;
+      const save = box.querySelector('.ro-save');
+      if (save) save.onclick = async () => {
+        const values = {};
+        box.querySelectorAll('[data-h]').forEach(i => values[i.dataset.h] = i.type === 'checkbox' ? i.checked : i.value);
+        save.disabled = true; save.textContent = '保存しています…';
+        try { const j = await apiPost({ app:'rosterSave', key: d.dataset.key, name: p.name, values, add: r.exists ? '0' : '1' }); toast(j.message); closeSheet(); showRoster(); }
+        catch (e) { save.disabled = false; save.textContent = '保存'; toast(e.message); }
+      };
+    } catch (e) { box.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+  }));
+}
+function rosterAdd(){
+  const stores = [...new Set(RO.data.people.map(p => p.store).filter(Boolean))];
+  openSheet('新しい人を登録', `<datalist id="roStores">${stores.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+    <div class="chips" id="roKind">${['利用者', 'スタッフ'].map(k => `<button type="button" class="chip" data-v="${k}" aria-pressed="${k === '利用者'}" style="flex:1;--gc:var(--g2)">${k}</button>`).join('')}</div>
+    <label class="js-f"><span>氏名<em>必須</em></span><input id="ro_name" placeholder="例：石橋 強（姓と名の間にスペース）"></label>
+    <label class="js-f"><span>ふりがな</span><input id="ro_kana" placeholder="例：いしばし つよし"></label>
+    <label class="js-f"><span>事業所・店舗</span><input id="ro_store" list="roStores"></label>
+    <label class="js-f"><span>メールアドレス（会議の招待などに使う）</span><input id="ro_mail" type="email" inputmode="email"></label>
+    <div class="small" style="color:var(--sub)">登録先：スタッフ一覧（＋利用者なら利用者管理、メールがあればメールアドレスリスト、ふりがながあればふりがな）。受給者証の期限などは、登録したあと一覧から開いて入れてください。</div>`,
+    '<button class="btn p wide" id="roSave">登録する</button>');
+  let kind = '利用者';
+  $('roKind').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { kind = b.dataset.v; $('roKind').querySelectorAll('[data-v]').forEach(c => c.setAttribute('aria-pressed', c === b)); });
+  $('roSave').onclick = () => {
+    const data = { name: $('ro_name').value.trim(), kana: $('ro_kana').value.trim(), store: $('ro_store').value.trim(), mail: $('ro_mail').value.trim(), kubun: kind };
+    if (!data.name) { toast('氏名を入れてください'); return; }
+    runAction(() => apiPost({ app:'rosterAdd', data }), () => showRoster());
+  };
+}
+
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
 function route(){
@@ -1471,6 +1571,7 @@ function route(){
   if (page === 'admin' && arg === 'jigai') return showJigai();
   if (page === 'admin' && arg === 'tenken') return showTenken();
   if (page === 'admin' && arg === 'jusetsu') return showJusetsu();
+  if (page === 'admin' && arg === 'roster') return showRoster();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
@@ -3187,7 +3288,7 @@ function drawerItems(){
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', 'ハザードマップ・避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/deadlines', '利用者の期限・カレンダー'), it('#/sougei', '送迎の予定とアラーム', '送迎30分前に担当へ通知'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計')]] : null,
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/roster', '名簿の管理', '利用者・スタッフの登録と確認'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
@@ -3348,6 +3449,7 @@ function showWork(){
     html += `<div class="sec-title">管理<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/admin/attend" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出退勤の一覧</div><div class="m">日ごとの出勤・退勤・送迎・遅延欠席</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/roster" style="color:inherit;text-decoration:none;--gc:var(--brand)"><div class="main"><div class="t">名簿の管理</div><div class="m">利用者・スタッフの登録、メール・LINE・ふりがなの確認</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jusetsu" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">重要事項説明書（署名）</div><div class="m">契約のとき、タッチ・マウスで署名 → 署名入りPDFを保存</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/tenken" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">運営指導 自己点検表</div><div class="m">項目ごとに 適・否 と関係書類を点検 → PDF</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労（報告書・タイムシート）</div><div class="m">実施報告書と請求用タイムシートを月ごとに</div></div>${ICON.chev}</a>
