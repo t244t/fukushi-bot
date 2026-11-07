@@ -3010,19 +3010,31 @@ async function readJissekiFiles(files){
   const name = $('jsName').value, month = $('jsMonth').value;
   JS_BATCH = items.map(x => ({ ...x, state:'wait', res:null, err:'' }));
   drawBatch();
-  // 2件ずつ並べて読み取る
-  let next = 0;
-  const worker = async () => {
+  // 2件ずつ並べて読み取る。Gemini の利用上限（1分あたりの回数など）に当たったら、待ってから読み直す
+  let next = 0, slow = false;
+  const isQuota = m => /quota|RESOURCE_EXHAUSTED|rate.?limit|429|Too Many/i.test(String(m));
+  const worker = async (n) => {
     while (next < JS_BATCH.length) {
+      if (slow && n > 0) return;                       // 上限に当たったら1件ずつにする
       const it = JS_BATCH[next++];
-      it.state = 'run'; drawBatch();
-      try { it.res = await apiPost({ app:'jissekiScan', name: items.length === 1 ? name : '', month, file: JSON.stringify({ b64: it.b64, mime: it.mime }) }); it.state = 'done'; }
-      catch (err) { it.state = 'err'; it.err = err.message; }
-      delete it.b64;
+      for (let tryNo = 0; tryNo < 4; tryNo++) {
+        it.state = 'run'; it.err = ''; drawBatch();
+        try { it.res = await apiPost({ app:'jissekiScan', name: items.length === 1 ? name : '', month, file: JSON.stringify({ b64: it.b64, mime: it.mime }) }); it.state = 'done'; break; }
+        catch (err) {
+          it.state = 'err'; it.err = err.message;
+          if (!isQuota(err.message) || tryNo === 3) break;
+          slow = true;
+          const wait = 45 + tryNo * 30;
+          for (let sec = wait; sec > 0; sec -= 5) { it.state = 'run'; it.err = `読み取りの上限に当たったので、${sec}秒待ってから読み直します（${tryNo + 1}回目）`; drawBatch(); await new Promise(r => setTimeout(r, 5000)); }
+        }
+      }
+      if (it.state === 'done') delete it.b64;
       drawBatch();
     }
   };
-  await Promise.all([worker(), worker()]);
+  await Promise.all([worker(0), worker(1)]);
+  // 上限のせいで1人分ずつにしたとき、残りを最後まで読む
+  while (next < JS_BATCH.length) await worker(0);
   if (JS_BATCH.length === 1 && JS_BATCH[0].res) openBatch(0);
 }
 
@@ -3033,10 +3045,11 @@ function drawBatch(){
   const running = JS_BATCH.length - done.length - errs.length;
   let html = `<div class="box"><h3>まとめて読み取り（${JS_BATCH.length}枚）</h3>
     <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${done.length}</b><span>読み取り済み</span></div><div style="background:${need.length ? 'var(--err)' : 'var(--g1)'}"><b>${need.length}</b><span>要確認の人</span></div><div style="background:${errs.length ? 'var(--warn)' : 'var(--g2)'}"><b>${errs.length}</b><span>読めなかった</span></div></div>
-    ${running ? `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚。1枚30秒ほどかかります。画面を閉じずにお待ちください。</div>` : '<div class="small">すべて読み取りました。名前を押すと、その人の結果を確認・修正できます。</div>'}</div>`;
+    ${running ? `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚。1枚30秒ほどかかります。画面を閉じずにお待ちください。</div>` : '<div class="small">すべて読み取りました。名前を押すと、その人の結果を確認・修正できます。</div>'}
+    ${!running && errs.some(x => x.b64) ? `<button class="btn s wide" id="jsRetry" style="margin-top:10px">読めなかった${errs.filter(x => x.b64).length}枚を読み直す</button>` : ''}</div>`;
   html += `<table class="at-tbl"><thead><tr><th style="width:42%">利用者</th><th>出勤（用紙／記録）</th><th>要確認</th></tr></thead><tbody>${JS_BATCH.map((x, i) => {
     if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">待機中</td></tr>`;
-    if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">読み取り中…</td></tr>`;
+    if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${esc(x.err)}</span>` : '読み取り中…'}</td></tr>`;
     if (x.state === 'err') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="flag">${esc(x.err)}</td></tr>`;
     const r = x.res, n = r.totals.issues + (r.headIssues || []).length;
     return `<tr data-open="${i}" style="cursor:pointer${n ? ';background:var(--err-bg)' : ''}"><td><b class="link" style="padding:0">${esc(r.name || '（名前不明）')}</b><div class="small">${esc(String(r.month).replace('-', '/'))}${r.hasSys ? '' : '　記録が見つからない'}</div></td>
@@ -3044,6 +3057,15 @@ function drawBatch(){
   }).join('')}</tbody></table>`;
   $('jsOut').innerHTML = html;
   $('jsOut').querySelectorAll('[data-open]').forEach(tr => tr.onclick = () => openBatch(Number(tr.dataset.open)));
+  if ($('jsRetry')) $('jsRetry').onclick = async () => {
+    const month = $('jsMonth').value;
+    for (const it of JS_BATCH.filter(x => x.state === 'err' && x.b64)) {
+      it.state = 'run'; it.err = ''; drawBatch();
+      try { it.res = await apiPost({ app:'jissekiScan', name: '', month, file: JSON.stringify({ b64: it.b64, mime: it.mime }) }); it.state = 'done'; delete it.b64; }
+      catch (err) { it.state = 'err'; it.err = err.message; }
+      drawBatch();
+    }
+  };
 }
 
 let JS_CUR = -1;
