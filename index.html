@@ -408,6 +408,28 @@ body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-
 .ro-sec{background:var(--soft);border-radius:var(--r-m);padding:10px 12px;margin-bottom:8px}
 .ro-sec summary{cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px 8px}.ro-sec summary span{font-size:13px;color:var(--sub)}.ro-sec summary small{grid-column:1/3;color:var(--sub);font-size:12px}
 .ro-body{margin-top:8px}
+.ei-date{display:flex;align-items:center;gap:10px;margin-bottom:6px}.ei-date input{min-height:44px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 10px;font-size:16px;background:var(--paper);color:var(--ink)}.ei-date span{color:var(--sub);font-size:14px}
+.ei-card{background:var(--paper);border-radius:var(--r-m);padding:12px 14px;margin-bottom:8px;border-left:5px solid var(--rule)}
+.ei-card.ok{border-left-color:var(--g1)}.ei-card.ng{border-left-color:var(--err);background:var(--err-bg)}
+.ei-t{display:flex;gap:8px;align-items:baseline}.ei-t b{font-size:16px;flex:1}.ei-f{font-size:12px;background:var(--soft);color:var(--sub);border-radius:99px;padding:2px 8px;white-space:nowrap}
+.ei-n{font-size:13px;color:var(--sub);margin-top:3px}
+.ei-ox{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ei-ox button{min-height:50px;border-radius:var(--r-m);border:2px solid var(--rule);background:var(--soft);color:var(--ink);font-size:16px;font-weight:700}
+.ei-ox [data-ok][aria-pressed="true"]{background:var(--g1);border-color:var(--g1);color:var(--on)}.ei-ox [data-ng][aria-pressed="true"]{background:var(--err);border-color:var(--err);color:var(--on)}
+.ei-temp{display:flex;align-items:center;gap:8px;margin-top:10px}.ei-temp input{width:120px;min-height:50px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--rule);border-radius:var(--r-m);background:var(--soft);color:var(--ink)}
+.ei-temp span{font-size:18px;font-weight:700}.ei-temp small{color:var(--sub);margin-left:auto}
+.ei-memo{width:100%;margin-top:8px;min-height:64px;border:1.5px solid var(--err);border-radius:var(--r-s);padding:8px 10px;font-size:15px;background:var(--paper);color:var(--ink)}
+.ei-who{font-size:12px;color:var(--sub);margin-top:6px;text-align:right}
+.ei-mnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.ei-mnav .btn{min-height:40px;padding:0 12px;font-size:14px}.ei-mnav b{font-size:18px}
+.ei-ptitle{font-size:16px;margin:0 0 8px;display:none}
+.ei-scroll{overflow-x:auto;background:var(--paper);border-radius:var(--r-m)}
+.ei-tbl{border-collapse:collapse;font-size:13px;min-width:100%}.ei-tbl th,.ei-tbl td{border:1px solid var(--rule);padding:4px 6px;text-align:center;white-space:nowrap}
+.ei-tbl th{background:var(--soft);position:sticky;top:0}.ei-tbl td:first-child{font-weight:700}.ei-tbl td small{font-weight:400;color:var(--sub);margin-left:2px;font-size:11px}
+.ei-tbl tr.sun td:first-child{color:var(--err)}.ei-tbl tr.sat td:first-child{color:var(--g2)}.ei-tbl td.ng{background:var(--err-bg);color:var(--err);font-weight:700}.ei-tbl td.who{font-size:11px;text-align:left;color:var(--sub)}
+.ei-legend{font-size:13px;margin:10px 0;padding-left:0;list-style:none;display:grid;gap:2px}.ei-notes{font-size:13.5px;padding-left:18px;line-height:1.6}.ei-notes small{color:var(--sub)}
+.ei-sign{margin-top:16px;font-size:14px;display:none}
+@media print{body.ei-printing *{visibility:hidden}body.ei-printing .ei-print,body.ei-printing .ei-print *{visibility:visible}body.ei-printing .ei-print{position:absolute;left:0;top:0;width:100%;color:#000}
+body.ei-printing .ei-ptitle,body.ei-printing .ei-sign{display:block}body.ei-printing .ei-scroll{overflow:visible}body.ei-printing .ei-tbl{font-size:10px}body.ei-printing .ei-tbl th,body.ei-printing .ei-tbl td{border-color:#999;padding:2px 4px}@page{size:A4 landscape;margin:10mm}}
 </style>
 </head>
 <body>
@@ -629,6 +651,17 @@ async function demoApi(p){
   if (p.app === 'rosterRow') return { exists: p.key !== 'users', label:'', fields: p.key === 'staff' ? [{h:'スタッフID',type:'text',v:'R004'},{h:'スタッフ名',type:'text',v:p.name,name:true},{h:'店舗名',type:'text',v:'ねぎぼうず'},{h:'所属区分',type:'text',v:'利用者'},{h:'LINEユーザーID',type:'text',v:''},{h:'メールアドレス',type:'text',v:''},{h:'有効フラグ',type:'bool',v:true}] : [{h:'氏名',type:'text',v:p.name,name:true},{h:'受給者証支給終了',type:'date',v:''},{h:'手帳有効期限',type:'date',v:''}] };
   if (p.app === 'rosterSave' || p.app === 'rosterAdd') return { message:'（デモ）保存しました' };
   if (p.app === 'formPreview') { await new Promise(r => setTimeout(r, 600)); return { files:[{ name:'preview.pdf', b64: window.DEMO_PDF || '' }] }; }
+  if (p.app === 'eisei' || p.app === 'eiseiMonth') {
+    const places = [{ name:'事業所', kind:'事業所' }, { name:'伊都国即売会', kind:'店舗' }, { name:'糸島ねぎぼうず', kind:'店舗' }, { name:'唐泊ストアー', kind:'店舗' }, { name:'ITOSHIMASHOP', kind:'店舗' }];
+    const place = p.place || '伊都国即売会', store = (places.find(x => x.name === place) || {}).kind === '店舗';
+    const items = store ? [{ name:'原材料・商品の受入の確認', type:'check', freq:'毎日', note:'外観・におい・包装の破れ・温度を確認' }, { name:'冷蔵庫・冷蔵ショーケースの温度', type:'temp', rule:'<=10', freq:'毎日', note:'10℃以下' }, { name:'冷凍庫の温度', type:'temp', rule:'<=-15', freq:'毎日', note:'' }, { name:'器具・台・かごの洗浄・消毒', type:'check', freq:'毎日', note:'' }, { name:'トイレの洗浄・消毒', type:'check', freq:'毎日', note:'' }, { name:'従業員の健康管理', type:'check', freq:'毎日', note:'' }, { name:'衛生的な手洗いの実施', type:'check', freq:'毎日', note:'' }, { name:'衛生管理計画の振り返り（月次確認）', type:'check', freq:'毎月', note:'', last:'2026-10-31', due:true }]
+      : [{ name:'換気（1日2回以上）', type:'check', freq:'毎日', note:'窓開け・換気扇' }, { name:'共用部の消毒', type:'check', freq:'毎日', note:'' }, { name:'利用者・スタッフの体調確認', type:'check', freq:'毎日', note:'' }, { name:'感染症対策委員会の開催', type:'check', freq:'3か月', note:'3か月に1回以上', last:'2026-08-20', next:'2026-11-20', due:true }, { name:'感染症の研修', type:'check', freq:'6か月', note:'年2回以上', last:'2026-09-10', next:'2027-03-12' }];
+    if (p.app === 'eisei') return { place, date: p.date, places, items: items.map((x, i) => ({ ...x, result: i === 0 ? '○' : i === 1 && store ? '6.5' : '', who: i === 0 ? '石橋 強' : '' })) };
+    const ym = p.ym || ymd().slice(0, 7).replace('/', '-'), recs = [];
+    for (let d = 1; d <= 6; d++) items.filter(x => x.freq === '毎日').forEach((it, i) => recs.push({ date: ym + '-' + String(d).padStart(2, '0'), item: it.name, result: it.type === 'temp' ? (d === 3 && i === 1 ? '12.0' : (5 + d * 0.3).toFixed(1)) : d === 4 && i === 3 ? '×' : '○', who: d % 2 ? '石橋 強' : '大原 里奈', note: d === 3 && i === 1 ? '扉の閉め忘れ。閉めて30分後に7℃を確認' : d === 4 && i === 3 ? '洗剤切れ。翌朝に補充して実施' : '', ng: (d === 3 && i === 1) || (d === 4 && i === 3) }));
+    return { place, ym, places, items: items.filter(x => x.freq === '毎日'), records: recs };
+  }
+  if (p.app === 'eiseiSave') return { message:'（デモ）記録しました' };
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -1535,6 +1568,110 @@ function rosterAdd(){
   };
 }
 
+
+/* ================= 衛生管理の記録（店舗のHACCP＋事業所の衛生・感染対策） ================= */
+let EI = { tab:'day', place: '', date:'', ym:'', vals:{} };
+const eiJudge = (it, v) => {
+  if (it.type !== 'temp' || v === '' || v == null) return v === '×' ? 'ng' : v ? 'ok' : '';
+  const n = Number(String(v).replace(/[^\d.\-]/g, '')); const m = String(it.rule || '').match(/^(<=|>=|<|>)\s*(-?[\d.]+)/);
+  if (isNaN(n) || !m) return 'ok';
+  const t = Number(m[2]); return (m[1] === '<=' ? n <= t : m[1] === '>=' ? n >= t : m[1] === '<' ? n < t : n > t) ? 'ok' : 'ng';
+};
+async function showEisei(){
+  setTop({ title:'衛生管理の記録', back:true });
+  EI.place = EI.place || LS.get('fb_ei_place', '');
+  EI.date = EI.date || ymd().replace(/\//g, '-');
+  EI.ym = EI.ym || EI.date.slice(0, 7);
+  if (EI.tab === 'month') return eiMonth();
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  try { const j = await api({ app:'eisei', place: EI.place, date: EI.date }); if (token !== viewToken) return; EI.place = j.place; LS.set('fb_ei_place', j.place); eiDay(j); }
+  catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+function eiHead(places){
+  return `<div class="tabs mini" role="tablist" style="margin:12px 0 10px">${[['day', '記録する'], ['month', '月の記録表']].map(([k, l]) => `<button class="tab" role="tab" data-et="${k}" aria-selected="${k === EI.tab}">${l}</button>`).join('')}</div>
+    <div class="chips" style="margin-bottom:10px">${(places || []).map(p => `<button class="chip" data-ep="${esc(p.name)}" aria-pressed="${p.name === EI.place}" style="--gc:${p.kind === '店舗' ? 'var(--g3)' : 'var(--g2)'}">${esc(p.name)}</button>`).join('')}</div>`;
+}
+function eiBindHead(){
+  $('view').querySelectorAll('[data-et]').forEach(b => b.onclick = () => { EI.tab = b.dataset.et; showEisei(); });
+  $('view').querySelectorAll('[data-ep]').forEach(b => b.onclick = () => { EI.place = b.dataset.ep; LS.set('fb_ei_place', EI.place); showEisei(); });
+}
+function eiDay(j){
+  EI.vals = {};
+  j.items.forEach(i => { EI.vals[i.name] = { result: i.result || '', note: i.memo || '' }; });
+  const daily = j.items.filter(i => i.freq === '毎日'), other = j.items.filter(i => i.freq !== '毎日');
+  const done = daily.filter(i => i.result).length;
+  const card = i => {
+    const v = EI.vals[i.name], st = eiJudge(i, v.result);
+    const ctl = i.type === 'temp'
+      ? `<div class="ei-temp"><input type="number" inputmode="decimal" step="0.1" data-tv="${esc(i.name)}" value="${esc(v.result)}" placeholder="—"><span>℃</span><small>基準 ${esc(String(i.rule).replace('<=', '').replace('>=', '') + (/^</.test(i.rule) ? '℃以下' : /^>/.test(i.rule) ? '℃以上' : ''))}</small></div>`
+      : `<div class="ei-ox"><button data-ok="${esc(i.name)}" aria-pressed="${v.result === '○'}">○ できた</button><button data-ng="${esc(i.name)}" aria-pressed="${v.result === '×'}">× できなかった</button></div>`;
+    return `<div class="ei-card ${st}" data-card="${esc(i.name)}"><div class="ei-t"><b>${esc(i.name)}</b>${i.freq !== '毎日' ? `<span class="ei-f">${esc(i.freq)}</span>` : ''}</div>
+      ${i.note ? `<div class="ei-n">${esc(i.note)}</div>` : ''}
+      ${i.freq !== '毎日' ? `<div class="ei-n" style="color:${i.due ? 'var(--warn)' : 'var(--sub)'}">${i.last ? '前回 ' + esc(i.last.slice(5).replace('-', '/')) : 'まだ記録がありません'}${i.next ? '　次の目安 ' + esc(i.next.slice(5).replace('-', '/')) : ''}${i.due ? '　← そろそろ実施' : ''}</div>` : ''}
+      ${ctl}
+      <textarea class="ei-memo" data-memo="${esc(i.name)}" placeholder="できなかった・基準外のとき：どう対応したか（必須）" ${st === 'ng' || v.note ? '' : 'hidden'}>${esc(v.note)}</textarea>
+      ${i.who ? `<div class="ei-who">記録：${esc(i.who)}</div>` : ''}</div>`;
+  };
+  let html = eiHead(j.places) + `<div class="ei-date"><input type="date" id="eiDate" value="${esc(j.date)}"><span>${done}/${daily.length} 記録済み</span></div>
+    <div class="sec-title">毎日の点検</div>${daily.map(card).join('') || '<div class="empty">毎日の項目はありません</div>'}
+    ${other.length ? `<div class="sec-title">毎週・毎月・定期（委員会・研修など）</div>${other.map(card).join('')}` : ''}
+    <p class="small" style="color:var(--sub);margin:10px 2px 90px">項目は「衛生チェック項目」シートで増やしたり直したりできます。</p>
+    <div class="bar" style="position:sticky;bottom:calc(var(--nav-h, 64px) + 8px)"><span class="saved" id="eiCount"></span><button class="btn p" id="eiSave">記録する</button></div>`;
+  $('view').innerHTML = html;
+  eiBindHead();
+  const refresh = name => {
+    const it = j.items.find(i => i.name === name), c = $('view').querySelector(`[data-card="${CSS.escape(name)}"]`), v = EI.vals[name], st = eiJudge(it, v.result);
+    c.classList.remove('ok', 'ng'); if (st) c.classList.add(st);
+    c.querySelectorAll('[data-ok],[data-ng]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.ok && v.result === '○') || (b.dataset.ng && v.result === '×')));
+    const m = c.querySelector('.ei-memo'); m.hidden = !(st === 'ng' || v.note);
+    if (st === 'ng' && !v.note) m.focus();
+    $('eiCount').textContent = Object.keys(EI.vals).filter(k => EI.vals[k].result).length + '項目 入力中';
+  };
+  $('view').querySelectorAll('[data-ok]').forEach(b => b.onclick = () => { const v = EI.vals[b.dataset.ok]; v.result = v.result === '○' ? '' : '○'; refresh(b.dataset.ok); });
+  $('view').querySelectorAll('[data-ng]').forEach(b => b.onclick = () => { const v = EI.vals[b.dataset.ng]; v.result = v.result === '×' ? '' : '×'; refresh(b.dataset.ng); });
+  $('view').querySelectorAll('[data-tv]').forEach(i => i.oninput = () => { EI.vals[i.dataset.tv].result = i.value; refresh(i.dataset.tv); });
+  $('view').querySelectorAll('[data-memo]').forEach(t => t.oninput = () => { EI.vals[t.dataset.memo].note = t.value; });
+  $('eiDate').onchange = e => { EI.date = e.target.value || EI.date; showEisei(); };
+  $('eiSave').onclick = () => {
+    const rows = Object.keys(EI.vals).filter(k => EI.vals[k].result !== '').map(k => ({ item: k, result: EI.vals[k].result, note: EI.vals[k].note }));
+    if (!rows.length) { toast('まだ何も入力されていません'); return; }
+    const miss = rows.find(r => eiJudge(j.items.find(i => i.name === r.item), r.result) === 'ng' && !String(r.note || '').trim());
+    if (miss) { toast('「' + miss.item + '」の対応を書いてください'); const c = $('view').querySelector(`[data-card="${CSS.escape(miss.item)}"] .ei-memo`); c.hidden = false; c.focus(); return; }
+    runAction(() => apiPost({ app:'eiseiSave', place: j.place, date: j.date, rows }), () => showEisei());
+  };
+  $('eiCount').textContent = daily.length - done ? `あと${daily.length - done}項目` : '今日の毎日の点検は完了';
+}
+async function eiMonth(){
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  let j;
+  try { j = await api({ app:'eiseiMonth', place: EI.place, ym: EI.ym }); } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+  if (token !== viewToken) return;
+  EI.place = j.place;
+  const [y, m] = j.ym.split('-').map(Number), last = new Date(y, m, 0).getDate();
+  const cell = {}; j.records.forEach(r => cell[r.date + '|' + r.item] = r);
+  const nums = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'.split('');
+  const notes = j.records.filter(r => r.note).sort((a, b) => a.date.localeCompare(b.date));
+  const whos = {}; j.records.forEach(r => { (whos[r.date] = whos[r.date] || new Set()).add(r.who); });
+  const shift = d => { const t = new Date(y, m - 1 + d, 1); EI.ym = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); eiMonth(); };
+  let html = eiHead(j.places) + `<div class="ei-mnav"><button class="btn s" id="eiPrev">‹ 前の月</button><b>${y}年${m}月</b><button class="btn s" id="eiNext">次の月 ›</button></div>
+    <div class="ei-print"><h2 class="ei-ptitle">衛生管理 月次記録表　${esc(j.place)}　${y}年${m}月</h2>
+    <div class="ei-scroll"><table class="ei-tbl"><thead><tr><th>日</th>${j.items.map((it, i) => `<th title="${esc(it.name)}">${nums[i] || i + 1}</th>`).join('')}<th>記録者</th></tr></thead><tbody>
+    ${Array.from({ length: last }, (_, k) => { const d = j.ym + '-' + String(k + 1).padStart(2, '0'), wd = new Date(y, m - 1, k + 1).getDay();
+      return `<tr class="${wd === 0 ? 'sun' : wd === 6 ? 'sat' : ''}"><td>${k + 1}<small>${'日月火水木金土'[wd]}</small></td>${j.items.map(it => { const r = cell[d + '|' + it.name]; return `<td class="${r && r.ng ? 'ng' : ''}">${r ? esc(r.result) : ''}</td>`; }).join('')}<td class="who">${whos[d] ? esc([...whos[d]].join('・')) : ''}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <ol class="ei-legend">${j.items.map((it, i) => `<li><b>${nums[i] || i + 1}</b> ${esc(it.name)}${it.type === 'temp' ? '（℃・基準 ' + esc(it.rule) + '）' : ''}</li>`).join('')}</ol>
+    <div class="sec-title">特記事項（できなかった・基準外のときの対応）</div>
+    ${notes.length ? `<ul class="ei-notes">${notes.map(r => `<li><b>${esc(r.date.slice(5).replace('-', '/'))} ${esc(r.item)}</b>（${esc(r.result)}）${esc(r.note)}<small>　${esc(r.who)}</small></li>`).join('')}</ul>` : '<div class="small" style="color:var(--sub)">ありません</div>'}
+    <div class="ei-sign">確認者：＿＿＿＿＿＿＿＿　　確認日：　　年　　月　　日</div></div>
+    <button class="btn p wide" id="eiPrint" style="margin:14px 0 24px">🖨 印刷・PDFにする</button>`;
+  $('view').innerHTML = html;
+  eiBindHead();
+  $('eiPrev').onclick = () => shift(-1); $('eiNext').onclick = () => shift(1);
+  $('eiPrint').onclick = () => { document.body.classList.add('ei-printing'); setTimeout(() => { window.print(); document.body.classList.remove('ei-printing'); }, 50); };
+}
+
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
 function route(){
@@ -1548,7 +1685,7 @@ function route(){
   if (!page && !signedIn() && kioskKey()) { location.replace('#/kiosk'); return; }
   if (isMember() && !['attend', 'info', 'settings', 'book', 'manual'].includes(page)) { location.replace('#/attend'); return; }
   document.body.classList.toggle('member', isMember());
-  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'contact', admin:'work', quarantine:'work', sougei:'work', deadlines:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home', manual: isMember() ? 'info' : 'contact' })[page] || page || 'home');
+  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'contact', admin:'work', quarantine:'work', sougei:'work', eisei:'work', deadlines:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home', manual: isMember() ? 'info' : 'contact' })[page] || page || 'home');
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -1564,6 +1701,7 @@ function route(){
   if (page === 'manual') return showManual(arg);
   if (page === 'quarantine') return showQuarantine();
   if (page === 'sougei') return showSougei();
+  if (page === 'eisei') return showEisei();
   if (page === 'deadlines') return showDeadlines();
   if (page === 'mybook') { if (ME && ME.name) location.replace('#/book/' + encodeURIComponent(ME.name)); else location.replace('#/attend'); return; }
   if (page === 'books') return showBooks();
@@ -3297,7 +3435,7 @@ function drawerItems(){
   return [
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', 'ハザードマップ・避難場所')]],
-    ['業務', [it('#/work', 'やること'), it('#/deadlines', '利用者の期限・カレンダー'), it('#/sougei', '送迎の予定とアラーム', '送迎30分前に担当へ通知'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
+    ['業務', [it('#/work', 'やること'), it('#/eisei', '衛生管理の記録', '店舗のHACCP・事業所の衛生'), it('#/deadlines', '利用者の期限・カレンダー'), it('#/sougei', '送迎の予定とアラーム', '送迎30分前に担当へ通知'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
     a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/roster', '名簿の管理', '利用者・スタッフの登録と確認'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
@@ -3452,6 +3590,7 @@ function showWork(){
   if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くか、設定でアプリキーを入力すると使えます。')}</div>`; return; }
   let html = `<div class="sec-title">やること</div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
     <div class="sec-title">健康・感染症</div>
+    <a class="list-item" href="#/eisei" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">衛生管理の記録</div><div class="m">店舗の衛生管理計画（HACCP）・事業所の衛生と感染対策</div></div>${ICON.chev}</a>
     <a class="list-item" href="#/sougei" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">送迎の予定とアラーム</div><div class="m">今日の送迎と、30分前のLINE通知</div></div>${ICON.chev}</a>
     <a class="list-item" href="#/quarantine" style="color:inherit;text-decoration:none;--gc:var(--err)"><div class="main"><div class="t">感染症の待機期間</div><div class="m" id="qtSub">誰がいつまで待機中かをチャートで</div></div>${ICON.chev}</a>
     <div class="sec-title">報告</div><div id="rpBox">${workReports()}</div>`;
