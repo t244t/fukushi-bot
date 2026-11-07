@@ -430,6 +430,8 @@ body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-
 .ei-sign{margin-top:16px;font-size:14px;display:none}
 @media print{body.ei-printing *{visibility:hidden}body.ei-printing .ei-print,body.ei-printing .ei-print *{visibility:visible}body.ei-printing .ei-print{position:absolute;left:0;top:0;width:100%;color:#000}
 body.ei-printing .ei-ptitle,body.ei-printing .ei-sign{display:block}body.ei-printing .ei-scroll{overflow:visible}body.ei-printing .ei-tbl{font-size:10px}body.ei-printing .ei-tbl th,body.ei-printing .ei-tbl td{border-color:#999;padding:2px 4px}@page{size:A4 landscape;margin:10mm}}
+.ev-past{margin-top:6px}.ev-past summary{cursor:pointer;list-style:none;padding:12px 14px;background:var(--paper);border-radius:var(--r-m);font-weight:700;color:var(--sub);display:flex;justify-content:space-between}
+.ev-past summary::-webkit-details-marker{display:none}.ev-past summary::after{content:'開く ▾';font-weight:400;font-size:13px}.ev-past[open] summary::after{content:'閉じる ▴'}.ev-past[open] summary{margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -670,7 +672,7 @@ async function demoApi(p){
   if (p.app === 'me') return { name:'石橋 強', role:'admin', userId:'Udemo', via:'line' };
   if (p.app === 'safety') return { lastSend:'2026/11/01 09:00', total:8, groups:{ '無事です':[{name:'石橋 強'},{name:'大原 里奈'},{name:'坂東 麻衣子'},{name:'大鶴 猛'}], '怪我あり':[{name:'平山 菜々',time:'11/1 09:12'}], '避難中':[{name:'福田',time:'11/1 09:20'}], '連絡不可':[], '未回答':[{name:'重富'},{name:'河津 さち子'}] } };
   if (p.app === 'events') return { events:[{ id:'EV1', name:'秋の避難訓練', date:'2026/11/10', time:'10:00', place:'伊都国即売会', memo:'動きやすい服装で', upcoming:true, isTarget:true, my:'出席', targetCount:8,
-      counts:{ '出席':['石橋 強','大原 里奈','大鶴 猛'], '遅刻':['福田'], '未定':[], '欠席':['重富'], '未回答':['河津 さち子','坂東 麻衣子','平山 菜々'] } }].map(e => /admin/.test(location.search) ? e : { ...e, counts:undefined }) };
+      counts:{ '出席':['石橋 強','大原 里奈','大鶴 猛'], '遅刻':['福田'], '未定':[], '欠席':['重富'], '未回答':['河津 さち子','坂東 麻衣子','平山 菜々'] } }, { id:'EV0', name:'10月の誕生日会', date:'2026/10/25', time:'15:00', place:'事業所', memo:'', upcoming:false, isTarget:true, my:'出席', targetCount:8, counts:{ '出席':['石橋 強'], '遅刻':[], '未定':[], '欠席':[], '未回答':[] } }, { id:'EV00', name:'夏の避難訓練', date:'2026/07/12', time:'10:00', place:'伊都国即売会', memo:'', upcoming:false, isTarget:true, my:'', targetCount:8, counts:{ '出席':[], '遅刻':[], '未定':[], '欠席':[], '未回答':[] } }].map(e => /admin/.test(location.search) ? e : { ...e, counts:undefined }) };
   if (p.app === 'meetings') return { meetings:[{ row:5, title:'ケース会議', date:'11/5（水）', time:'14:00', minutes:60, url:'https://meet.google.com/' }], people:[{ name:'石橋', email:'a@example.com' }, { name:'大原', email:'b@example.com' }, { name:'平山', email:'c@example.com' }] };
   if (p.app === 'attendMe' || p.app === 'attendPunch') return demoAttend(p);
   if (p.app === 'attendDay') return { date: p.date || ymd(), office:true, counts:{ in:3, out:1, notice:1 }, rows:[
@@ -3654,7 +3656,7 @@ async function loadEvents(live){
     const evs = j.events || [];
     let html = isAdmin() ? `<button class="btn s wide" id="evNew" style="margin-bottom:10px">＋ 新しいイベントを作る</button>` : '';
     if (!evs.length) html += `<div class="box small">${isAdmin() ? 'イベントはまだありません。' : 'あなたが対象のイベントはありません。'}</div>`;
-    html += evs.map(e => {
+    const card = e => {
       const ans = ME && ME.userId && e.isTarget ? `<div class="chips">${['出席','遅刻','未定','欠席'].map(o =>
         `<button class="chip" data-ev="${esc(e.id)}" data-at="${o}" aria-pressed="${e.my === o}" style="--gc:var(--brand)">${o}</button>`).join('')}</div>` : '';
       const cnt = e.counts ? `<div class="counts">${['出席','遅刻','未定','欠席','未回答'].map(k => `<div class="${AT_CLASS[k]}"><b>${e.counts[k].length}</b><span>${k}</span></div>`).join('')}</div>
@@ -3662,7 +3664,12 @@ async function loadEvents(live){
         ${e.upcoming ? `<div class="row2"><button class="btn s" data-evsend="${esc(e.id)}" data-evname="${esc(e.name)}" data-n="${e.targetCount}">出欠確認をLINEで送る</button></div>` : ''}` : '';
       return `<div class="box evt"${e.upcoming ? '' : ' style="opacity:.7"'}><h3>${esc(e.name)}${e.upcoming ? '' : '<span class="pill" style="--gbg:var(--soft);--gc:var(--sub)">終了</span>'}</h3>
         <div class="meta">${esc(e.date)} ${esc(e.time)}${e.place ? '　' + esc(e.place) : ''}</div>${e.memo ? `<div class="small">${esc(e.memo)}</div>` : ''}${ans}${cnt}</div>`;
-    }).join('');
+    };
+    // これからのイベントは開いたまま、終わったイベントは折りたたむ（新しい順）
+    const up = evs.filter(e => e.upcoming), past = evs.filter(e => !e.upcoming).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    if (evs.length && !up.length) html += '<div class="box small">これからのイベントはありません。</div>';
+    html += up.map(card).join('');
+    if (past.length) html += `<details class="ev-past"><summary>終わったイベント（${past.length}件）</summary>${past.map(card).join('')}</details>`;
     $('evBox').innerHTML = html;
     const reload = () => loadEvents(live);
     $('evBox').querySelectorAll('[data-at]').forEach(b => b.onclick = () =>
