@@ -628,6 +628,7 @@ async function demoApi(p){
       {name:'松川 忠義',key:'松川忠義',kana:'まつかわ ただよし',kubun:'利用者',store:'イオン笹丘',in:{staff:1,users:1,punch:1},line:true,mail:false,active:true,miss:[]}] };
   if (p.app === 'rosterRow') return { exists: p.key !== 'users', label:'', fields: p.key === 'staff' ? [{h:'スタッフID',type:'text',v:'R004'},{h:'スタッフ名',type:'text',v:p.name,name:true},{h:'店舗名',type:'text',v:'ねぎぼうず'},{h:'所属区分',type:'text',v:'利用者'},{h:'LINEユーザーID',type:'text',v:''},{h:'メールアドレス',type:'text',v:''},{h:'有効フラグ',type:'bool',v:true}] : [{h:'氏名',type:'text',v:p.name,name:true},{h:'受給者証支給終了',type:'date',v:''},{h:'手帳有効期限',type:'date',v:''}] };
   if (p.app === 'rosterSave' || p.app === 'rosterAdd') return { message:'（デモ）保存しました' };
+  if (p.app === 'formPreview') { await new Promise(r => setTimeout(r, 600)); return { files:[{ name:'preview.pdf', b64: window.DEMO_PDF || '' }] }; }
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -1724,6 +1725,7 @@ async function showForm(sheet){
   }
 }
 
+const hasPdfOf = sheet => (LS.get('fb_haspdf', {}) || {})[sheet];
 function renderForm(sheet, fields, keepValues, edit){
   const group = groupOf(sheet);
   const draft = keepValues ? null : LS.get(draftKey(sheet), null);
@@ -1745,7 +1747,7 @@ function renderForm(sheet, fields, keepValues, edit){
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
   vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); });
   html += `<div class="bar"><span class="saved" id="saved">${edit ? '' : draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
-    <button class="btn p" id="send">${edit ? '修正内容を確認' : '内容を確認'}</button></div></div>`;
+    ${hasPdfOf(sheet) === false ? '' : '<button class="btn s" id="fPrev" title="入力中の内容を書式（テンプレート）で見る" style="padding:0 14px">📄 書式</button>'}<button class="btn p" id="send">${edit ? '修正内容を確認' : '内容を確認'}</button></div></div>`;
   $('view').innerHTML = html;
   bindForm();
   updateProgress();
@@ -1857,6 +1859,14 @@ function bindForm(){
   v.querySelectorAll('[data-unphoto]').forEach(b => b.onclick = () => { const i = b.dataset.unphoto; if (F.files[i]) delete F.files[i]; else F.values[i] = ''; redrawField(i); });
   v.querySelectorAll('.picker').forEach(p => p.onclick = () => openPicker(F.fields.find(f => String(f.index) === p.dataset.f)));
   $('send').onclick = openReview;
+  if ($('fPrev')) $('fPrev').onclick = () => {
+    const vis = F.fields.filter(f => !f.hidden);
+    if (!vis.some(f => String(F.values[f.index] ?? '').trim())) { toast('まだ何も入力されていません'); return; }
+    pdfOverlay(F.sheet + '（入力中・まだ送信していません）', async () => {
+      try { return await apiPost({ app:'formPreview', sheet: F.sheet, data: F.values }); }
+      catch (e) { if (/テンプレート（PDF）がありません/.test(e.message)) { const m = LS.get('fb_haspdf', {}); m[F.sheet] = false; LS.set('fb_haspdf', m); if ($('fPrev')) $('fPrev').remove(); } throw e; }
+    }, '入力中の内容を書式に入れています…');
+  };
 }
 
 function redrawField(i){
