@@ -432,6 +432,32 @@ body.kiosk .top,body.kiosk .nav{display:none!important}body.kiosk main.wrap{max-
 body.ei-printing .ei-ptitle,body.ei-printing .ei-sign{display:block}body.ei-printing .ei-scroll{overflow:visible}body.ei-printing .ei-tbl{font-size:10px}body.ei-printing .ei-tbl th,body.ei-printing .ei-tbl td{border-color:#999;padding:2px 4px}@page{size:A4 landscape;margin:10mm}}
 .ev-past{margin-top:6px}.ev-past summary{cursor:pointer;list-style:none;padding:12px 14px;background:var(--paper);border-radius:var(--r-m);font-weight:700;color:var(--sub);display:flex;justify-content:space-between}
 .ev-past summary::-webkit-details-marker{display:none}.ev-past summary::after{content:'開く ▾';font-weight:400;font-size:13px}.ev-past[open] summary::after{content:'閉じる ▴'}.ev-past[open] summary{margin-bottom:10px}
+
+/* ===== PC（横長の画面） ===== */
+body.pc{padding-left:264px}
+body.pc .drawer{transform:none;visibility:visible;width:264px;transition:none;box-shadow:none;border-right:1px solid var(--rule);z-index:12;padding-top:10px}
+body.pc #drClose,body.pc #menuBtn,body.pc .dscrim,body.pc .nav{display:none!important}
+body.pc .wrap{max-width:1180px;padding:0 28px}
+body.pc main.wrap{padding-bottom:40px}
+body.pc .toast{left:calc(50% + 132px);bottom:24px}
+body.pc .bar{bottom:0}
+/* ダイアログは画面の真ん中に */
+body.pc .bsheet{left:calc(50% + 132px);right:auto;bottom:auto;top:50%;width:min(640px,calc(100vw - 320px));max-height:86vh;border-radius:var(--r-l);transform:translate(-50%,-46%);opacity:0;visibility:hidden;transition:opacity .15s,transform .15s,visibility 0s .15s;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+body.pc .bsheet.on{transform:translate(-50%,-50%);opacity:1;visibility:visible;transition:opacity .15s,transform .15s}
+body.pc .bsheet .grab{display:none}body.pc .bsheet h2{margin-top:16px}
+/* ホーム：帳票の一覧を横に並べる */
+body.pc #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+body.pc #list .row{border-right:1px solid var(--rule)}
+body.pc .pins{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+/* 一覧のカードを2列に */
+body.pc .ro-list,body.pc .sg-list{grid-template-columns:repeat(2,1fr)}
+body.pc .ks-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+/* 入力欄を2列に（文章・写真・選択肢の多い項目は横いっぱい） */
+body.pc .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;align-items:start}
+body.pc .fgrid>.field:has(textarea),body.pc .fgrid>.field:has(.chips),body.pc .fgrid>.field:has(input[type=file]),body.pc .fgrid>.field:has(.opts){grid-column:1/-1}
+/* 表は広く */
+body.pc .at-tbl,body.pc .ei-tbl{font-size:14px}
+body.pc .ei-scroll{overflow-x:visible}
 </style>
 </head>
 <body>
@@ -1885,7 +1911,7 @@ function renderForm(sheet, fields, keepValues, edit){
     if (VOICE_FORMS[sheet] && !isMember()) html += `<button type="button" class="vc-start" id="vcOpen"><span class="vc-ic">${ICON_MIC}</span><span><b>面談を録音して下書きを作る</b><small>録音から「${esc(VOICE_FORMS[sheet])}」などを自動で書きます</small></span></button><div id="vcResult"></div>`;
   }
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
-  vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); });
+  html += '<div class="fgrid">'; vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); }); html += '</div>';
   html += `<div class="bar"><span class="saved" id="saved">${edit ? '' : draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
     ${hasPdfOf(sheet) === false ? '' : '<button class="btn s" id="fPrev" title="入力中の内容を書式（テンプレート）で見る" style="padding:0 14px">📄 書式</button>'}<button class="btn p" id="send">${edit ? '修正内容を確認' : '内容を確認'}</button></div></div>`;
   $('view').innerHTML = html;
@@ -3465,14 +3491,17 @@ function drawerItems(){
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
 }
-function openDrawer(){
+function fillDrawer(){
   const cur = location.hash || '#/';
   $('drWho').innerHTML = ME && ME.name ? esc(ME.name) + ' さん' + (isAdmin() ? '<span class="admin-mark">管理者</span>' : '') : '';
   $('drBody').innerHTML = drawerItems().map(([g, list]) => `${g ? `<div class="dr-sec">${esc(g)}</div>` : '<div class="dr-sep"></div>'}${list.filter(Boolean).map(x =>
-    `<a class="dr-item" href="${x.href}"${x.href === cur ? ' aria-current="page"' : ''}><span>${esc(x.label)}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`).join('')}`).join('');
+    `<a class="dr-item" href="${x.href}"${x.href === cur || (x.href !== '#/' && cur.startsWith(x.href + '/')) ? ' aria-current="page"' : ''}><span>${esc(x.label)}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`).join('')}`).join('');
+  $('drBody').querySelectorAll('a').forEach(x => x.onclick = () => closeDrawer());
+}
+function openDrawer(){
+  fillDrawer();
   $('drawer').classList.add('on'); $('dscrim').classList.add('on');
   $('drawer').setAttribute('aria-hidden', 'false'); $('menuBtn').setAttribute('aria-expanded', 'true');
-  $('drBody').querySelectorAll('a').forEach(x => x.onclick = () => closeDrawer());
   setTimeout(() => { const f = $('drClose'); if (f) f.focus(); }, 50);
 }
 function closeDrawer(){
@@ -3483,6 +3512,16 @@ $('menuBtn').onclick = openDrawer;
 $('drClose').onclick = closeDrawer;
 $('dscrim').onclick = closeDrawer;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('drawer').classList.contains('on')) closeDrawer(); });
+/* ===== PC（横長の画面）：メニューを左にいつも出す ===== */
+const PCQ = matchMedia('(min-width: 1024px)');
+function pcSync(){
+  const on = PCQ.matches && !document.body.classList.contains('kiosk');
+  document.body.classList.toggle('pc', on);
+  $('drawer').setAttribute('aria-hidden', on ? 'false' : String(!$('drawer').classList.contains('on')));
+  if (on) fillDrawer();
+}
+PCQ.addEventListener ? PCQ.addEventListener('change', pcSync) : PCQ.addListener(pcSync);
+window.addEventListener('hashchange', () => setTimeout(pcSync, 0));
 
 
 /* ===== 施設外就労実施報告書 ===== */
@@ -4060,7 +4099,8 @@ function takeQrFromUrl(){
   sp.delete('qr'); sp.delete('liff.state');
   history.replaceState(null, '', location.pathname + (sp.toString() ? '?' + sp : '') + '#/attend');
 }
-AUTH = initAuth().finally(() => { authPending = false; });
+AUTH = initAuth().finally(() => { authPending = false; setTimeout(pcSync, 0); });
+setTimeout(pcSync, 0);
 if (CACHED_ME && !/[?&](qr|liff\.state)=/.test(location.search)) {
   // 前回のログイン情報で先に画面を出し、確認が終わったら必要なときだけ描き直す
   ME = CACHED_ME; takeGoFromUrl(); route();
