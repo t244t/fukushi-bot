@@ -476,6 +476,7 @@ body.pc .md-detail .ro-sec{background:var(--soft)}
 <header class="top" id="top"><div class="wrap">
   <button class="icon-btn" id="menuBtn" aria-label="メニューを開く" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   <button class="icon-btn" id="back" aria-label="戻る" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <a class="icon-btn" id="homeBtn" href="#/" aria-label="トップ（最初の画面）へ" title="トップへ" hidden style="color:inherit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 01-1 1h-5v-6h-4v6H5a1 1 0 01-1-1z"/></svg></a>
   <h1 id="title">福祉ボット２</h1>
   <a class="icon-btn" id="gearBtn" href="#/settings" aria-label="設定" style="color:inherit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></a>
   <button class="icon-btn" id="pinBtn" aria-label="よく使うに追加" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg></button>
@@ -493,7 +494,7 @@ body.pc .md-detail .ro-sec{background:var(--soft)}
 </div></nav>
 
 <div class="dscrim" id="dscrim"></div>
-<nav class="drawer" id="drawer" aria-label="すべてのメニュー" aria-hidden="true"><div class="dr-head"><img src="logo.png" alt="" width="44" height="44"><div><b>福祉ボット２</b><div class="small" id="drWho"></div></div>
+<nav class="drawer" id="drawer" aria-label="すべてのメニュー" aria-hidden="true"><div class="dr-head"><a id="drHome" href="#/" title="トップへ" style="display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none"><img src="logo.png" alt="" width="44" height="44"><div><b>福祉ボット２</b><div class="small" id="drWho"></div></div></a>
   <button class="icon-btn" id="drClose" aria-label="メニューを閉じる" style="margin-left:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div id="drBody"></div></nav>
 <div class="scrim" id="scrim"></div>
@@ -1784,6 +1785,8 @@ function setTop({ title, back = false, group = null, pin = null }){
   top.className = 'top' + (group ? ' group ' + gClass(group) : '');
   $('title').textContent = title;
   $('back').hidden = !back;
+  $('homeBtn').hidden = !back;
+  $('homeBtn').setAttribute('href', isMember() ? '#/attend' : '#/');
   $('menuBtn').hidden = back;
   $('prog').hidden = !group;
   $('pinBtn').hidden = pin === null;
@@ -3536,6 +3539,8 @@ function drawerItems(){
 }
 function fillDrawer(){
   const cur = location.hash || '#/';
+  $('drHome').setAttribute('href', isMember() ? '#/attend' : '#/');
+  $('drHome').onclick = () => closeDrawer();
   $('drWho').innerHTML = ME && ME.name ? esc(ME.name) + ' さん' + (isAdmin() ? '<span class="admin-mark">管理者</span>' : '') : '';
   $('drBody').innerHTML = drawerItems().map(([g, list]) => `${g ? `<div class="dr-sec">${esc(g)}</div>` : '<div class="dr-sep"></div>'}${list.filter(Boolean).map(x =>
     `<a class="dr-item" href="${x.href}"${x.href === cur || (x.href !== '#/' && cur.startsWith(x.href + '/')) ? ' aria-current="page"' : ''}><span>${esc(x.label)}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`).join('')}`).join('');
