@@ -458,6 +458,18 @@ body.pc .fgrid>.field:has(textarea),body.pc .fgrid>.field:has(.chips),body.pc .f
 /* 表は広く */
 body.pc .at-tbl,body.pc .ei-tbl{font-size:14px}
 body.pc .ei-scroll{overflow-x:visible}
+
+/* PC：左に一覧、右に中身 */
+body.pc .md{display:grid;grid-template-columns:minmax(340px,40%) 1fr;gap:18px;align-items:start}
+body.pc .md-list{position:sticky;top:72px;max-height:calc(100vh - 88px);overflow-y:auto;padding-right:4px}
+body.pc .md-detail{position:sticky;top:72px;max-height:calc(100vh - 88px);overflow-y:auto;background:var(--paper);border-radius:var(--r-m);padding:16px 18px;min-height:240px}
+body.pc .md-empty{color:var(--sub);text-align:center;padding:60px 10px}
+body.pc .md-title{font-size:20px;margin:0 0 10px}.md-title small{display:block;font-size:13px;font-weight:400;color:var(--sub);margin-top:2px}
+body.pc .md-list .ro-list{grid-template-columns:1fr}
+body.pc .ro-row.sel{outline:3px solid var(--brand);outline-offset:-3px}
+body.pc .md-list tr.sel td{background:var(--g2-bg)!important;font-weight:700}
+body.pc .md-list tr[data-open]:hover td{background:var(--soft)}
+body.pc .md-detail .ro-sec{background:var(--soft)}
 </style>
 </head>
 <body>
@@ -1525,6 +1537,16 @@ async function showRoster(){
   try { const j = await api({ app:'roster' }); LS.set('fb_roster', j); if (token === viewToken) drawRoster(j); }
   catch (e) { if (token === viewToken && !c) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
+const isPC = () => document.body.classList.contains('pc');
+/* PCの左右の画面：↑↓キーで前後の人へ */
+document.addEventListener('keydown', e => {
+  if (!isPC() || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || $('bsheet').classList.contains('on')) return;
+  const rows = [...document.querySelectorAll('.md-list [data-k], .md-list tr[data-open]')];
+  if (!rows.length) return;
+  const i = rows.findIndex(r => r.classList.contains('sel'));
+  const n = rows[Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
+  if (n) { e.preventDefault(); n.click(); if (n.focus) n.focus({ preventScroll:true }); n.scrollIntoView({ block:'nearest' }); }
+});
 const RO_MARKS = [['staff', '名簿'], ['users', '期限'], ['mail', 'メール'], ['kana', 'かな'], ['punch', '打刻'], ['line', 'LINE']];
 function drawRoster(j){
   RO.data = j;
@@ -1543,7 +1565,12 @@ function drawRoster(j){
       <div class="ro-m">${RO_MARKS.filter(([k]) => k !== 'users' || isU(p)).map(([k, l]) => { const on = k === 'line' ? p.line : k === 'mail' ? p.mail : !!p.in[k];
         const bad = !on && p.miss.some(m => (k === 'staff' && m === 'スタッフ一覧') || (k === 'users' && m === '利用者管理') || (k === 'mail' && m === 'メール') || (k === 'line' && m === 'LINE') || (k === 'kana' && m === 'ふりがな'));
         return `<span class="${on ? 'on' : bad ? 'bad' : ''}">${on ? '✓' : '－'}${l}</span>`; }).join('')}</div></button>`).join('') || '<div class="empty">該当する人はいません</div>'}</div>`;
+  const split = isPC();
+  const keep = split && $('roDetail') && RO.sel ? $('roDetail') : null;
+  if (split) html = `<div class="md"><div class="md-list">${html}</div><div class="md-detail" id="roDetail"><div class="md-empty">左の一覧から名前を選ぶと、ここにその人の名簿が全部開きます</div></div></div>`;
   $('view').innerHTML = html;
+  if (keep) $('roDetail').replaceWith(keep);
+  if (split && RO.sel) { const b = $('view').querySelector(`.ro-row[data-k="${CSS.escape(RO.sel)}"]`); if (b) b.classList.add('sel'); if (!keep) { const p = j.people.find(x => x.key === RO.sel); if (p) rosterPerson(p); } }
   $('view').querySelectorAll('[data-t]').forEach(b => b.onclick = () => { RO.tab = b.dataset.t; drawRoster(j); });
   $('roQ').oninput = e => { RO.q = e.target.value.trim(); const pos = e.target.selectionStart; drawRoster(j); $('roQ').focus(); $('roQ').setSelectionRange(pos, pos); };
   $('roMiss').onchange = e => { RO.onlyMiss = e.target.checked; drawRoster(j); };
@@ -1553,9 +1580,15 @@ function drawRoster(j){
 function rosterPerson(p){
   const isU = p.kubun === '利用者';
   const sheets = RO.data.sheets.filter(s => !s.only || (s.only === '利用者' && isU));
-  openSheet(p.name + ' さん', `<div class="small" style="color:var(--sub);margin-bottom:8px">${p.miss.length ? '<b style="color:var(--err)">要確認：' + esc(p.miss.join('・')) + '</b>' : '名簿はそろっています'}${p.in.punch ? '' : '<br>出退勤ボットの「メンバー」にはまだいません（LINEか受付端末で初めて打刻すると入ります）'}</div>
-    ${sheets.map(s => `<details class="ro-sec" data-key="${s.key}"><summary><b>${esc(s.label)}</b><span>${p.in[s.key] ? '✓ 載っている' : '－ 載っていない'}</span><small>${esc(s.note)}</small></summary><div class="ro-body">開くと読み込みます…</div></details>`).join('')}`, '<button class="btn s wide" onclick="closeSheet()">閉じる</button>');
-  $('bsBody').querySelectorAll('.ro-sec').forEach(d => d.addEventListener('toggle', async () => {
+  const split = isPC() && $('roDetail');
+  RO.sel = p.key;
+  if (split) $('view').querySelectorAll('.ro-row').forEach(b => b.classList.toggle('sel', b.dataset.k === p.key));
+  const body = `<div class="small" style="color:var(--sub);margin-bottom:8px">${p.miss.length ? '<b style="color:var(--err)">要確認：' + esc(p.miss.join('・')) + '</b>' : '名簿はそろっています'}${p.in.punch ? '' : '<br>出退勤ボットの「メンバー」にはまだいません（LINEか受付端末で初めて打刻すると入ります）'}</div>
+    ${sheets.map(s => `<details class="ro-sec" data-key="${s.key}"><summary><b>${esc(s.label)}</b><span>${p.in[s.key] ? '✓ 載っている' : '－ 載っていない'}</span><small>${esc(s.note)}</small></summary><div class="ro-body">開くと読み込みます…</div></details>`).join('')}`;
+  let host;
+  if (split) { host = $('roDetail'); host.innerHTML = `<h2 class="md-title">${esc(p.name)} さん<small>${esc(p.kana || '')}${p.kubun ? '　' + esc(p.kubun) : ''}${p.store ? '　' + esc(p.store) : ''}</small></h2>` + body; host.scrollTop = 0; }
+  else { openSheet(p.name + ' さん', body, '<button class="btn s wide" onclick="closeSheet()">閉じる</button>'); host = $('bsBody'); }
+  host.querySelectorAll('.ro-sec').forEach(d => d.addEventListener('toggle', async () => {
     if (!d.open || d.dataset.loaded) return;
     d.dataset.loaded = '1';
     const box = d.querySelector('.ro-body');
@@ -1571,11 +1604,13 @@ function rosterPerson(p){
         const values = {};
         box.querySelectorAll('[data-h]').forEach(i => values[i.dataset.h] = i.type === 'checkbox' ? i.checked : i.value);
         save.disabled = true; save.textContent = '保存しています…';
-        try { const j = await apiPost({ app:'rosterSave', key: d.dataset.key, name: p.name, values, add: r.exists ? '0' : '1' }); toast(j.message); closeSheet(); showRoster(); }
+        try { const j = await apiPost({ app:'rosterSave', key: d.dataset.key, name: p.name, values, add: r.exists ? '0' : '1' }); toast(j.message); if (!split) closeSheet(); else $('roDetail').innerHTML = ''; showRoster(); }
         catch (e) { save.disabled = false; save.textContent = '保存'; toast(e.message); }
       };
     } catch (e) { box.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
   }));
+  // PCでは全部の表を開いておく
+  if (split) host.querySelectorAll('.ro-sec').forEach(d => { d.open = true; });
 }
 function rosterAdd(){
   const stores = [...new Set(RO.data.people.map(p => p.store).filter(Boolean))];
@@ -3081,8 +3116,14 @@ function drawBatch(){
     return `<tr data-open="${i}" style="cursor:pointer${n ? ';background:var(--err-bg)' : ''}"><td><b class="link" style="padding:0">${esc(r.name || '（名前不明）')}</b><div class="small">${esc(String(r.month).replace('-', '/'))}${r.hasSys ? '' : '　記録が見つからない'}</div></td>
       <td class="n">${r.totals.paperDays}／${r.totals.sysDays}日</td><td class="n" style="${n ? 'color:var(--err);font-weight:700' : ''}">${n ? n + '件' : 'なし'}</td></tr>`;
   }).join('')}</tbody></table>`;
-  $('jsOut').innerHTML = html;
-  $('jsOut').querySelectorAll('[data-open]').forEach(tr => tr.onclick = () => openBatch(Number(tr.dataset.open)));
+  if (isPC() && JS_BATCH.length > 1) {
+    if (!$('jsList')) $('jsOut').innerHTML = `<div class="md"><div class="md-list" id="jsList"></div><div class="md-detail" id="jsDetail"><div class="md-empty">左の一覧から名前を選ぶと、ここにその人の照合結果が出ます</div></div></div>`;
+    $('jsList').innerHTML = html;
+    $('jsList').querySelectorAll('[data-open]').forEach(tr => { tr.classList.toggle('sel', Number(tr.dataset.open) === JS_CUR); tr.onclick = () => openBatch(Number(tr.dataset.open)); });
+  } else {
+    $('jsOut').innerHTML = html;
+    $('jsOut').querySelectorAll('[data-open]').forEach(tr => tr.onclick = () => openBatch(Number(tr.dataset.open)));
+  }
   if ($('jsRetry')) $('jsRetry').onclick = async () => {
     const month = $('jsMonth').value;
     for (const it of JS_BATCH.filter(x => x.state === 'err' && x.b64)) {
@@ -3097,6 +3138,7 @@ function drawBatch(){
 let JS_CUR = -1;
 function openBatch(i){
   JS_CUR = i; JS_RES = JS_BATCH[i].res;
+  if (isPC() && JS_BATCH.length > 1 && $('jsDetail')) { drawJisseki(JS_RES); drawBatch(); $('jsDetail').scrollTop = 0; return; }
   $('jsOut').dataset.detail = JS_BATCH.length > 1 ? '1' : '';
   drawJisseki(JS_RES);
   window.scrollTo(0, $('jsOut').offsetTop - 70);
@@ -3123,10 +3165,11 @@ function drawJisseki(j){
   html += `<details style="margin-top:12px"><summary class="sec-title" style="cursor:pointer">全部の日を見る</summary><table class="at-tbl"><thead><tr><th style="width:16%">日</th><th>用紙</th><th style="width:32%">記録</th></tr></thead><tbody>${j.rows.map(r =>
     `<tr${r.issues.length ? ' style="background:var(--err-bg)"' : ''}><td class="n">${r.day}${wd(r)}</td><td style="font-size:13px">${paperTxt(r)}</td><td style="font-size:13px">${sysTxt(r)}</td></tr>`).join('')}</tbody></table></details>`;
   html += `<div class="row2" style="display:flex;gap:10px;margin-top:14px"><button class="btn s" id="jsName2" style="flex:1">利用者・年月を変えて照合</button></div>`;
-  if (JS_BATCH.length > 1) html = `<button class="btn s wide" id="jsBack" style="margin-bottom:10px">‹ まとめて読み取りの一覧に戻る</button>` + html;
-  $('jsOut').innerHTML = html;
+  const host = (isPC() && JS_BATCH.length > 1 && $('jsDetail')) || $('jsOut');
+  if (JS_BATCH.length > 1 && host === $('jsOut')) html = `<button class="btn s wide" id="jsBack" style="margin-bottom:10px">‹ まとめて読み取りの一覧に戻る</button>` + html;
+  host.innerHTML = html;
   if ($('jsBack')) $('jsBack').onclick = () => { $('jsOut').dataset.detail = ''; JS_CUR = -1; drawBatch(); };
-  $('jsOut').querySelectorAll('[data-fix]').forEach(b => b.onclick = () => fixJissekiDay(Number(b.dataset.fix)));
+  host.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => fixJissekiDay(Number(b.dataset.fix)));
   $('jsName2').onclick = () => {
     const names = LS.get('fb_jnames', []);
     openSheet('利用者・年月を変える', `<div class="field" style="padding:0"><label for="jn">利用者</label><select class="in" id="jn">${names.concat(names.includes(j.name) ? [] : [j.name]).filter(Boolean).map(n => `<option${n === j.name ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
