@@ -471,6 +471,8 @@ body.pc .md-list tr.sel td{background:var(--g2-bg)!important;font-weight:700}
 body.pc .md-list tr[data-open]:hover td{background:var(--soft)}
 body.pc .md-detail .ro-sec{background:var(--soft)}
 .ib-safe .ib-row.new{background:var(--warn-bg)}
+.band-ic{width:34px;height:34px;border-radius:10px;background:#06c755;color:#fff;display:grid;place-items:center;font-weight:900;font-size:18px;flex:none}
+.band-prev{background:var(--soft);border-radius:var(--r-s);padding:10px 12px;font-size:15px;font-weight:700;margin:4px 0;word-break:break-all}
 </style>
 </head>
 <body>
@@ -1476,6 +1478,42 @@ async function kioskSetupBox(){
 }
 
 
+/* ===== BANDに予定を入れる =====
+   BANDの予定は外から自動では作れない（BAND Open APIに予定を作る機能が無い）ので、
+   「[11/12(水) 10:00 予定名]」の形に整えた文字をコピーして、BANDの投稿画面を開く。
+   この形は BANDtoLINE の通知が予定の日時として読み取れる書き方。 */
+const BAND_URL = 'https://www.band.us/band/79142081/post';
+function bandSchedule(){
+  const d = jst(), today = d.toISOString().slice(0, 10);
+  openSheet('BANDに予定を入れる', `
+    <label class="js-f"><span>予定の名前<em>必須</em></span><input id="bd_t" placeholder="例：ケース会議、避難訓練"></label>
+    <div style="display:flex;gap:8px"><label class="js-f" style="flex:1"><span>日付<em>必須</em></span><input id="bd_d" type="date" value="${today}"></label><label class="js-f" style="width:140px"><span>時刻</span><input id="bd_h" type="time"></label></div>
+    <label class="js-f"><span>場所・メモ（任意）</span><input id="bd_m" placeholder="例：伊都国即売会 2階"></label>
+    <div class="small" style="color:var(--sub)">BANDに貼り付ける文：</div><div class="band-prev" id="bd_p"></div>
+    <div class="small" style="color:var(--sub);margin-top:6px">「コピーしてBANDへ」を押したら、BANDで予定（または投稿）を作り、<b>予定名の欄に貼り付け</b>てください。日時もBANDの欄で選ぶと、BANDのカレンダーに入ります。</div>`,
+    `<button class="btn s" id="bd_copy">コピーだけ</button><button class="btn p" id="bd_go" style="--gc:#06c755;flex:1.6">コピーしてBANDへ</button>`);
+  const text = () => {
+    const t = $('bd_t').value.trim(), dv = $('bd_d').value, h = $('bd_h').value, m = $('bd_m').value.trim();
+    if (!t || !dv) return '';
+    const dt = new Date(dv + 'T00:00:00');
+    return `[${dt.getMonth() + 1}/${dt.getDate()}(${'日月火水木金土'[dt.getDay()]})${h ? ' ' + h : ''} ${t}]${m ? ' ' + m : ''}`;
+  };
+  const upd = () => { $('bd_p').textContent = text() || '（予定の名前と日付を入れると、ここに出ます）'; };
+  ['bd_t', 'bd_d', 'bd_h', 'bd_m'].forEach(id => $(id).oninput = upd); upd();
+  const copy = async () => {
+    const v = text(); if (!v) { toast('予定の名前と日付を入れてください'); return false; }
+    try { await navigator.clipboard.writeText(v); } catch (e) { const ta = document.createElement('textarea'); ta.value = v; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    return true;
+  };
+  $('bd_copy').onclick = async () => { if (await copy()) toast('コピーしました'); };
+  $('bd_go').onclick = async () => {
+    if (!(await copy())) return;
+    toast('コピーしました。BANDで貼り付けてください');
+    closeSheet();
+    if (window.liff && liff.isInClient && liff.isInClient()) liff.openWindow({ url: BAND_URL, external: true });
+    else window.open(BAND_URL, '_blank', 'noopener');
+  };
+}
 /* ===== ホームの新着のお知らせ（各機関のメール・災害・福岡市） ===== */
 const inboxKey = () => 'fb_inbox_' + (isDemo() ? 'demo' : 'live');
 /* 天候・災害・感染症（すぐ知りたい）と、行政・関係機関からのお知らせ（読んでおく）を分けて出す。既読もそれぞれ */
@@ -2821,10 +2859,12 @@ async function showContact(){
     html += `<div class="sec-title">安否確認の状況<span class="admin-mark">管理者</span></div><div class="box" id="safetyBox"><div class="small">読み込んでいます…</div></div>`;
   }
   html += trainBox();
+  setTimeout(() => { if ($('bandBtn')) $('bandBtn').onclick = bandSchedule; }, 0);
   html += `<div class="sec-title">災害への備え</div>
     <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">災害時の備蓄品</div><div class="m">在庫の確認・入庫・出庫（QRコード対応）</div></div>${ICON.chev}</a>
     <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">ハザードマップ・避難場所</div><div class="m">浸水・土砂災害・津波の危険区域と、近くの避難場所</div></div>${ICON.chev}</a>`;
   html += `<div class="sec-title">イベント${isAdmin() ? '<span class="admin-mark">管理者</span>' : 'の出欠'}</div><div id="evBox"><div class="box small">読み込んでいます…</div></div>`;
+  html += `<button class="list-item band-item" id="bandBtn" style="width:100%;text-align:left;border-top:0;border-right:0;border-bottom:0;color:inherit;--gc:#06c755"><span class="band-ic" aria-hidden="true">B</span><div class="main"><div class="t">BANDに予定を入れる</div><div class="m">予定名と日時を入れると、BANDの書き方に整えてコピーし、BANDを開きます</div></div>${ICON.chev}</button>`;
   if (isAdmin()) {
     html += `<div class="sec-title">スタッフへの連絡<span class="admin-mark">管理者</span></div>
       <a class="list-item" href="#/contact/broadcast" style="color:inherit;text-decoration:none;--gc:var(--brand)"><div class="main"><div class="t">一斉連絡を送る</div><div class="m">LINE・メールで、選んだスタッフにお知らせ</div></div>${ICON.chev}</a>
