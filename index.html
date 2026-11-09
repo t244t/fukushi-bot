@@ -1971,7 +1971,7 @@ function sgDraw(){
       ${SGU.tpl ? `<div class="small">ひな形：<b>${esc(SGU.tpl.name)}</b>（${esc(SGU.tpl.updated || '')}）</div>` : '<div class="small" style="color:var(--warn)">まだひな形がありません。指定権者のホームページの計画書（.xlsx）を一度登録してください。</div>'}
       <div class="small" style="color:var(--sub);margin:4px 0 8px">黄色の入力欄だけを書き換えます。基本情報入力シート（法人名・担当者など）と「４ 確認・証明」のチェックはひな形のまま残ります。</div>
       <div class="bar" style="position:static;padding:0;flex-wrap:wrap"><button class="btn s" id="sgTplBtn">📥 ひな形を登録・入れ替え</button>${SGU.tpl ? '<button class="btn s" id="sgImport">ひな形の記入内容を取り込む</button>' : ''}<button class="btn p" id="sgXlsx" style="flex:1"${SGU.tpl ? '' : ' disabled'}>📄 記入済みExcelを作る</button></div>
-      <input type="file" id="sgTplFile" accept=".xlsx" hidden><div id="sgOut" class="small" style="margin-top:8px"></div></div>
+      <input type="file" id="sgTplFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream" hidden><div id="sgOut" class="small" style="margin-top:8px"></div></div>
     <div class="bar"><button class="btn s" id="sgPrint">🖨 まとめを印刷</button><button class="btn p" id="sgSave" style="flex:1">保存する</button></div>`;
   $('view').innerHTML = h;
   const keepLocal = () => { try { LS.set('fb_shogu_' + SGU.nendo, SGU.d); } catch (e) {} };
@@ -2047,15 +2047,25 @@ async function sgTplBuffer(){
   SGU.tplBuf = sgFromB64(j.b64); SGU.tplName = j.name;
   return SGU.tplBuf;
 }
+/* 選んだファイルが Excel（.xlsx）かを中身で確かめる（スマホでは名前に .xlsx が付かないことがある） */
+async function xlCheckFile(f){
+  const buf = await f.arrayBuffer(), u = new Uint8Array(buf.slice(0, 8));
+  const isZip = u[0] === 0x50 && u[1] === 0x4B;
+  const isXls = u[0] === 0xD0 && u[1] === 0xCF && u[2] === 0x11 && u[3] === 0xE0;
+  if (isXls) throw new Error('古い形式の Excel（.xls）です。Excel で開いて「名前を付けて保存」→「Excel ブック（.xlsx）」で保存し直してから選んでください。');
+  if (!isZip) throw new Error('Excel（.xlsx）のファイルではないようです（' + (f.type || f.name || '種類不明') + '）。.xlsx のファイルを選んでください。');
+  let name = String(f.name || '').split(/[\\/:]/).pop() || 'ひな形';
+  if (!/\.xlsx$/i.test(name)) name = name.replace(/\.[^.]*$/, '') + '.xlsx';
+  return { buf, name };
+}
 async function sgTplUpload(f){
-  if (!/\.xlsx$/i.test(f.name)) { msgSheet('登録できません', '.xlsx のファイルを選んでください（.xls の場合は Excel で .xlsx に保存し直してください）'); return; }
   $('busy').classList.add('on');
   try {
-    const buf = await f.arrayBuffer();
+    const { buf, name } = await xlCheckFile(f);
     await sgZip(buf);   // 様式のチェック
-    SGU.tplBuf = buf; SGU.tplName = f.name;
-    if (isDemo()) SGU.tpl = { name: f.name, updated:'この端末で読み込み中' };
-    else { const j = await apiPost({ app:'shoguTplSave', name: f.name, b64: sgB64(buf) }); SGU.tpl = j.tpl || { name: f.name }; }
+    SGU.tplBuf = buf; SGU.tplName = name;
+    if (isDemo()) SGU.tpl = { name, updated:'この端末で読み込み中' };
+    else { const j = await apiPost({ app:'shoguTplSave', name, b64: sgB64(buf) }); SGU.tpl = j.tpl || { name }; }
     toast('ひな形を登録しました');
     sgDraw();
     confirmSheet('記入内容も取り込みますか？', 'ひな形に入っている事業所・報酬総額・加算区分・要件・取組のチェックを、この画面に読み込めます（今の画面の内容は上書き）。', '取り込む', sgImport);
@@ -2332,7 +2342,7 @@ function ksConf(){
     <datalist id="ksStores">${Object.keys(KSN.stores).map(n => `<option value="${esc(n)}">`).join('')}</datalist>
     <div class="box"><h3>正式な様式（ひな形）</h3><div class="small" style="color:var(--sub);margin-bottom:6px">指定権者のホームページの .xlsx をそのまま登録します。様式が新しくなったら入れ替えてください。</div>
       ${Object.entries(KS_TPL).map(([k, l]) => `<div class="ks-tpl"><div><b>${esc(l)}</b><div class="small">${KSN.tpl[k] ? esc(KSN.tpl[k].name) + '（' + esc(KSN.tpl[k].updated || '') + '）' : '<span style="color:var(--warn)">未登録</span>'}</div></div><button class="btn s" data-tplk="${k}" style="min-height:40px">${KSN.tpl[k] ? '入れ替え' : '登録'}</button></div>`).join('')}
-      <input type="file" id="ksTplFile" accept=".xlsx" hidden></div>
+      <input type="file" id="ksTplFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream" hidden></div>
     <div class="box"><h3>申請者（法人）</h3><div class="fgrid">
       ${f('corp.name', '名称', corp.name, '例：一般社団法人○○')}${f('corp.no', '法人番号（13桁）', corp.no, '', ' inputmode="numeric"')}
       ${f('corp.addr', '主たる事務所の所在地', corp.addr)}${f('corp.rep', '代表者の職・氏名', corp.rep, '例：代表理事 ○○ ○○')}</div></div>
@@ -2359,14 +2369,13 @@ function ksConf(){
   B.querySelectorAll('[data-tplk]').forEach(b => b.onclick = () => { tk = b.dataset.tplk; $('ksTplFile').click(); });
   $('ksTplFile').onchange = async e => {
     const file = e.target.files[0]; e.target.value = ''; if (!file) return;
-    if (!/\.xlsx$/i.test(file.name)) { msgSheet('登録できません', '.xlsx のファイルを選んでください'); return; }
     $('busy').classList.add('on');
     try {
-      const buf = await file.arrayBuffer();
+      const { buf, name } = await xlCheckFile(file);
       await xlOpen(buf, tk === 'pref_A' ? [] : ['様式第６号', '国別紙１', '国別紙48', '市別紙23']);
       KSN.bufs[tk] = buf;
-      if (isDemo()) KSN.tpl[tk] = { name: file.name, updated:'この端末で読み込み中' };
-      else { const j = await apiPost({ app:'xlsxTplSave', key: tk, name: file.name, b64: sgB64(buf) }); KSN.tpl[tk] = j.tpl || { name: file.name }; }
+      if (isDemo()) KSN.tpl[tk] = { name, updated:'この端末で読み込み中' };
+      else { const j = await apiPost({ app:'xlsxTplSave', key: tk, name, b64: sgB64(buf) }); KSN.tpl[tk] = j.tpl || { name }; }
       toast('ひな形を登録しました'); ksConf();
     } catch (err) { msgSheet('登録できませんでした', err.message); }
     finally { $('busy').classList.remove('on'); }
