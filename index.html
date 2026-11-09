@@ -784,6 +784,7 @@ async function demoApi(p){
   if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : p.sheet === '相談記録表' ? DEMO_SOUDAN : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
+  if (p.app === 'formPreviewBatch') { await new Promise(r => setTimeout(r, 900)); return { files:[{ name:'preview.pdf', b64: window.DEMO_PDF || '' }] }; }
   if (p.app === 'submitBatch') { await new Promise(r => setTimeout(r, 1500)); return { ok:true, done:p.list.length, message:p.list.length + '日分を記録しました', pdfs:[] }; }
   if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[], note: p.sheet === '検温管理' ? '36.8℃：発熱無し 🟢' : '' }; }
 }
@@ -2444,7 +2445,6 @@ function saveDraft(){
   saveTimer = setTimeout(() => {
     if (!F || F.edit) return;
     const at = fmtTime(Date.now());
-    F.batchFresh = false;
     LS.set(draftKey(F.sheet), { values:F.values, at, ts:Date.now() });
     const s = $('saved'); if (s) s.textContent = '下書き保存 ' + at.split(' ').pop();
     updateDraftDot();
@@ -2565,6 +2565,7 @@ function formMissing(show){
   }
   return missing;
 }
+const batchFresh = () => !!(F && F.batchBase && JSON.stringify(F.values) === F.batchBase);
 const batchDateField = () => F.fields.find(f => !f.hidden && f.type === 'date');
 function batchSummary(values){
   const pick = re => { const f = F.fields.find(x => !x.hidden && re.test(x.label)); return f ? String(values[f.index] ?? '').trim() : ''; };
@@ -2579,8 +2580,10 @@ function drawSendBatch(){
   box.innerHTML = `<div class="box batch"><div class="batch-h"><b>まとめて送る</b><span class="small">${list.length ? list.length + '日分を一時保存中' : '1日ずつ入れて、最後にまとめて送信'}</span></div>
     ${list.length ? `<ul class="batch-list">${list.map((it, i) => `<li><button type="button" class="batch-day" data-open="${i}"><b>${esc(batchMd(fd ? it.values[fd.index] : ''))}</b><span>${esc(batchSummary(it.values))}</span></button><button type="button" class="link" data-rm="${i}" aria-label="この日を外す">✕</button></li>`).join('')}</ul>` : ''}
     <button type="button" class="btn s wide" id="batchAdd">この日を一時保存して次の日へ</button>
+    ${list.length ? '<button type="button" class="btn s wide" id="batchPrev" style="margin-top:8px">📄 一時保存した日をまとめて書式で見る</button>' : ''}
     <p class="small" style="color:var(--sub);margin:8px 2px 0">作業のない日があるときは、上の「日付」を次に作業した日に直してから保存してください（空いた日は保存しなくて大丈夫です）。一時保存した日は、最後に「内容を確認」でまとめて送ります。PDFとLINEの通知は1回だけです。一覧の日付をタップすると、その日を直せます。</p></div>`;
   $('batchAdd').onclick = batchAdd;
+  if ($('batchPrev')) $('batchPrev').onclick = batchPreview;
   box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
     const l = getBatch(F.sheet); const it = l.splice(Number(b.dataset.rm), 1)[0];
     LS.set(batchKey(F.sheet), l); drawSendBatch(); updateBatchBtn(); toast(batchMd(fd ? it.values[fd.index] : '') + ' を外しました');
@@ -2618,26 +2621,39 @@ function batchAdd(){
   const next = { ...F.values, [fd.index]: d.toISOString().slice(0, 10) };
   LS.set(draftKey(F.sheet), { values: next, at: new Date().toLocaleString('ja-JP'), ts: Date.now() });
   renderForm(F.sheet, F.fields, next);
-  F.batchFresh = true;   // 次の日は前の日の写し。触るまでは「確認」に含めない
+  F.batchBase = JSON.stringify(next);   // 次の日は前の日の写し。中身を変えるまでは「確認」に含めない
   window.scrollTo(0, 0);
   toast(`${batchMd(r.day)} を${r.replaced ? '置き換えて' : ''}一時保存しました。次は ${batchMd(next[fd.index])}`, 3200);
 }
-function openBatchReview(){
-  // 今の画面の日も入っていれば加える（必須が空なら、今の日は入れない）
+/* 一時保存した日＋（入力していれば）今の画面の日を、日付順に */
+function batchCollect(){
   const vis = F.fields.filter(f => !f.hidden), fd = batchDateField();
   const day = F.values[fd.index], inList = getBatch(F.sheet).some(it => it.values[fd.index] === day);
-  const touched = !F.batchFresh && vis.some(f => f !== fd && String(F.values[f.index] ?? '').trim());
+  const touched = !batchFresh() && vis.some(f => f !== fd && String(F.values[f.index] ?? '').trim());
   let cur = 'none';
   if (touched && !formMissing(false).length) cur = inList ? 'replace' : 'add';
   const list = getBatch(F.sheet).slice();
   if (cur !== 'none') { const i = list.findIndex(it => it.values[fd.index] === day); if (i >= 0) list.splice(i, 1); list.push({ values: { ...F.values }, current: true }); list.sort((a, b) => String(a.values[fd.index]).localeCompare(String(b.values[fd.index]))); }
+  return { list, cur, touched, day, fd };
+}
+function batchPreview(){
+  const { list } = batchCollect();
+  if (!list.length) { toast('まだ一時保存した日がありません'); return; }
+  pdfOverlay(`${F.sheet}（${list.length}日分・まだ送信していません）`,
+    () => apiPost({ app:'formPreviewBatch', sheet: F.sheet, list: list.map(it => it.values) }),
+    `${list.length}日分を書式に入れています…`);
+}
+function openBatchReview(){
+  // 今の画面の日も入っていれば加える（必須が空なら、今の日は入れない）
+  const { list, cur, touched, day, fd } = batchCollect();
   const months = [...new Set(list.map(it => String(it.values[fd.index]).slice(0, 7)))];
   openSheet(`${list.length}日分をまとめて送信しますか？`,
     `<ul class="batch-list rv">${list.map(it => `<li><span class="batch-day"><b>${esc(batchMd(it.values[fd.index]))}</b><span>${esc(batchSummary(it.values))}${it.current ? '　<em>（今の画面）</em>' : ''}</span></span></li>`).join('')}</ul>
-     ${touched && cur === 'none' ? '<p class="small" style="color:var(--warn)">今の画面の日は、必須の項目が空いているので入りません。</p>' : F.batchFresh ? `<p class="small" style="color:var(--sub)">今の画面（${esc(batchMd(day))}）はまだ入力していないので入りません。この日も送るときは、内容を直すか「一時保存して次の日へ」を押してください。</p>` : ''}
+     ${touched && cur === 'none' ? '<p class="small" style="color:var(--warn)">今の画面の日は、必須の項目が空いているので入りません。</p>' : batchFresh() ? `<p class="small" style="color:var(--sub)">今の画面（${esc(batchMd(day))}）はまだ入力していないので入りません。この日も送るときは、内容を直すか「一時保存して次の日へ」を押してください。</p>` : ''}
      <p class="small" style="margin-top:12px">日付の順に記録し、PDFは${months.length > 1 ? '月ごとに1回（' + months.length + '回）' : '1回'}、LINEの通知は1回だけ送ります。</p>`,
-    `<button class="btn s" id="rvBack">戻って直す</button><button class="btn p" id="rvSend">${list.length}日分を送信</button>`, gClass(F.group));
+    `<button class="btn s" id="rvBack">戻って直す</button><button class="btn s" id="rvPrev">📄 書式</button><button class="btn p" id="rvSend">${list.length}日分を送信</button>`, gClass(F.group));
   $('rvBack').onclick = closeSheet;
+  $('rvPrev').onclick = () => { closeSheet(); batchPreview(); };
   $('rvSend').onclick = () => submitBatch(list.map(it => it.values), cur !== 'none');
 }
 async function submitBatch(list, withCurrent){
@@ -2649,7 +2665,7 @@ async function submitBatch(list, withCurrent){
     // 記録できた日を一時保存から外す
     const sent = new Set(list.slice(0, j.done || 0).map(v => v[fd.index]));
     LS.set(batchKey(sheet), getBatch(sheet).filter(it => !sent.has(it.values[fd.index])));
-    if ((withCurrent && sent.has(F.values[fd.index])) || (F.batchFresh && j.ok !== false)) LS.del(draftKey(sheet));
+    if ((withCurrent && sent.has(F.values[fd.index])) || (batchFresh() && j.ok !== false)) LS.del(draftKey(sheet));
     if (!getBatch(sheet).length) LS.del(batchKey(sheet));
     if (j.done) LS.set('fb_history', [{ sheet, ts:Date.now(), pdfs:j.pdfs || [], note:(j.done + '日分をまとめて記録') + (j.note ? '　' + j.note : ''), who:'' }, ...getHistory()].slice(0, 50));
     if (j.ok === false) {
