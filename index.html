@@ -1203,7 +1203,7 @@ async function mnLog(node){
   if (!signedIn()) { note('ログインしていないため、記録は残りません。'); return; }
   MN.lastLog = sig;
   try {
-    const j = await apiPost({ app:'manualLog', group:c.group, category:c.title, key:c.key, tone:node.tone || 'info', summary, result:mnTmpl(node.text) });
+    const j = await apiPost({ app:'manualLog', group:c.group, category:c.title, mk:c.key, tone:node.tone || 'info', summary, result:mnTmpl(node.text) });
     note((c.group === '権利・福祉' ? '名前を付けずに記録しました。' : '記録しました。') + (j.notified ? '管理者へ通知しました。' : ''));
   } catch (e) { MN.lastLog = ''; note('記録できませんでした（' + e.message + '）'); }
 }
@@ -1679,7 +1679,7 @@ function rosterPerson(p){
     d.dataset.loaded = '1';
     const box = d.querySelector('.ro-body');
     try {
-      const r = await api({ app:'rosterRow', key: d.dataset.key, name: p.name });
+      const r = await api({ app:'rosterRow', rk: d.dataset.key, name: p.name });
       box.innerHTML = r.fields.length ? r.fields.map(f => f.name ? `<div class="js-f"><span>${esc(f.h)}</span><b>${esc(p.name)}</b></div>`
         : f.type === 'bool' ? `<label class="js-ok" style="padding:6px 0"><input type="checkbox" data-h="${esc(f.h)}"${f.v === true || String(f.v).toUpperCase() === 'TRUE' ? ' checked' : ''}> ${esc(f.h)}</label>`
         : `<label class="js-f"><span>${esc(f.h)}</span><input data-h="${esc(f.h)}" type="${f.type === 'date' ? 'date' : 'text'}" value="${esc(f.v)}"${/LINEユーザーID/.test(f.h) ? ' placeholder="アプリやLINEで登録すると自動で入ります"' : ''}></label>`).join('')
@@ -1690,7 +1690,7 @@ function rosterPerson(p){
         const values = {};
         box.querySelectorAll('[data-h]').forEach(i => values[i.dataset.h] = i.type === 'checkbox' ? i.checked : i.value);
         save.disabled = true; save.textContent = '保存しています…';
-        try { const j = await apiPost({ app:'rosterSave', key: d.dataset.key, name: p.name, values, add: r.exists ? '0' : '1' }); toast(j.message); if (!split) closeSheet(); else $('roDetail').innerHTML = ''; showRoster(); }
+        try { const j = await apiPost({ app:'rosterSave', rk: d.dataset.key, name: p.name, values, add: r.exists ? '0' : '1' }); toast(j.message); if (!split) closeSheet(); else $('roDetail').innerHTML = ''; showRoster(); }
         catch (e) { save.disabled = false; save.textContent = '保存'; toast(e.message); }
       };
     } catch (e) { box.innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
@@ -2296,7 +2296,7 @@ async function xlDownloadAndSave(blob, name, folder, out){
 async function ksTplBuf(key){
   if (KSN.bufs[key]) return KSN.bufs[key];
   if (!KSN.tpl[key]) throw new Error('「' + KS_TPL[key] + '」のひな形がまだ登録されていません（設定タブ）');
-  const j = await api({ app:'xlsxTpl', key });
+  const j = await api({ app:'xlsxTpl', tk: key });
   return KSN.bufs[key] = sgFromB64(j.b64);
 }
 /* 「１．なし　　３．Ⅰ」の中の選んだものを【】で囲む */
@@ -2375,7 +2375,7 @@ function ksConf(){
       await xlOpen(buf, tk === 'pref_A' ? [] : ['様式第６号', '国別紙１', '国別紙48', '市別紙23']);
       KSN.bufs[tk] = buf;
       if (isDemo()) KSN.tpl[tk] = { name, updated:'この端末で読み込み中' };
-      else { const j = await apiPost({ app:'xlsxTplSave', key: tk, name, b64: sgB64(buf) }); KSN.tpl[tk] = j.tpl || { name }; }
+      else { const j = await apiPost({ app:'xlsxTplSave', tk, name, b64: sgB64(buf) }); KSN.tpl[tk] = j.tpl || { name }; }
       toast('ひな形を登録しました'); ksConf();
     } catch (err) { msgSheet('登録できませんでした', err.message); }
     finally { $('busy').classList.remove('on'); }
