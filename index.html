@@ -487,6 +487,10 @@ body.pc .md-detail .ro-sec{background:var(--soft)}
 .sg-note{width:100%;min-height:56px;margin:2px 0 6px;border:1px solid var(--rule);border-radius:var(--r-s);padding:6px 8px;font-size:14px;background:var(--paper);color:var(--ink)}
 .sg-due{padding-left:18px;line-height:1.8;font-size:14px}
 body.pc .sg-off{grid-template-columns:repeat(4,1fr)}
+.batch{margin-top:14px}.batch-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}.batch-h .small{color:var(--sub)}
+.batch-list{list-style:none;margin:0 0 10px;padding:0;border-top:1px solid var(--rule)}.batch-list li{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--rule)}
+.batch-day{flex:1;display:flex;gap:12px;align-items:baseline;background:none;border:0;padding:10px 4px;text-align:left;color:var(--ink);font:inherit;min-height:44px}.batch-day b{min-width:64px}.batch-day span{color:var(--sub);font-size:14px}.batch-day em{color:var(--g1);font-style:normal}
+.batch-list li .link{min-width:44px;min-height:44px;color:var(--err)}
 </style>
 </head>
 <body>
@@ -780,6 +784,7 @@ async function demoApi(p){
   if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : p.sheet === '相談記録表' ? DEMO_SOUDAN : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
+  if (p.app === 'submitBatch') { await new Promise(r => setTimeout(r, 1500)); return { ok:true, done:p.list.length, message:p.list.length + '日分を記録しました', pdfs:[] }; }
   if (p.app === 'submit') { await new Promise(r => setTimeout(r, 1200)); return { message:'記録しました', pdfs:[], note: p.sheet === '検温管理' ? '36.8℃：発熱無し 🟢' : '' }; }
 }
 
@@ -2283,7 +2288,7 @@ async function showHome(){
         const hasDraft = drafts.some(d => d.sheet === f.sheet);
         return `<a class="row ${gClass(f.group)}" href="#/form/${encodeURIComponent(f.sheet)}" style="color:inherit;text-decoration:none">
           <span class="name">${esc(f.sheet)}${q ? `<span class="grp">${esc(f.group)}</span>` : ''}</span>
-          ${hasDraft ? '<span class="tag">下書きあり</span>' : ''}${ICON.chev}</a>`;
+          ${BATCH_FORMS[f.sheet] && getBatch(f.sheet).length ? `<span class="tag">一時保存${getBatch(f.sheet).length}日</span>` : hasDraft ? '<span class="tag">下書きあり</span>' : ''}${ICON.chev}</a>`;
       }).join('') : `<div class="empty">「${esc(q)}」に合う帳票はありません。</div>`;
       if (!q && homeTab === '届出・報告' && isAdmin()) list.insertAdjacentHTML('afterbegin', `<a class="row ${gClass(homeTab)}" href="#/admin/shogu" style="color:inherit;text-decoration:none"><span class="name">処遇改善加算 計画書の準備<span class="grp">見込額・要件チェック</span></span>${ICON.chev}</a>`);
     };
@@ -2373,11 +2378,13 @@ function renderForm(sheet, fields, keepValues, edit){
   }
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
   html += '<div class="fgrid">'; vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); }); html += '</div>';
+  if (!edit && BATCH_FORMS[sheet]) html += `<div id="batchBox"></div>`;
   html += `<div class="bar"><span class="saved" id="saved">${edit ? '' : draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
     ${hasPdfOf(sheet) === false ? '' : '<button class="btn s" id="fPrev" title="入力中の内容を書式（テンプレート）で見る" style="padding:0 14px">📄 書式</button>'}<button class="btn p" id="send">${edit ? '修正内容を確認' : '内容を確認'}</button></div></div>`;
   $('view').innerHTML = html;
   bindForm();
   updateProgress();
+  if ($('batchBox')) drawSendBatch();
   if ($('vcOpen')) $('vcOpen').onclick = () => openVoice(sheet);
 }
 
@@ -2437,6 +2444,7 @@ function saveDraft(){
   saveTimer = setTimeout(() => {
     if (!F || F.edit) return;
     const at = fmtTime(Date.now());
+    F.batchFresh = false;
     LS.set(draftKey(F.sheet), { values:F.values, at, ts:Date.now() });
     const s = $('saved'); if (s) s.textContent = '下書き保存 ' + at.split(' ').pop();
     updateDraftDot();
@@ -2485,7 +2493,7 @@ function bindForm(){
   });
   v.querySelectorAll('[data-unphoto]').forEach(b => b.onclick = () => { const i = b.dataset.unphoto; if (F.files[i]) delete F.files[i]; else F.values[i] = ''; redrawField(i); });
   v.querySelectorAll('.picker').forEach(p => p.onclick = () => openPicker(F.fields.find(f => String(f.index) === p.dataset.f)));
-  $('send').onclick = openReview;
+  $('send').onclick = () => (F && !F.edit && BATCH_FORMS[F.sheet] && getBatch(F.sheet).length) ? openBatchReview() : openReview();
   if ($('fPrev')) $('fPrev').onclick = () => {
     const vis = F.fields.filter(f => !f.hidden);
     if (!vis.some(f => String(F.values[f.index] ?? '').trim())) { toast('まだ何も入力されていません'); return; }
@@ -2540,17 +2548,130 @@ function openPicker(f){
   $('pclose').onclick = closeSheet;
 }
 
+
+/* ===== まとめて送る（1枚に1か月分ある帳票）=====
+   1日入力 →「この日を一時保存して次の日へ」→ … →「内容を確認（○日分）」で一度に送信。
+   PDF は月ごとに1回、LINE 通知も1回だけ（GAS の submitBatch） */
+const BATCH_FORMS = { '施設外実績記録表': true };
+const batchKey = s => 'fb_batch_' + s;
+const getBatch = s => LS.get(batchKey(s), []) || [];
+function formMissing(show){
+  const vis = F.fields.filter(f => !f.hidden);
+  const missing = vis.filter(f => f.required && (f.type === 'image' ? !F.files[f.index] : !String(F.values[f.index] ?? '').trim()));
+  if (missing.length && show) {
+    missing.forEach(f => $('w' + f.index)?.classList.add('miss'));
+    $('w' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
+    toast('必須の項目が空いています：' + missing.map(f => f.label).join('、'), 3600);
+  }
+  return missing;
+}
+const batchDateField = () => F.fields.find(f => !f.hidden && f.type === 'date');
+function batchSummary(values){
+  const pick = re => { const f = F.fields.find(x => !x.hidden && re.test(x.label)); return f ? String(values[f.index] ?? '').trim() : ''; };
+  const st = pick(/開始/), en = pick(/終了/), who = pick(/参加利用者|利用者/), co = pick(/企業|就労先/);
+  return [st || en ? `${st}〜${en}` : '', who ? splitMulti(who).length + '名' : '', co].filter(Boolean).join('　');
+}
+const batchUtc = v => { const m = String(v || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3])) : null; };
+const batchMd = v => { const d = batchUtc(v); return !d ? (v || '日付なし') : `${d.getUTCMonth() + 1}/${d.getUTCDate()}(${'日月火水木金土'[d.getUTCDay()]})`; };
+function drawSendBatch(){
+  const box = $('batchBox'); if (!box || !F) return;
+  const list = getBatch(F.sheet), fd = batchDateField();
+  box.innerHTML = `<div class="box batch"><div class="batch-h"><b>まとめて送る</b><span class="small">${list.length ? list.length + '日分を一時保存中' : '1日ずつ入れて、最後にまとめて送信'}</span></div>
+    ${list.length ? `<ul class="batch-list">${list.map((it, i) => `<li><button type="button" class="batch-day" data-open="${i}"><b>${esc(batchMd(fd ? it.values[fd.index] : ''))}</b><span>${esc(batchSummary(it.values))}</span></button><button type="button" class="link" data-rm="${i}" aria-label="この日を外す">✕</button></li>`).join('')}</ul>` : ''}
+    <button type="button" class="btn s wide" id="batchAdd">この日を一時保存して次の日へ</button>
+    <p class="small" style="color:var(--sub);margin:8px 2px 0">一時保存した日は、最後に「内容を確認」でまとめて送ります。PDFとLINEの通知は1回だけです。日付をタップすると、その日を直せます。</p></div>`;
+  $('batchAdd').onclick = batchAdd;
+  box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
+    const l = getBatch(F.sheet); const it = l.splice(Number(b.dataset.rm), 1)[0];
+    LS.set(batchKey(F.sheet), l); drawSendBatch(); updateBatchBtn(); toast(batchMd(fd ? it.values[fd.index] : '') + ' を外しました');
+  });
+  box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
+    const l = getBatch(F.sheet); const it = l.splice(Number(b.dataset.open), 1)[0];
+    LS.set(batchKey(F.sheet), l);
+    LS.set(draftKey(F.sheet), { values: it.values, at: it.at, ts: Date.now() });
+    renderForm(F.sheet, F.fields, { ...it.values });
+    toast('この日を直せます。直したら「一時保存して次の日へ」か「内容を確認」');
+  });
+  updateBatchBtn();
+}
+function updateBatchBtn(){
+  const n = F && getBatch(F.sheet).length, b = $('send');
+  if (b && !F.edit) b.textContent = n ? `内容を確認（${n}日分〜）` : '内容を確認';
+  updateDraftDot();
+}
+/* 今の入力を一時保存（同じ日付があれば置き換え）。次の日付にして、ほかの欄はそのまま残す */
+function batchPut(){
+  if (!String(F.values[(batchDateField() || {}).index] ?? '').trim()) { toast('実施日を入れてください'); return false; }
+  if (formMissing(true).length) return false;
+  const fd = batchDateField(), day = F.values[fd.index];
+  const l = getBatch(F.sheet).filter(it => it.values[fd.index] !== day);
+  const replaced = l.length < getBatch(F.sheet).length;
+  l.push({ values: { ...F.values }, at: new Date().toLocaleString('ja-JP') });
+  l.sort((a, b) => String(a.values[fd.index]).localeCompare(String(b.values[fd.index])));
+  LS.set(batchKey(F.sheet), l);
+  return { day, replaced };
+}
+function batchAdd(){
+  const r = batchPut(); if (!r) return;
+  const fd = batchDateField();
+  const d = batchUtc(r.day); d.setUTCDate(d.getUTCDate() + 1);
+  const next = { ...F.values, [fd.index]: d.toISOString().slice(0, 10) };
+  LS.set(draftKey(F.sheet), { values: next, at: new Date().toLocaleString('ja-JP'), ts: Date.now() });
+  renderForm(F.sheet, F.fields, next);
+  F.batchFresh = true;   // 次の日は前の日の写し。触るまでは「確認」に含めない
+  window.scrollTo(0, 0);
+  toast(`${batchMd(r.day)} を${r.replaced ? '置き換えて' : ''}一時保存しました。次は ${batchMd(next[fd.index])}`, 3200);
+}
+function openBatchReview(){
+  // 今の画面の日も入っていれば加える（必須が空なら、今の日は入れない）
+  const vis = F.fields.filter(f => !f.hidden), fd = batchDateField();
+  const day = F.values[fd.index], inList = getBatch(F.sheet).some(it => it.values[fd.index] === day);
+  const touched = !F.batchFresh && vis.some(f => f !== fd && String(F.values[f.index] ?? '').trim());
+  let cur = 'none';
+  if (touched && !formMissing(false).length) cur = inList ? 'replace' : 'add';
+  const list = getBatch(F.sheet).slice();
+  if (cur !== 'none') { const i = list.findIndex(it => it.values[fd.index] === day); if (i >= 0) list.splice(i, 1); list.push({ values: { ...F.values }, current: true }); list.sort((a, b) => String(a.values[fd.index]).localeCompare(String(b.values[fd.index]))); }
+  const months = [...new Set(list.map(it => String(it.values[fd.index]).slice(0, 7)))];
+  openSheet(`${list.length}日分をまとめて送信しますか？`,
+    `<ul class="batch-list rv">${list.map(it => `<li><span class="batch-day"><b>${esc(batchMd(it.values[fd.index]))}</b><span>${esc(batchSummary(it.values))}${it.current ? '　<em>（今の画面）</em>' : ''}</span></span></li>`).join('')}</ul>
+     ${touched && cur === 'none' ? '<p class="small" style="color:var(--warn)">今の画面の日は、必須の項目が空いているので入りません。</p>' : F.batchFresh ? `<p class="small" style="color:var(--sub)">今の画面（${esc(batchMd(day))}）はまだ入力していないので入りません。この日も送るときは、内容を直すか「一時保存して次の日へ」を押してください。</p>` : ''}
+     <p class="small" style="margin-top:12px">日付の順に記録し、PDFは${months.length > 1 ? '月ごとに1回（' + months.length + '回）' : '1回'}、LINEの通知は1回だけ送ります。</p>`,
+    `<button class="btn s" id="rvBack">戻って直す</button><button class="btn p" id="rvSend">${list.length}日分を送信</button>`, gClass(F.group));
+  $('rvBack').onclick = closeSheet;
+  $('rvSend').onclick = () => submitBatch(list.map(it => it.values), cur !== 'none');
+}
+async function submitBatch(list, withCurrent){
+  closeSheet();
+  $('busy').classList.add('on');
+  const sheet = F.sheet, fd = batchDateField();
+  try {
+    const j = await apiPost({ app:'submitBatch', sheet, list });
+    // 記録できた日を一時保存から外す
+    const sent = new Set(list.slice(0, j.done || 0).map(v => v[fd.index]));
+    LS.set(batchKey(sheet), getBatch(sheet).filter(it => !sent.has(it.values[fd.index])));
+    if ((withCurrent && sent.has(F.values[fd.index])) || (F.batchFresh && j.ok !== false)) LS.del(draftKey(sheet));
+    if (!getBatch(sheet).length) LS.del(batchKey(sheet));
+    if (j.done) LS.set('fb_history', [{ sheet, ts:Date.now(), pdfs:j.pdfs || [], note:(j.done + '日分をまとめて記録') + (j.note ? '　' + j.note : ''), who:'' }, ...getHistory()].slice(0, 50));
+    if (j.ok === false) {
+      openSheet('途中で止まりました', `<p>${j.done ? `${j.done}日分は記録しました。` : ''}${esc(batchMd(list[j.done || 0][fd.index]))} の記録でエラーになりました。</p><p class="small">${esc(j.error || '')}</p><p class="small">残りの日は一時保存に残っています。</p>`, '<button class="btn p wide" id="errOk">閉じる</button>');
+      $('errOk').onclick = () => { closeSheet(); renderForm(sheet, F.fields); };
+      return;
+    }
+    F = null;
+    location.replace('#/done/' + encodeURIComponent(sheet));
+  } catch (e) {
+    openSheet('送信できませんでした', `<p>${esc(e.message)}</p><p class="small">一時保存した日はそのまま残っています。</p>`, '<button class="btn p wide" id="errOk">閉じる</button>');
+    $('errOk').onclick = closeSheet;
+  } finally {
+    $('busy').classList.remove('on');
+  }
+}
+
 /* ===== 送信前の確認 ===== */
 function openReview(){
   const vis = F.fields.filter(f => !f.hidden);
   if (!vis.some(f => String(F.values[f.index] ?? '').trim()) && !Object.keys(F.files).length) { toast('まだ何も入力されていません'); return; }
-  const missing = vis.filter(f => f.required && (f.type === 'image' ? !F.files[f.index] : !String(F.values[f.index] ?? '').trim()));
-  if (missing.length) {
-    missing.forEach(f => $('w' + f.index)?.classList.add('miss'));
-    $('w' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
-    toast('必須の項目が空いています：' + missing.map(f => f.label).join('、'), 3600);
-    return;
-  }
+  if (formMissing(true).length) return;
   const filled = vis.filter(f => f.type === 'image' ? (F.files[f.index] || String(F.values[f.index] ?? '').trim()) : String(F.values[f.index] ?? '').trim());
   const show = f => {
     if (f.type === 'image') return `<img src="${F.files[f.index] ? F.files[f.index].dataUrl : esc(driveImg(F.values[f.index], 400))}" alt="" style="width:120px;border-radius:8px">`;
