@@ -2579,7 +2579,7 @@ function drawSendBatch(){
   box.innerHTML = `<div class="box batch"><div class="batch-h"><b>まとめて送る</b><span class="small">${list.length ? list.length + '日分を一時保存中' : '1日ずつ入れて、最後にまとめて送信'}</span></div>
     ${list.length ? `<ul class="batch-list">${list.map((it, i) => `<li><button type="button" class="batch-day" data-open="${i}"><b>${esc(batchMd(fd ? it.values[fd.index] : ''))}</b><span>${esc(batchSummary(it.values))}</span></button><button type="button" class="link" data-rm="${i}" aria-label="この日を外す">✕</button></li>`).join('')}</ul>` : ''}
     <button type="button" class="btn s wide" id="batchAdd">この日を一時保存して次の日へ</button>
-    <p class="small" style="color:var(--sub);margin:8px 2px 0">一時保存した日は、最後に「内容を確認」でまとめて送ります。PDFとLINEの通知は1回だけです。日付をタップすると、その日を直せます。</p></div>`;
+    <p class="small" style="color:var(--sub);margin:8px 2px 0">作業のない日があるときは、上の「日付」を次に作業した日に直してから保存してください（空いた日は保存しなくて大丈夫です）。一時保存した日は、最後に「内容を確認」でまとめて送ります。PDFとLINEの通知は1回だけです。一覧の日付をタップすると、その日を直せます。</p></div>`;
   $('batchAdd').onclick = batchAdd;
   box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
     const l = getBatch(F.sheet); const it = l.splice(Number(b.dataset.rm), 1)[0];
