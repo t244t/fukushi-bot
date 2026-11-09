@@ -473,6 +473,20 @@ body.pc .md-detail .ro-sec{background:var(--soft)}
 .ib-safe .ib-row.new{background:var(--warn-bg)}
 .band-ic{width:34px;height:34px;border-radius:10px;background:#06c755;color:#fff;display:grid;place-items:center;font-weight:900;font-size:18px;flex:none}
 .band-prev{background:var(--soft);border-radius:var(--r-s);padding:10px 12px;font-size:15px;font-weight:700;margin:4px 0;word-break:break-all}
+.sg-box h3{margin-bottom:6px}.sg-row{display:flex;gap:10px;flex-wrap:wrap}
+.sg-off{display:grid;grid-template-columns:1fr 1fr;gap:0 10px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule)}.sg-off .link{grid-column:1/-1;justify-self:start;color:var(--err)}
+.sg-sub{margin:0 0 6px 34px}.sg-sub select{min-height:40px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 8px;background:var(--paper);color:var(--ink);font-size:14px;margin-bottom:4px}.sg-off input,.sg-off select,#sgK7,#sgY,#sgK45,#sgK6{min-height:44px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 10px;font-size:15px;background:var(--paper);color:var(--ink)}
+.sg-scroll{overflow-x:auto;margin:6px 0}
+.sg-kpi{display:grid;gap:6px;margin:8px 0}.sg-kpi div{display:flex;justify-content:space-between;gap:8px;background:var(--soft);border-radius:var(--r-s);padding:8px 10px;font-size:14px}.sg-kpi b{white-space:nowrap}
+.sg-judge{border-radius:var(--r-s);padding:10px 12px;font-size:14px;font-weight:700;margin:6px 0}.sg-judge.ok{background:var(--g1-bg);color:var(--g1)}.sg-judge.ng{background:var(--warn-bg);color:var(--warn)}
+.sg-req{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--rule)}.sg-req .small{color:var(--sub);margin-top:2px}
+.sg-seg{display:flex;flex:none;border:1px solid var(--rule);border-radius:var(--r-s);overflow:hidden}.sg-seg button{border:0;background:var(--paper);color:var(--ink);padding:8px 10px;font-size:13px;min-height:40px}
+.sg-seg button[aria-pressed="true"][data-v="ok"]{background:var(--g1);color:var(--on)}.sg-seg button[aria-pressed="true"][data-v="oath"]{background:var(--warn);color:var(--on)}.sg-seg button[aria-pressed="true"][data-v=""]{background:var(--soft)}
+.sg-env{border-top:1px solid var(--rule);padding:8px 0}.sg-env summary{cursor:pointer;display:flex;justify-content:space-between;gap:8px;padding:4px 0}.sg-env summary span{color:var(--sub);font-size:13px}
+.sg-item{display:flex;gap:8px;align-items:flex-start;padding:8px 6px;border-radius:var(--r-s);font-size:14px;line-height:1.5}.sg-item.on{background:var(--g1-bg)}.sg-item input{width:20px;height:20px;flex:none;margin-top:2px}
+.sg-note{width:100%;min-height:56px;margin:2px 0 6px;border:1px solid var(--rule);border-radius:var(--r-s);padding:6px 8px;font-size:14px;background:var(--paper);color:var(--ink)}
+.sg-due{padding-left:18px;line-height:1.8;font-size:14px}
+body.pc .sg-off{grid-template-columns:repeat(4,1fr)}
 </style>
 </head>
 <body>
@@ -706,6 +720,8 @@ async function demoApi(p){
     return { place, ym, places, items: items.filter(x => x.freq === '毎日'), records: recs };
   }
   if (p.app === 'eiseiSave') return { message:'（デモ）記録しました' };
+  if (p.app === 'shogu') return { nendo: p.nendo, data: null, years: [], updated: '' };
+  if (p.app === 'shoguSave') return { message:'（デモ）保存しました' };
   if (p.app === 'manualConf') return { contacts:{ 虐待防止センター:'糸島市 障害者虐待防止センター（デモ）092-000-0000' } };
   if (p.app === 'manualLog') return { message:'記録しました', notified: p.tone === 'danger' && p.group === '緊急・災害' };
   if (p.app === 'manualLogs') return { rows:[{ date:'11/3 10:12', name:'大原 里奈', group:'緊急・災害', category:'ケガ・病人', tone:'warn', summary:'出血はありますか？→少量 / 意識の状態を教えてください。→はっきりしている', result:'⌛ 観察を継続し、変化があれば医療機関・家族へ連絡を。' }, { date:'11/2 15:40', name:'', group:'権利・福祉', category:'苦情解決', tone:'info', summary:'どなたからの申し出ですか？→家族・後見人', result:'🤝 受け付けました。' }] };
@@ -1788,6 +1804,359 @@ async function eiMonth(){
   $('eiPrint').onclick = () => { document.body.classList.add('ei-printing'); setTimeout(() => { window.print(); document.body.classList.remove('ei-printing'); }, 50); };
 }
 
+
+/* ================= 処遇改善加算 計画書の準備（届出・報告） =================
+   加算率・要件は「福祉・介護職員等処遇改善加算 処遇改善計画書（令和８年度）」の様式（別紙様式2-1〜2-3）に合わせている。
+   正式な提出は指定権者の Excel 様式。登録したひな形の入力欄（黄色のセル）だけを書き換えて、記入済みの .xlsx を作る。
+   （書式・数式・チェックボックス・入力規則は元のまま。開いたときに再計算される） */
+const SG_RATE = {   // 様式の【参考】数式用 と同じ値（％）
+  'A型': { m45: { 'Ⅰ':9.6, 'Ⅱ':9.4, 'Ⅲ':7.9, 'Ⅳ':6.3 }, m6: { 'Ⅰイ':10.8, 'Ⅰロ':11.2, 'Ⅱイ':10.6, 'Ⅱロ':11.0, 'Ⅲ':9.1, 'Ⅳ':7.5 } },
+  'B型': { m45: { 'Ⅰ':9.3, 'Ⅱ':9.1, 'Ⅲ':7.6, 'Ⅳ':6.2 }, m6: { 'Ⅰイ':10.5, 'Ⅰロ':10.9, 'Ⅱイ':10.3, 'Ⅱロ':10.7, 'Ⅲ':8.8, 'Ⅳ':7.4 } }
+};
+const SG_SVC = { 'A型':'就労継続支援Ａ型', 'B型':'就労継続支援Ｂ型' };
+const SG_ENV = [
+  ['入職促進に向けた取組', ['① 経営理念・支援方針・人材育成方針と、その実現の施策・仕組みの明確化', '② 事業者の共同による採用・人事ローテーション・研修の制度構築', '③ 他産業からの転職者・主婦層・中高年齢者など幅広い採用の仕組み', '④ 職業体験の受入れ・地域行事への参加や主催による職業魅力向上']],
+  ['資質の向上やキャリアアップに向けた支援', ['⑤ 国家資格・専門研修（サビ管研修、強度行動障害支援者養成研修など）の受講支援', '⑥ 研修受講やキャリア段位と人事考課の連動（キャリアサポート制度）', '⑦ エルダー・メンター制度の導入', '⑧ 上位者等によるキャリア面談など定期的な相談の機会']],
+  ['両立支援・多様な働き方の推進', ['⑨ 子育て・介護との両立のための休業制度の充実、事業所内託児', '⑩ 事情に応じた勤務シフト・短時間正規職員・非正規から正規への転換制度', '⑪ 有給休暇の取得目標を定め、取得状況を定期的に確認・声かけ', '⑫ 情報共有・複数担当制などで業務の属人化・偏りを解消（有休取得促進）']],
+  ['腰痛を含む心身の健康管理', ['⑬ 障害を有する者でも働きやすい職場環境・勤務シフトの配慮', '⑭ 業務・福利厚生・メンタルヘルス等の職員相談窓口の設置', '⑮ 短時間勤務者も受診できる健康診断・ストレスチェック、休憩室の設置', '⑯ 身体の負担軽減のための介護技術の修得支援・リフト等の活用・研修', '⑰ 事故・トラブルへの対応マニュアル等の作成など体制の整備']],
+  ['生産性向上（業務改善及び働く環境改善）のための取組', ['⑱ 現場の課題の見える化（課題の抽出・構造化、業務時間調査など）', '⑲ ５Ｓ活動（整理・整頓・清掃・清潔・躾）等による職場環境の整備', '⑳ 業務手順書の作成、記録・報告様式の工夫による情報共有・負担軽減', '㉑ 業務支援ソフト（転記不要の記録・情報共有・請求）、タブレット・スマホの導入', '㉒ 介護ロボット、または連絡調整を速くするICT機器（ビジネスチャット含む）の導入', '㉓ 業務内容の明確化と役割分担、間接業務の外注・分担で支援に集中できる環境', '㉔ 委員会の共同設置・指針の共同策定・物品の共同購入など協働化']],
+  ['やりがい・働きがいの醸成', ['㉕ ミーティング等による職場内コミュニケーションの円滑化と、気づきを踏まえた改善', '㉖ 地域の児童・生徒や住民との交流（インクルージョンの推進）', '㉗ 利用者本位の支援方針・障害福祉や法人の理念を定期的に学ぶ機会', '㉘ 支援の好事例や、利用者・家族からの感謝を共有する機会']]
+];
+const SG_NUMS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘'.split('');
+const SG_ENV_ROW = c => { const n = SG_NUMS.indexOf(c) + 1; return n <= 24 ? 67 + n : 68 + n; };   // 様式2-1 E68〜E96（E92 は ㉔の２）
+const SG_TK = {   // ⑦令和８年度特例要件（様式の選択肢そのまま）
+  do: '「生産性向上（業務改善及び働く環境改善）のための取組」のうち５以上の取組（うち⑱及び㉑は必須）を実施かつ処遇改善加算Ⅱロの加算額の２分の１以上を基本給等の改善に充てている',
+  oath: '「生産性向上（業務改善及び働く環境改善）のための取組」のうち５以上の取組（うち⑱及び㉑は必須）を実施することを誓約かつ処遇改善加算Ⅱロの加算額の２分の１以上を基本給等の改善に充てている',
+  renkei: '社会福祉連携推進法人に所属かつ処遇改善加算Ⅱロの加算額の２分の１以上を基本給等の改善に充てている'
+};
+const SG_CP = { ok:'○', tk:'令和８年度特例要件を満たす', oath:'令和８年度特例要件を誓約' };
+const SG_SHEETS = { basic:'基本情報入力シート', s1:'別紙様式2-1 （総括表）', s2:'別紙様式2-2（個票（４、５月））', s3:'別紙様式2-3（個票（６月以降））' };
+let SGU = { nendo:'', d:null, open:{ 0:true }, tpl:null, tplBuf:null };
+const sgYen = n => isFinite(n) ? Math.round(n).toLocaleString() + '円' : '—';
+const sgNum = v => Number(String(v == null ? '' : v).replace(/[^\d.-]/g, '')) || 0;
+const sgDefault = () => ({ offices:[{ no:'', name:'', type:'A型', fee:'', feeShogu:'', auth:'', pref:'福岡県', city:'' }], k7:'Ⅱ', k45:'Ⅰ', k6:'Ⅰイ', small:false,
+  plan:'', base:'', other:'', monthly:'', reqs:{ m:'ok', c12:'ok', c3:'ok', c4:'ok', c5:'', tk:'' }, env:{}, envNote:{}, pubSys:true, pubHp:false, date:'', memo:'' });
+/* 古い保存形式（真偽値の env・c1/c2 など）を今の形にそろえる */
+function sgNormalize(d){
+  d = Object.assign(sgDefault(), d || {});
+  d.reqs = Object.assign(sgDefault().reqs, d.reqs || {});
+  if (d.reqs.c1 && !('c12' in (d.reqs._v || {}))) { d.reqs.c12 = d.reqs.c1 === 'oath' || d.reqs.c2 === 'oath' ? 'oath' : d.reqs.c1; delete d.reqs.c1; delete d.reqs.c2; }
+  Object.keys(d.env || {}).forEach(k => { if (d.env[k] === true) d.env[k] = '✓'; if (d.env[k] === false) delete d.env[k]; });
+  d.offices = (d.offices || []).map(o => Object.assign({ no:'', name:'', type:'A型', fee:'', feeShogu:'', auth:'', pref:'福岡県', city:'' }, o));
+  if (!d.offices.length) d.offices = sgDefault().offices;
+  return d;
+}
+async function showShogu(){
+  setTop({ title:'処遇改善加算 計画書の準備', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">管理者だけが使えます</div>'; return; }
+  const now = jst(); SGU.nendo = SGU.nendo || String(now.getUTCMonth() + 1 >= 4 ? now.getUTCFullYear() : now.getUTCFullYear() - 1);
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
+  let j; try { j = await api({ app:'shogu', nendo: SGU.nendo }); } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+  if (token !== viewToken) return;
+  SGU.d = sgNormalize(j.data || LS.get('fb_shogu_' + SGU.nendo, null));
+  SGU.updated = j.updated; SGU.tpl = j.tpl || (SGU.tplBuf ? { name: SGU.tplName, updated:'この端末で読み込み中' } : null);
+  sgDraw();
+}
+function sgCalc(d){
+  return d.offices.map(o => {
+    const r = SG_RATE[o.type] || SG_RATE['A型'], fee = sgNum(o.fee), a = Math.max(0, fee - sgNum(o.feeShogu));
+    const m = rate => Math.floor(Math.round(a * rate / 100));   // 様式と同じ：月ごとに四捨五入→切り捨て
+    const a45 = m(r.m45[d.k45] || 0), a6 = m(r.m6[d.k6] || 0);
+    return { ...o, fee, a, a45, a6, year: a45 * 2 + a6 * 10, iv: (m(r.m45['Ⅳ']) * 2 + m(r.m6['Ⅳ']) * 10) / 2, iirho: m(r.m6['Ⅱロ']) * 10 / 2 };
+  });
+}
+function sgReqList(d){
+  const k = d.k6, hi = /^Ⅰ|^Ⅱ/.test(k), rho = /ロ$/.test(k);
+  const cp = [['ok', '○ 満たす'], ['tk', '特例で満たす'], ['oath', '特例を誓約'], ['', '未']];
+  const L = [['m', '①月額賃金改善要件', '加算Ⅳ相当額の1/2以上を、基本給や毎月決まって払う手当の改善に充てる', [['ok', '満たす'], ['', '未']]]];
+  L.push(['c12', '②・③キャリアパス要件Ⅰ・Ⅱ（任用要件・賃金体系、研修）', '職位・職責に応じた任用要件と賃金体系、資質向上の目標と研修計画を就業規則等で定め、全職員に周知。令和8年度は特例要件を満たす・誓約することでも可（令和9年3月末までに整備）', cp]);
+  if (k !== 'Ⅳ') L.push(['c3', '④キャリアパス要件Ⅲ（昇給の仕組み）', '経験・資格・評価に応じて昇給する仕組みを就業規則等で定め、全職員に周知', cp]);
+  if (hi) L.push(['c4', '⑤キャリアパス要件Ⅳ（年額460万円以上が1人以上）', '経験・技能のある職員1人以上が改善後に年額460万円以上（職場環境等の取組が全体で14以上でも可）', cp]);
+  if (/^Ⅰ/.test(k)) L.push(['c5', '⑥キャリアパス要件Ⅴ（配置等要件）', '福祉専門職員配置等加算を届け出ている', [['ok', '届出あり'], ['', '未']]]);
+  const usesTk = rho || ['c12', 'c3', 'c4'].some(x => /tk|oath/.test(d.reqs[x] || ''));
+  if (usesTk) L.push(['tk', '⑦令和８年度特例要件', '生産性向上の取組5以上（⑱・㉑は必須）または社会福祉連携推進法人に所属、かつ加算Ⅱロ相当額の1/2以上を基本給等の改善に充てる', [['do', '5以上実施'], ['oath', '実施を誓約'], ['renkei', '連携推進法人'], ['', '未']]]);
+  return L;
+}
+function sgEnvCheck(d){
+  const k = d.k6, hi = /^Ⅰ|^Ⅱ/.test(k), rho = /ロ$/.test(k), on = d.env || {};
+  const cnt = SG_ENV.map(([g, items]) => items.filter(t => on[t.slice(0, 1)]).length);
+  const total = cnt.reduce((a, b) => a + b, 0), prodIdx = 4, prod = cnt[prodIdx];
+  const has = c => !!on[c], msgs = [];
+  SG_ENV.forEach(([g], i) => { if (i === prodIdx) return; const need = hi ? 2 : 1; if (cnt[i] < need) msgs.push(`「${g}」があと${need - cnt[i]}つ`); });
+  const prodNeed = rho ? 5 : hi ? 3 : 2;
+  if (!(d.small && has('㉔') && !rho)) {
+    if (prod < prodNeed) msgs.push(`「生産性向上」があと${prodNeed - prod}つ`);
+    if ((hi || rho) && !has('⑱')) msgs.push('生産性向上の⑱は必須');
+    if (rho && !has('㉑')) msgs.push('特例要件（ロ）では㉑も必須');
+  }
+  if (!hi && total < 8) msgs.push(`全体であと${8 - total}つ（8以上）`);
+  if (hi && !d.pubSys && !d.pubHp) msgs.push('取組の公表（情報公表システムかホームページ）');
+  return { cnt, total, msgs, need14: total >= 14 };
+}
+function sgDraw(){
+  const d = SGU.d, calc = sgCalc(d), sum = calc.reduce((a, o) => a + o.year, 0), ivHalf = calc.reduce((a, o) => a + o.iv, 0), rhoHalf = calc.reduce((a, o) => a + o.iirho, 0);
+  const plan = sgNum(d.plan), monthly = sgNum(d.monthly), env = sgEnvCheck(d), reqs = sgReqList(d);
+  const yrs = [Number(SGU.nendo) - 1, Number(SGU.nendo), Number(SGU.nendo) + 1];
+  const inp = (id, v, ph, extra) => `<input id="${id}" inputmode="numeric" value="${esc(v)}" placeholder="${esc(ph || '')}"${extra || ''}>`;
+  const judge = (ok, okT, ngT) => `<div class="sg-judge ${ok ? 'ok' : 'ng'}">${ok ? '✓ ' + esc(okT) : esc(ngT)}</div>`;
+  let h = `<div class="note" style="margin-top:12px">提出は指定権者の Excel 様式（計画書：別紙様式2-1〜2-3）です。ここで入れた内容から、登録したひな形に書き込んだ記入済みの Excel を作れます（⑦）。加算率は令和8年度の様式と同じ値です。</div>
+    <div class="sg-row"><label class="js-f" style="flex:1"><span>年度</span><select id="sgY">${yrs.map(y => `<option value="${y}"${String(y) === SGU.nendo ? ' selected' : ''}>令和${y - 2018}年度（${y}年4月〜）</option>`).join('')}</select></label>
+    <div class="small" style="color:var(--sub);align-self:end;padding-bottom:12px">${SGU.updated ? '保存：' + esc(SGU.updated) : 'まだ保存していません'}</div></div>
+    <div class="box sg-box"><h3>① 加算の対象事業所</h3><div class="small" style="color:var(--sub)">報酬総額は、前年1〜12月の障害福祉サービス等報酬の総額（加算減算を含む）÷12 などで見込んだ一月あたりの額。計算は「報酬総額 − うち処遇改善加算」に加算率を掛けます。</div>
+    ${d.offices.map((o, i) => `<div class="sg-off">
+      <label class="js-f"><span>事業所名</span><input data-o="${i}" data-f="name" value="${esc(o.name)}" placeholder="例：唐泊ストアー"></label>
+      <label class="js-f"><span>事業所番号</span><input data-o="${i}" data-f="no" inputmode="numeric" value="${esc(o.no)}" placeholder="10桁"></label>
+      <label class="js-f"><span>サービス</span><select data-o="${i}" data-f="type">${['A型', 'B型'].map(t => `<option value="${t}"${t === o.type ? ' selected' : ''}>${SG_SVC[t]}</option>`).join('')}</select></label>
+      <label class="js-f"><span>指定権者</span><input data-o="${i}" data-f="auth" value="${esc(o.auth)}" placeholder="例：福岡市"></label>
+      <label class="js-f"><span>所在地（都道府県）</span><input data-o="${i}" data-f="pref" value="${esc(o.pref)}"></label>
+      <label class="js-f"><span>所在地（市区町村）</span><input data-o="${i}" data-f="city" value="${esc(o.city)}"></label>
+      <label class="js-f"><span>一月の報酬総額（円）</span><input data-o="${i}" data-f="fee" inputmode="numeric" value="${esc(o.fee)}"></label>
+      <label class="js-f"><span>うち処遇改善加算（円）</span><input data-o="${i}" data-f="feeShogu" inputmode="numeric" value="${esc(o.feeShogu)}"></label>
+      ${d.offices.length > 1 ? `<button class="link" data-del="${i}">この事業所を外す</button>` : ''}</div>`).join('')}
+    <button class="btn s" id="sgAddO" style="min-height:40px;margin-top:6px">＋ 事業所を足す</button></div>
+    <div class="box sg-box"><h3>② 算定する加算区分</h3>
+    <div class="sg-row"><label class="js-f" style="flex:1"><span>令和8年3月時点（参考）</span><select id="sgK7">${['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'].map(k => `<option${k === d.k7 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>
+    <label class="js-f" style="flex:1"><span>4・5月</span><select id="sgK45">${['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'].map(k => `<option${k === d.k45 ? ' selected' : ''}>${k}</option>`).join('')}</select></label>
+    <label class="js-f" style="flex:1"><span>6月以降</span><select id="sgK6">${['Ⅰイ', 'Ⅰロ', 'Ⅱイ', 'Ⅱロ', 'Ⅲ', 'Ⅳ'].map(k => `<option${k === d.k6 ? ' selected' : ''}>${k}</option>`).join('')}</select></label></div>
+    <label class="js-ok" style="padding:6px 0"><input type="checkbox" id="sgSmall"${d.small ? ' checked' : ''}> 1法人で1事業所だけの小規模事業者（㉔の取組で生産性向上の要件を満たせる＝㉔の２）</label></div>
+    <div class="box sg-box"><h3>③ 加算の見込額と賃金改善</h3><div class="sg-scroll"><table class="at-tbl"><thead><tr><th>事業所</th><th>4・5月（月）</th><th>6月以降（月）</th><th>年度の見込額</th></tr></thead><tbody>
+    ${calc.map(o => `<tr><td>${esc(o.name || '（名前なし）')}<div class="small">${o.a ? '(a) ' + sgYen(o.a) + '/月' : '報酬総額が未入力'}</div></td><td class="n">${sgYen(o.a45)}<div class="small">${(SG_RATE[o.type].m45[d.k45] || 0)}%</div></td><td class="n">${sgYen(o.a6)}<div class="small">${(SG_RATE[o.type].m6[d.k6] || 0)}%</div></td><td class="n"><b>${sgYen(o.year)}</b></td></tr>`).join('')}
+    <tr><td><b>合計（2-1 ２①）</b></td><td></td><td></td><td class="n"><b>${sgYen(sum)}</b></td></tr></tbody></table></div>
+    <div class="fgrid">
+      <label class="js-f"><span>②賃金改善の見込額（年度・円）</span>${inp('sgPlan', d.plan, '①以上にする')}</label>
+      <label class="js-f"><span>うち月額賃金改善による額（3(1)②・円）</span>${inp('sgMonthly', d.monthly, '加算Ⅳ相当の1/2以上')}</label>
+      <label class="js-f"><span>④増加分によるベースアップの見込額（円）</span>${inp('sgBase', d.base)}</label>
+      <label class="js-f"><span>⑤その他の手当・一時金等（円）</span>${inp('sgOther', d.other)}</label></div>
+    ${!sum ? '<div class="sg-judge ng">報酬総額を入れると判定します</div>' : judge(plan >= sum, '賃金改善の見込額が、加算の見込額以上です', '賃金改善の見込額が ' + sgYen(sum - plan) + ' 足りません（加算額以上の賃金改善が必要）')}
+    ${sum ? judge(monthly >= ivHalf, `月額賃金改善が、加算Ⅳ相当の1/2（${sgYen(ivHalf)}）以上です`, `月額賃金改善は 加算Ⅳ相当の1/2＝${sgYen(ivHalf)} 以上が必要です`) : ''}
+    ${sum && /ロ$/.test(d.k6) ? judge(monthly >= ivHalf + rhoHalf, '特例要件：加算Ⅱロ相当の1/2も含めて満たしています', `特例要件（ロ）では、月額賃金改善が ${sgYen(ivHalf + rhoHalf)}（Ⅳの1/2＋Ⅱロの1/2の目安）以上必要です`) : ''}</div>
+    <div class="box sg-box"><h3>④ 要件（6月以降：${esc(d.k6)}）</h3>
+    ${reqs.map(([k, t, n, opts]) => { const v = d.reqs[k] || ''; return `<div class="sg-req ${v ? 'on' : ''}"><div><b>${esc(t)}</b><div class="small">${esc(n)}${k === 'c4' && env.need14 ? '<br><b style="color:var(--g1)">→ 職場環境等の取組が14以上なので満たせます</b>' : ''}</div></div>
+      <div class="sg-seg">${opts.map(([vv, l]) => `<button data-req="${k}" data-v="${vv}" aria-pressed="${v === vv}">${l}</button>`).join('')}</div></div>`; }).join('')}</div>
+    <div class="box sg-box"><h3>⑤ 職場環境等要件（取り組む項目）</h3>
+    ${judge(!env.msgs.length, `${d.k6}の職場環境等要件を満たしています（全体 ${env.total}項目）`, '足りないもの：' + env.msgs.join('、'))}
+    ${SG_ENV.map(([g, items], gi) => `<details class="sg-env" data-g="${gi}"${SGU.open[gi] ? ' open' : ''}><summary><b>${esc(g)}</b><span>${env.cnt[gi]}項目</span></summary>
+      ${items.map(t => { const c = t.slice(0, 1), v = (d.env || {})[c] || ''; return `<label class="sg-item ${v ? 'on' : ''}"><input type="checkbox" data-env="${c}"${v ? ' checked' : ''}> <span>${esc(t)}</span></label>
+        ${v ? `<div class="sg-sub"><select data-envv="${c}"><option value="✓"${v === '✓' ? ' selected' : ''}>実施する（✓）</option><option value="誓約"${v === '誓約' ? ' selected' : ''}>令和8年度中に実施を誓約</option></select>
+        <textarea class="sg-note" data-note="${c}" placeholder="具体的な取組（公表・実績報告で使う）">${esc((d.envNote || {})[c] || '')}</textarea></div>` : ''}`; }).join('')}</details>`).join('')}
+    <div class="sec-title" style="margin-top:10px">見える化（取組の公表）</div>
+    <label class="js-ok"><input type="checkbox" id="sgPubSys"${d.pubSys ? ' checked' : ''}> 障害福祉サービス等情報公表システム（「事業所の特色」欄）で選択</label>
+    <label class="js-ok"><input type="checkbox" id="sgPubHp"${d.pubHp ? ' checked' : ''}> 自社のホームページに掲載</label></div>
+    <div class="box sg-box"><h3>⑥ 提出の予定</h3><ul class="sg-due">
+      <li><b>処遇改善計画書</b>（別紙様式2-1〜2-3）… 令和8年4月15日まで（6月から新たに算定する場合は6月15日）</li>
+      <li><b>体制届出</b> … 令和8年4月1日まで（指定権者によっては4月15日まで）</li>
+      <li><b>実績報告書</b>（別紙様式3-1・3-2）… 令和9年7月31日まで</li>
+      <li>計画書・実績報告書と根拠資料（賃金規程・研修計画など）は<b>2年間保存</b></li></ul>
+      <label class="js-f"><span>計画書の提出日（様式の日付欄）</span><input type="date" id="sgDate" value="${esc(d.date || '')}"></label>
+      <label class="js-f"><span>メモ</span><textarea id="sgMemo" placeholder="例：就業規則の改定は12月の会議で">${esc(d.memo || '')}</textarea></label></div>
+    <div class="box sg-box"><h3>⑦ 正式な様式（Excel）に書き込む</h3>
+      ${SGU.tpl ? `<div class="small">ひな形：<b>${esc(SGU.tpl.name)}</b>（${esc(SGU.tpl.updated || '')}）</div>` : '<div class="small" style="color:var(--warn)">まだひな形がありません。指定権者のホームページの計画書（.xlsx）を一度登録してください。</div>'}
+      <div class="small" style="color:var(--sub);margin:4px 0 8px">黄色の入力欄だけを書き換えます。基本情報入力シート（法人名・担当者など）と「４ 確認・証明」のチェックはひな形のまま残ります。</div>
+      <div class="bar" style="position:static;padding:0;flex-wrap:wrap"><button class="btn s" id="sgTplBtn">📥 ひな形を登録・入れ替え</button>${SGU.tpl ? '<button class="btn s" id="sgImport">ひな形の記入内容を取り込む</button>' : ''}<button class="btn p" id="sgXlsx" style="flex:1"${SGU.tpl ? '' : ' disabled'}>📄 記入済みExcelを作る</button></div>
+      <input type="file" id="sgTplFile" accept=".xlsx" hidden><div id="sgOut" class="small" style="margin-top:8px"></div></div>
+    <div class="bar"><button class="btn s" id="sgPrint">🖨 まとめを印刷</button><button class="btn p" id="sgSave" style="flex:1">保存する</button></div>`;
+  $('view').innerHTML = h;
+  const keepLocal = () => { try { LS.set('fb_shogu_' + SGU.nendo, SGU.d); } catch (e) {} };
+  const redraw = () => { keepLocal(); const y = window.scrollY; sgDraw(); window.scrollTo(0, y); };
+  const V = $('view');
+  $('sgY').onchange = e => { SGU.nendo = e.target.value; showShogu(); };
+  V.querySelectorAll('[data-o]').forEach(i => i.onchange = () => { d.offices[Number(i.dataset.o)][i.dataset.f] = i.value; redraw(); });
+  V.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { d.offices.splice(Number(b.dataset.del), 1); redraw(); });
+  $('sgAddO').onclick = () => { const o = d.offices[0] || {}; d.offices.push({ no:'', name:'', type:o.type || 'A型', fee:'', feeShogu:'', auth:o.auth || '', pref:o.pref || '福岡県', city:o.city || '' }); redraw(); };
+  [['sgK7', 'k7'], ['sgK45', 'k45'], ['sgK6', 'k6'], ['sgPlan', 'plan'], ['sgMonthly', 'monthly'], ['sgBase', 'base'], ['sgOther', 'other'], ['sgDate', 'date']].forEach(([id, k]) => $(id).onchange = e => { d[k] = e.target.value; redraw(); });
+  [['sgSmall', 'small'], ['sgPubSys', 'pubSys'], ['sgPubHp', 'pubHp']].forEach(([id, k]) => $(id).onchange = e => { d[k] = e.target.checked; redraw(); });
+  V.querySelectorAll('[data-req]').forEach(b => b.onclick = () => { d.reqs[b.dataset.req] = b.dataset.v; redraw(); });
+  V.querySelectorAll('[data-env]').forEach(c => c.onchange = () => { if (c.checked) d.env[c.dataset.env] = '✓'; else delete d.env[c.dataset.env]; redraw(); });
+  V.querySelectorAll('[data-envv]').forEach(s => s.onchange = () => { d.env[s.dataset.envv] = s.value; keepLocal(); });
+  V.querySelectorAll('[data-note]').forEach(t => t.oninput = () => { d.envNote = d.envNote || {}; d.envNote[t.dataset.note] = t.value; keepLocal(); });
+  V.querySelectorAll('.sg-env').forEach(x => x.ontoggle = () => { SGU.open[x.dataset.g] = x.open; });
+  $('sgMemo').oninput = e => { d.memo = e.target.value; keepLocal(); };
+  $('sgSave').onclick = () => runAction(() => apiPost({ app:'shoguSave', nendo: SGU.nendo, data: d }), () => showShogu());
+  $('sgPrint').onclick = () => sgPrint(calc, sum, ivHalf, plan, env, reqs);
+  $('sgTplBtn').onclick = () => $('sgTplFile').click();
+  $('sgTplFile').onchange = e => { const f = e.target.files[0]; if (f) sgTplUpload(f); e.target.value = ''; };
+  if ($('sgImport')) $('sgImport').onclick = () => confirmSheet('ひな形の記入内容を取り込む', 'ひな形の Excel に入っている事業所・報酬総額・加算区分・要件・取組のチェックを、この画面に読み込みます。今の画面の内容は上書きされます（保存するまでは確定しません）。', '取り込む', sgImport);
+  $('sgXlsx').onclick = sgMakeXlsx;
+}
+/* ---------- Excel（.xlsx）をそのまま読み書きする小さな部品 ---------- */
+const sgB64 = buf => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const sgFromB64 = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; };
+const sgXmlEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const sgXmlUnesc = s => String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, c) => String.fromCharCode(c)).replace(/&amp;/g, '&');
+async function sgZip(buf){
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', () => window.JSZip);
+  const zip = await JSZip.loadAsync(buf);
+  const wb = await zip.file('xl/workbook.xml').async('string'), rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  const map = {};
+  for (const m of wb.matchAll(/<sheet\b[^>]*?name="([^"]+)"[^>]*?r:id="([^"]+)"/g)) {
+    const t = rels.match(new RegExp('<Relationship[^>]*Id="' + m[2] + '"[^>]*Target="([^"]+)"')) || rels.match(new RegExp('<Relationship[^>]*Target="([^"]+)"[^>]*Id="' + m[2] + '"'));
+    if (t) map[sgXmlUnesc(m[1])] = 'xl/' + t[1].replace(/^\/?xl\//, '').replace(/^\//, '');
+  }
+  Object.values(SG_SHEETS).forEach(n => { if (!map[n]) throw new Error('この Excel には「' + n + '」のシートがありません（令和8年度の計画書の様式か確認してください）'); });
+  return { zip, map };
+}
+const sgCellRe = ref => new RegExp('<c r="' + ref + '"(\\s[^>]*?)?(?:/>|>([\\s\\S]*?)</c>)');
+async function sgReader(zip, map){
+  const ssx = zip.file('xl/sharedStrings.xml') ? await zip.file('xl/sharedStrings.xml').async('string') : '';
+  const ss = [...ssx.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => sgXmlUnesc([...m[1].replace(/<rPh\b[\s\S]*?<\/rPh>/g, '').matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join('')));
+  const cache = {};
+  return async (sheet, ref) => {
+    const x = cache[sheet] || (cache[sheet] = await zip.file(map[SG_SHEETS[sheet]]).async('string'));
+    const m = x.match(sgCellRe(ref)); if (!m || !m[2]) return '';
+    if (/<f[\s>]/.test(m[2])) return '';   // 数式のセルは読まない
+    const t = ((m[1] || '').match(/\st="([^"]+)"/) || [])[1], v = (m[2].match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+    if (t === 's') return ss[Number(v)] || '';
+    if (t === 'inlineStr') return sgXmlUnesc([...m[2].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join(''));
+    if (t === 'b') return v === '1';
+    if (v == null) return '';
+    return t === 'str' ? sgXmlUnesc(v) : (isNaN(Number(v)) ? sgXmlUnesc(v) : Number(v));
+  };
+}
+function sgSetCell(x, ref, v){
+  const m = x.match(sgCellRe(ref));
+  if (!m) throw new Error('セル ' + ref + ' が見つかりません（様式が違う可能性）');
+  if (m[2] && /<f[\s>]/.test(m[2])) throw new Error('セル ' + ref + ' は数式のため書き込みませんでした');
+  const attrs = (m[1] || '').replace(/\s+t="[^"]*"/, '');
+  let c;
+  if (v === '' || v == null) c = `<c r="${ref}"${attrs}/>`;
+  else if (typeof v === 'number') c = `<c r="${ref}"${attrs}><v>${v}</v></c>`;
+  else c = `<c r="${ref}"${attrs} t="inlineStr"><is><t xml:space="preserve">${sgXmlEsc(v)}</t></is></c>`;
+  return x.replace(m[0], c);
+}
+async function sgTplBuffer(){
+  if (SGU.tplBuf) return SGU.tplBuf;
+  const j = await api({ app:'shoguTpl' });
+  SGU.tplBuf = sgFromB64(j.b64); SGU.tplName = j.name;
+  return SGU.tplBuf;
+}
+async function sgTplUpload(f){
+  if (!/\.xlsx$/i.test(f.name)) { msgSheet('登録できません', '.xlsx のファイルを選んでください（.xls の場合は Excel で .xlsx に保存し直してください）'); return; }
+  $('busy').classList.add('on');
+  try {
+    const buf = await f.arrayBuffer();
+    await sgZip(buf);   // 様式のチェック
+    SGU.tplBuf = buf; SGU.tplName = f.name;
+    if (isDemo()) SGU.tpl = { name: f.name, updated:'この端末で読み込み中' };
+    else { const j = await apiPost({ app:'shoguTplSave', name: f.name, b64: sgB64(buf) }); SGU.tpl = j.tpl || { name: f.name }; }
+    toast('ひな形を登録しました');
+    sgDraw();
+    confirmSheet('記入内容も取り込みますか？', 'ひな形に入っている事業所・報酬総額・加算区分・要件・取組のチェックを、この画面に読み込めます（今の画面の内容は上書き）。', '取り込む', sgImport);
+  } catch (e) { msgSheet('登録できませんでした', e.message); }
+  finally { $('busy').classList.remove('on'); }
+}
+async function sgImport(){
+  closeSheet(); $('busy').classList.add('on');
+  try {
+    const { zip, map } = await sgZip(await sgTplBuffer());
+    const g = await sgReader(zip, map), d = SGU.d, str = v => v === '' || v == null ? '' : String(v);
+    const offices = [];
+    for (let r = 35; r <= 135; r++) {
+      const name = str(await g('basic', 'W' + r)), no = str(await g('basic', 'B' + r));
+      if (!name && !no) break;
+      const svc = str(await g('basic', 'Z' + r));
+      offices.push({ no, name, type: /Ｂ型|B型/.test(svc) ? 'B型' : 'A型', auth: str(await g('basic', 'L' + r)), pref: str(await g('basic', 'Q' + r)), city: str(await g('basic', 'V' + r)), fee: str(await g('basic', 'AD' + r)), feeShogu: str(await g('basic', 'AE' + r)) });
+    }
+    if (offices.length) d.offices = offices;
+    const kk = v => str(v).replace('処遇改善加算', '');
+    const k7 = kk(await g('s2', 'M13')), k45 = kk(await g('s2', 'O13')), k6 = kk(await g('s3', 'O13'));
+    if (k7) d.k7 = k7; if (k45) d.k45 = k45; if (k6) d.k6 = k6;
+    const cp = v => { v = str(v); return v === '○' ? 'ok' : /満たす/.test(v) ? 'tk' : /誓約/.test(v) ? 'oath' : ''; };
+    d.reqs = Object.assign(d.reqs, { m: str(await g('s3', 'AF13')) === '○' ? 'ok' : '', c12: cp(await g('s3', 'AG13')), c3: cp(await g('s3', 'AH13')), c4: cp(await g('s3', 'AI13')), c5: str(await g('s3', 'AJ13')) ? 'ok' : '' });
+    const tk = str(await g('s3', 'AK13')); d.reqs.tk = !tk ? '' : /連携推進法人/.test(tk) ? 'renkei' : /誓約/.test(tk) ? 'oath' : 'do';
+    for (const [k, ref] of [['plan', 'Q18'], ['base', 'Q22'], ['other', 'Q23'], ['monthly', 'T32']]) d[k] = str(await g('s1', ref));
+    d.env = {};
+    for (const c of SG_NUMS) { const v = str(await g('s1', 'E' + SG_ENV_ROW(c))); if (v) d.env[c] = v === '誓約' ? '誓約' : '✓'; }
+    d.small = !!str(await g('s1', 'E92'));
+    d.pubSys = !!str(await g('s1', 'F100')); d.pubHp = !!str(await g('s1', 'F101'));
+    const yy = await g('s1', 'E131'), mm = await g('s1', 'H131'), dd = await g('s1', 'K131');
+    if (yy && mm && dd) d.date = `${Number(yy) + 2018}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+    try { LS.set('fb_shogu_' + SGU.nendo, d); } catch (e) {}
+    sgDraw(); toast('ひな形の内容を取り込みました。確認して「保存する」を押してください', 4200);
+  } catch (e) { msgSheet('取り込めませんでした', e.message); }
+  finally { $('busy').classList.remove('on'); }
+}
+async function sgMakeXlsx(){
+  const d = SGU.d, out = $('sgOut');
+  $('busy').classList.add('on');
+  try {
+    const { zip, map } = await sgZip(await sgTplBuffer());
+    const g = await sgReader(zip, map), W = {};
+    const set = (sheet, ref, v) => { (W[sheet] = W[sheet] || {})[ref] = v; };
+    const n = d.offices.length;
+    if (n > 100) throw new Error('事業所は100か所までです');
+    // いま記入されている行数（あとで余りを消す）
+    let old = 0; for (let r = 35; r <= 135; r++) { if (!(await g('basic', 'W' + r)) && !(await g('basic', 'B' + r))) break; old++; }
+    const rows = Math.max(n, old);
+    const k45 = d.k45, k6 = d.k6, hi45 = /^Ⅰ|^Ⅱ/.test(k45), hi6 = /^Ⅰ|^Ⅱ/.test(k6);
+    const usesTk = ['c12', 'c3', 'c4'].some(x => /tk|oath/.test(d.reqs[x] || '')) || /ロ$/.test(k6);
+    for (let i = 0; i < rows; i++) {
+      const o = d.offices[i], r = 35 + i, q = 13 + i;
+      const val = (v, num) => o ? (num ? (sgNum(v) || '') : String(v || '')) : '';
+      set('basic', 'B' + r, val(o && o.no)); set('basic', 'L' + r, val(o && o.auth)); set('basic', 'Q' + r, val(o && o.pref)); set('basic', 'V' + r, val(o && o.city));
+      set('basic', 'W' + r, val(o && o.name)); set('basic', 'Z' + r, o ? SG_SVC[o.type] : ''); set('basic', 'AD' + r, val(o && o.fee, 1)); set('basic', 'AE' + r, o ? sgNum(o.feeShogu) : '');
+      const cpv = k => o ? (SG_CP[d.reqs[k]] || '') : '';
+      // 2-2（4・5月）
+      set('s2', 'M' + q, o ? '処遇改善加算' + d.k7 : ''); set('s2', 'O' + q, o ? '処遇改善加算' + k45 : '');
+      set('s2', 'R' + q, o ? 8 : ''); set('s2', 'T' + q, o ? 4 : ''); set('s2', 'V' + q, o ? 8 : ''); set('s2', 'X' + q, o ? 5 : '');
+      set('s2', 'AF' + q, o && d.reqs.m === 'ok' ? '○' : ''); set('s2', 'AG' + q, cpv('c12'));
+      set('s2', 'AH' + q, k45 !== 'Ⅳ' ? cpv('c3') : ''); set('s2', 'AI' + q, hi45 ? cpv('c4') : '');
+      set('s2', 'AJ' + q, o && k45 === 'Ⅰ' && d.reqs.c5 === 'ok' ? '福祉専門職員配置等加算' : '');
+      set('s2', 'AK' + q, o && ['c12', 'c3', 'c4'].some(x => /tk|oath/.test(d.reqs[x] || '')) ? (SG_TK[d.reqs.tk] || '') : '');
+      // 2-3（6月以降）
+      set('s3', 'O' + q, o ? '処遇改善加算' + k6 : '');
+      set('s3', 'R' + q, o ? 8 : ''); set('s3', 'T' + q, o ? 6 : ''); set('s3', 'V' + q, o ? 9 : ''); set('s3', 'X' + q, o ? 3 : '');
+      set('s3', 'AF' + q, o && d.reqs.m === 'ok' ? '○' : ''); set('s3', 'AG' + q, cpv('c12'));
+      set('s3', 'AH' + q, k6 !== 'Ⅳ' ? cpv('c3') : ''); set('s3', 'AI' + q, hi6 ? cpv('c4') : '');
+      set('s3', 'AJ' + q, o && /^Ⅰ/.test(k6) && d.reqs.c5 === 'ok' ? '福祉専門職員配置等加算' : '');
+      set('s3', 'AK' + q, o && usesTk ? (SG_TK[d.reqs.tk] || '') : '');
+    }
+    // 2-1（総括表）
+    set('s1', 'Q18', sgNum(d.plan) || ''); set('s1', 'Q22', sgNum(d.base) || ''); set('s1', 'Q23', sgNum(d.other) || ''); set('s1', 'T32', sgNum(d.monthly) || '');
+    const oathOf = k => /tk|oath/.test(d.reqs[k] || '') ? '✓' : '';
+    set('s1', 'AK39', oathOf('c12')); set('s1', 'AK43', oathOf('c3')); set('s1', 'AK47', hi6 || hi45 ? oathOf('c4') : '');
+    SG_NUMS.forEach(c => set('s1', 'E' + SG_ENV_ROW(c), d.env[c] || ''));
+    set('s1', 'E92', d.small && d.env['㉔'] ? '✓' : '');
+    set('s1', 'F100', d.pubSys ? '✓' : ''); set('s1', 'F101', d.pubHp ? '✓' : '');
+    if (d.date) { const [y, m, dd] = d.date.split('-').map(Number); set('s1', 'E131', y - 2018); set('s1', 'H131', m); set('s1', 'K131', dd); }
+    for (const [sheet, cells] of Object.entries(W)) {
+      const path = map[SG_SHEETS[sheet]];
+      let x = await zip.file(path).async('string');
+      for (const [ref, v] of Object.entries(cells)) x = sgSetCell(x, ref, v);
+      zip.file(path, x);
+    }
+    // 開いたときに全部を計算し直す
+    let wb = await zip.file('xl/workbook.xml').async('string');
+    wb = /<calcPr\b/.test(wb) ? wb.replace(/<calcPr\b([^>]*?)\/?>/, (m, a) => '<calcPr' + a.replace(/\s*fullCalcOnLoad="[^"]*"/, '') + ' fullCalcOnLoad="1"/>') : wb.replace('</workbook>', '<calcPr fullCalcOnLoad="1"/></workbook>');
+    zip.file('xl/workbook.xml', wb);
+    const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const name = `処遇改善計画書_令和${Number(SGU.nendo) - 2018}年度_${ymd().replace(/-/g, '')}.xlsx`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    out.innerHTML = `✓ 「${esc(name)}」を作りました。<a href="${url}" download="${esc(name)}">もう一度ダウンロード</a><br>Excel で開き、総括表の判定欄（○・×）と「４ 確認・証明」のチェック、基本情報入力シートを確かめてから提出してください。`;
+    if (!isDemo()) {
+      try { const j = await apiPost({ app:'shoguFileSave', nendo: SGU.nendo, name, b64: sgB64(await blob.arrayBuffer()) }); out.insertAdjacentHTML('beforeend', `<br>Drive にも保存しました：<a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.name)}</a>`); }
+      catch (e) { out.insertAdjacentHTML('beforeend', `<br><span style="color:var(--warn)">Drive への保存はできませんでした（${esc(e.message)}）</span>`); }
+    }
+  } catch (e) { msgSheet('Excel を作れませんでした', e.message); }
+  finally { $('busy').classList.remove('on'); }
+}
+function sgPrint(calc, sum, ivHalf, plan, env, reqs){
+  const d = SGU.d, lab = (k, v) => { const r = reqs.find(x => x[0] === k); const o = r && r[3].find(x => x[0] === v); return o ? o[1] : '未'; };
+  const w = window.open('', '_blank');
+  if (!w) { toast('ポップアップを許可してください'); return; }
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>処遇改善加算 計画のまとめ</title><style>body{font-family:sans-serif;font-size:12px;margin:16mm}h1{font-size:16px}h2{font-size:13px;margin:14px 0 6px;border-bottom:1px solid #999}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 6px;text-align:left}td.n{text-align:right}.s{color:#555}</style>
+    <h1>福祉・介護職員等処遇改善加算　計画のまとめ（令和${Number(SGU.nendo) - 2018}年度）</h1><div class="s">※ 正式な計画書（別紙様式2-1〜2-3）の確認用です。</div>
+    <h2>加算区分</h2>令和8年3月時点：${esc(d.k7)}　／　4・5月：処遇改善加算${esc(d.k45)}　／　6月以降：処遇改善加算${esc(d.k6)}${d.small ? '　（小規模事業者）' : ''}
+    <h2>加算の見込額</h2><table><tr><th>事業所</th><th>サービス</th><th>(a) 報酬総額−処遇改善加算</th><th>4・5月（月）</th><th>6月以降（月）</th><th>年度</th></tr>${calc.map(o => `<tr><td>${esc(o.name)}<div class="s">${esc(o.no)}</div></td><td>${esc(SG_SVC[o.type])}</td><td class="n">${sgYen(o.a)}</td><td class="n">${sgYen(o.a45)}</td><td class="n">${sgYen(o.a6)}</td><td class="n">${sgYen(o.year)}</td></tr>`).join('')}<tr><th colspan="5">合計</th><td class="n"><b>${sgYen(sum)}</b></td></tr></table>
+    <p>賃金改善の見込額：<b>${sgYen(plan)}</b>（${plan >= sum ? '加算見込額以上' : '加算見込額に不足'}）　／　うち月額賃金改善：${sgYen(sgNum(d.monthly))}（必要額 加算Ⅳ相当の1/2＝${sgYen(ivHalf)}）</p>
+    <h2>要件</h2><table>${reqs.map(([k, t]) => `<tr><td>${esc(t)}</td><td>${esc(lab(k, d.reqs[k] || ''))}</td></tr>`).join('')}</table>
+    <h2>職場環境等要件（${env.total}項目）</h2><table>${SG_ENV.map(([g, items]) => items.filter(t => d.env[t.slice(0, 1)]).map(t => `<tr><td style="width:20%">${esc(g)}</td><td>${esc(t)}${d.env[t.slice(0, 1)] === '誓約' ? '（誓約）' : ''}</td><td>${esc((d.envNote || {})[t.slice(0, 1)] || '')}</td></tr>`).join('')).join('')}</table>
+    <p>公表：${[d.pubSys ? '情報公表システム' : '', d.pubHp ? 'ホームページ' : ''].filter(Boolean).join('・') || 'なし'}</p>
+    ${d.memo ? `<h2>メモ</h2><div>${esc(d.memo).replace(/\n/g, '<br>')}</div>` : ''}<script>window.onload=()=>window.print()<\/script>`);
+  w.document.close();
+}
+
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
 function route(){
@@ -1827,6 +2196,7 @@ function route(){
   if (page === 'admin' && arg === 'tenken') return showTenken();
   if (page === 'admin' && arg === 'jusetsu') return showJusetsu();
   if (page === 'admin' && arg === 'roster') return showRoster();
+  if (page === 'admin' && arg === 'shogu') return showShogu();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
@@ -1915,6 +2285,7 @@ async function showHome(){
           <span class="name">${esc(f.sheet)}${q ? `<span class="grp">${esc(f.group)}</span>` : ''}</span>
           ${hasDraft ? '<span class="tag">下書きあり</span>' : ''}${ICON.chev}</a>`;
       }).join('') : `<div class="empty">「${esc(q)}」に合う帳票はありません。</div>`;
+      if (!q && homeTab === '届出・報告' && isAdmin()) list.insertAdjacentHTML('afterbegin', `<a class="row ${gClass(homeTab)}" href="#/admin/shogu" style="color:inherit;text-decoration:none"><span class="name">処遇改善加算 計画書の準備<span class="grp">見込額・要件チェック</span></span>${ICON.chev}</a>`);
     };
     renderList('');
     $('q').oninput = e => renderList(e.target.value.trim());
@@ -3586,7 +3957,7 @@ function drawerItems(){
     ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
     ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', 'ハザードマップ・避難場所')]],
     ['業務', [it('#/work', 'やること'), it('#/eisei', '衛生管理の記録', '店舗のHACCP・事業所の衛生'), it('#/deadlines', '利用者の期限・カレンダー'), it('#/sougei', '送迎の予定とアラーム', '送迎30分前に担当へ通知'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/roster', '名簿の管理', '利用者・スタッフの登録と確認'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計')]] : null,
+    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/roster', '名簿の管理', '利用者・スタッフの登録と確認'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/shogu', '処遇改善加算 計画書の準備', '見込額・要件・職場環境等の取組'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計')]] : null,
     ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
     ['', [it('#/settings', '設定')]]
   ].filter(Boolean);
@@ -3765,6 +4136,7 @@ function showWork(){
       <a class="list-item" href="#/books" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">出勤簿</div><div class="m">一人ずつの今月の出勤簿を見る・直す・PDF</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/roster" style="color:inherit;text-decoration:none;--gc:var(--brand)"><div class="main"><div class="t">名簿の管理</div><div class="m">利用者・スタッフの登録、メール・LINE・ふりがなの確認</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jusetsu" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">重要事項説明書（署名）</div><div class="m">契約のとき、タッチ・マウスで署名 → 署名入りPDFを保存</div></div>${ICON.chev}</a>
+      <a class="list-item" href="#/admin/shogu" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">処遇改善加算 計画書の準備</div><div class="m">見込額の計算・要件と職場環境等の取組の確認 → 転記用まとめ</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/tenken" style="color:inherit;text-decoration:none;--gc:var(--g4)"><div class="main"><div class="t">運営指導 自己点検表</div><div class="m">項目ごとに 適・否 と関係書類を点検 → PDF</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jigai" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">施設外就労（報告書・タイムシート）</div><div class="m">実施報告書と請求用タイムシートを月ごとに</div></div>${ICON.chev}</a>
       <a class="list-item" href="#/admin/jisseki" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">実績記録のチェック</div><div class="m">紙の実績記録を撮影 → 打刻・支援経過記録と照合</div></div>${ICON.chev}</a>
