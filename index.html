@@ -506,6 +506,12 @@ body.pc .ks-iko{grid-template-columns:repeat(3,1fr)}
 .km-f{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
 .km-f input,.km-f select,#kmPlan,#kmSpan,#kmSoto,#kmBrk,#kmWeek,#kmMonth,#kmSvc,#kmO,#kmM{min-height:42px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 8px;font-size:15px;background:var(--paper);color:var(--ink);width:100%}
 body.pc .km-f{grid-template-columns:repeat(4,1fr)}
+.km-src{display:flex;align-items:center;gap:8px;margin:4px 0 6px;flex-wrap:wrap}
+.km-pat{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}.km-pat label{display:grid;gap:2px;text-align:center;font-size:12px;color:var(--sub)}.km-pat input{min-height:40px;border:1px solid var(--rule);border-radius:var(--r-s);text-align:center;font-size:15px;background:var(--paper);color:var(--ink);width:100%;padding:0}
+.km-dow{display:flex;flex-wrap:wrap;gap:4px 12px}.km-dow .js-ok{padding:4px 0}
+.km-prev{border-top:1px solid var(--rule);margin-top:10px;padding-top:8px}.km-prev summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}.km-prev summary .small{color:var(--sub)}
+.km-prevg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px;margin:8px 0}.km-prevg div{display:grid;grid-template-columns:36px 1fr 1fr;gap:4px;align-items:center;font-size:13px}.km-prevg input,#kmClosed{min-height:38px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 6px;font-size:14px;background:var(--paper);color:var(--ink);width:100%}
+body.pc .km-prevg{grid-template-columns:repeat(4,1fr)}
 </style>
 </head>
 <body>
@@ -742,6 +748,7 @@ async function demoApi(p){
   if (p.app === 'eiseiSave') return { message:'（デモ）記録しました' };
   if (p.app === 'kasanConf') return { conf: LS.get('fb_demo_kasan', null) || { corp:{ name:'（デモ）一般社団法人みのり', no:'1234567890123', addr:'福岡市西区○○', rep:'代表理事 みのり 太郎' }, offices:[{ id:'of1', name:'唐泊ストアー', auth:'福岡市', svc:'A', no:'4012345678', addr:'福岡市西区宮浦', tel:'092-000-0000', cap:'20', stores:'唐泊ストアー' }], initials:{} }, tpl:{}, names:['唐泊ストアー'], stores:{ '唐泊ストアー':8 } };
   if (p.app === 'kasanConfSave') { LS.set('fb_demo_kasan', p.conf); return { message:'（デモ）保存しました' }; }
+  if (p.app === 'kasanKinmu' && p.ym === '2026-09') return { ym:p.ym, fy:2025, staff:['みのり 花子', '糸島 一郎', '前原 さくら'].map(n => ({ name:n, key:n.replace(/\s/g, ''), kubun:'スタッフ', days:{}, paid:[], noLog:true })), usersByDay:{}, prev:[4,5,6,7,8,9,10,11,12,1,2,3].map(() => ({ ym:'', use:0, open:0 })), filtered:true };
   if (p.app === 'kasanKinmu') { const staff = ['みのり 花子', '糸島 一郎', '前原 さくら', '唐泊 健'].map((n, i) => { const days = {}, paid = []; for (let d = 1; d <= 31; d++) { const dow = new Date(2026, 9, d).getDay(); if (dow === 0 || dow === 6 || d > 31) continue; if (i === 2 && d % 3 === 0) continue; if (i === 0 && d === 15) { paid.push(d); continue; } days[d] = i === 3 ? 300 : 480; } return { name:n, key:n.replace(/\s/g, ''), kubun:'スタッフ', days, paid }; }); const ub = {}; for (let d = 1; d <= 31; d++) { const dow = new Date(2026, 9, d).getDay(); if (dow && dow < 6) ub[d] = 14; } return { ym:p.ym, fy:2025, staff, usersByDay:ub, prev:[4,5,6,7,8,9,10,11,12,1,2,3].map((m, i) => ({ ym:'', use:280 + i * 5, open:20 })), filtered:true }; }
   if (p.app === 'kasanDoc') return { doc: null };
   if (p.app === 'kasanSougei') { const users = DEMO_NAMES.slice(0, 12).map((n, i) => { const days = {}, ou = [], fuku = []; for (let d = 1; d <= 28; d++) { const dow = new Date(2026, 9, d).getDay(); if (dow === 0 || dow === 6 || (d + i) % 5 === 0) continue; const k = (d + i) % 3 === 0 ? 1 : 2; days[d] = k; ou.push(d); if (k === 2) fuku.push(d); } return { name:n, key:n.replace(/\s/g, ''), kana:'', days, ou, fuku }; }); return { ym:p.ym, office:null, users, filtered:true }; }
@@ -2629,10 +2636,11 @@ function ksKinmu(){
   const prev = (() => { const d = jst(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
   const st = KSN.km = KSN.km || { office: (KSN.conf.offices[0] || {}).id || '', ym: prev, data: null, doc: null };
   $('ksBody').innerHTML = ksNeedConf() + `<div class="box"><h3>勤務形態一覧表（国標準様式４）</h3>
-    <div class="small" style="color:var(--sub);margin-bottom:6px">スタッフの打刻（出勤〜退勤から離席を引いた時間）を日ごとに入れます。職種・勤務形態・資格は一度入れれば次から同じものを使います。</div>
+    <div class="small" style="color:var(--sub);margin-bottom:6px">スタッフの日ごとの勤務時間を入れます。職種・勤務形態・資格・勤務パターンは一度入れれば次から同じものを使います。</div>
     <div class="sg-row"><label class="js-f" style="flex:2"><span>事業所</span><select id="kmO">${ksOfficeOpts(st.office)}</select></label>
     <label class="js-f" style="flex:1"><span>月</span><input type="month" id="kmM" value="${esc(st.ym)}"></label></div>
-    <button class="btn p wide" id="kmLoad">打刻から読み込む</button></div><div id="kmRes"></div>`;
+    <button class="btn p wide" id="kmLoad">スタッフを読み込む</button>
+    <div class="small" style="color:var(--sub);margin-top:6px">打刻のある人は打刻から、ない人（手書きの出勤簿）は「勤務パターン」（曜日ごとの時間＋休みの日）から作ります。</div></div><div id="kmRes"></div>`;
   $('kmO').onchange = e => { st.office = e.target.value; st.data = null; st.doc = null; kmDraw(); };
   $('kmM').onchange = e => { st.ym = e.target.value; st.data = null; kmDraw(); };
   $('kmLoad').onclick = async () => {
@@ -2647,12 +2655,22 @@ function ksKinmu(){
   };
   kmDraw();
 }
+const kmDays = v => String(v || '').split(/[^\d]+/).map(Number).filter(n => n >= 1 && n <= 31);
+const kmUsePat = (s, a) => a.src ? a.src === 'pat' : !Object.keys(s.days || {}).length;
 function kmRows(st){
-  const doc = st.doc, list = (st.data.staff || []).map(s => {
+  const doc = st.doc, [Y, M] = st.ym.split('-').map(Number), last = new Date(Y, M, 0).getDate();
+  const list = (st.data.staff || []).map(s => {
     const a = doc.people[s.key] || {};
-    const days = {}; let total = 0;
-    Object.entries(s.days).forEach(([d, min]) => { const h = Math.round(kmBreak(min, doc.brk) / 6) / 10; days[d] = h; total += h; });
-    return { ...s, a, hours: days, total: Math.round(total * 10) / 10, use: a.use !== false };
+    const days = {}; let total = 0, paid = s.paid || [];
+    if (kmUsePat(s, a)) {
+      const pat = a.pat || {}, off = kmDays(a.off); paid = kmDays(a.paidDays);
+      for (let d = 1; d <= last; d++) {
+        if (off.includes(d) || paid.includes(d)) continue;
+        const h = Number(pat[new Date(Y, M - 1, d).getDay()]) || 0;
+        if (h) { days[d] = h; total += h; }
+      }
+    } else Object.entries(s.days).forEach(([d, min]) => { const h = Math.round(kmBreak(min, doc.brk) / 6) / 10; days[d] = h; total += h; });
+    return { ...s, a, paid, pat: kmUsePat(s, a), hours: days, total: Math.round(total * 10) / 10, use: a.use !== false };
   });
   const order = j => { const i = KM_JOBS.indexOf(j); return i < 0 ? 50 : i; };
   return list.sort((x, y) => (y.use - x.use) || order(x.a.job || 'その他') - order(y.a.job || 'その他') || (x.a.order || 0) - (y.a.order || 0));
@@ -2675,25 +2693,43 @@ function kmDraw(){
       <label class="js-f"><span>常勤が勤務すべき時間（週）</span><input id="kmWeek" inputmode="decimal" value="${esc(doc.week)}"></label>
       <label class="js-f"><span>同（月）</span><input id="kmMonth" inputmode="decimal" value="${esc(doc.month)}"></label>
       <label class="js-f"><span>1日のサービス提供時間（開所日）</span><input id="kmSvc" inputmode="decimal" value="${esc(doc.svc)}" placeholder="例：6"></label></div>
-    <div class="small" style="color:var(--sub)">開所日（利用者の出勤があった日）：${openDays}日　／　前年度（令和${st.data.fy - 2018}年度）の利用者延べ数・開所日数も打刻から入れます。</div>
+    ${openDays ? `<div class="small" style="color:var(--sub)">開所日（利用者の出勤があった日）：${openDays}日</div>` : `<div class="js-f"><span>開所する曜日（サービス提供時間を入れる日）</span><div class="km-dow">${'日月火水木金土'.split('').map((w, i) => `<label class="js-ok"><input type="checkbox" data-kmdow="${i}"${(doc.openDow || [1, 2, 3, 4, 5]).includes(i) ? ' checked' : ''}> ${w}</label>`).join('')}</div>
+      <label class="js-f" style="margin-top:6px"><span>休業日（この月・日付を「,」区切り）</span><input id="kmClosed" value="${esc(doc.closed || '')}" placeholder="例：3,23"></label></div>`}
+    <details class="km-prev"${(st.data.prev || []).some(p => p.use) ? '' : ' open'}><summary><b>前年度（令和${st.data.fy - 2018}年度）の利用者延べ数・開所日数</b><span class="small">人員基準の計算に使います</span></summary>
+      <div class="km-prevg">${kmPrev(st).map((p, i) => `<div><span>${[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3][i]}月</span><input data-kmpv="${i}" data-f="use" inputmode="numeric" value="${esc(p.use || '')}" placeholder="延べ"><input data-kmpv="${i}" data-f="open" inputmode="numeric" value="${esc(p.open || '')}" placeholder="日数"></div>`).join('')}</div>
+      <div class="small" style="color:var(--sub)">打刻があれば自動で入ります。手書きの実績表から入れる場合は、月ごとの延べ人数と開所日数を入れてください。</div></details>
     ${rows.length > 20 ? '<div class="note">様式は20人までです。21人目からは入りません。</div>' : ''}
     <div class="km-list">${rows.map(r => { const a = r.a, avg = Math.round(r.total / weeks * 10) / 10; return `<div class="km-p ${r.use ? '' : 'off'}">
       <div class="km-h"><label class="js-ok" style="flex:0 1 auto"><input type="checkbox" data-kmu="${esc(r.key)}"${r.use ? ' checked' : ''}> <b>${esc(r.name)}</b></label><span class="small">${Object.keys(r.hours).length}日・${r.total}時間（週平均 ${avg}）${r.paid.length ? '・有給' + r.paid.length + '日' : ''}</span></div>
-      ${r.use ? `<div class="km-f">
+      ${r.use ? `<div class="km-src"><div class="sg-seg" style="width:max-content"><button data-kmsrc="${esc(r.key)}" data-v="log" aria-pressed="${!r.pat}">打刻</button><button data-kmsrc="${esc(r.key)}" data-v="pat" aria-pressed="${r.pat}">勤務パターン</button></div>${!r.pat && !Object.keys(r.days || {}).length ? '<span class="small" style="color:var(--warn)">この月の打刻がありません</span>' : ''}</div>
+      ${r.pat ? `<div class="km-pat">${'日月火水木金土'.split('').map((w, i) => `<label><span>${w}</span><input data-kmpat="${esc(r.key)}" data-dow="${i}" inputmode="decimal" value="${esc((r.a.pat || {})[i] ?? '')}" placeholder="0"></label>`).join('')}</div>
+        <div class="km-f"><label class="js-f"><span>休みの日（この月・日付を「,」区切り）</span><input data-kmk="${esc(r.key)}" data-f="off" value="${esc(r.a.off || '')}" placeholder="例：3,23"></label>
+        <label class="js-f"><span>有給の日（「休」と入れる）</span><input data-kmk="${esc(r.key)}" data-f="paidDays" value="${esc(r.a.paidDays || '')}" placeholder="例：15"></label></div>` : ''}
+      <div class="km-f">
         <label class="js-f"><span>職種</span><input data-kmk="${esc(r.key)}" data-f="job" list="kmJobs" value="${esc(a.job || '')}" placeholder="選ぶか入力"></label>
         <label class="js-f"><span>勤務形態</span><select data-kmk="${esc(r.key)}" data-f="form"><option value="">選んでください</option>${Object.entries(KM_FORMS).map(([k, l]) => `<option value="${k}"${a.form === k ? ' selected' : ''}>${k}：${l}</option>`).join('')}</select></label>
         <label class="js-f"><span>資格</span><input data-kmk="${esc(r.key)}" data-f="qual" value="${esc(a.qual || '')}" placeholder="例：社会福祉士"></label>
         <label class="js-f"><span>兼務状況・特記事項</span><input data-kmk="${esc(r.key)}" data-f="kenmu" value="${esc(a.kenmu || '')}" placeholder="例：管理者と兼務"></label></div>` : ''}</div>`; }).join('') || '<div class="empty">この月のスタッフの打刻はありません</div>'}</div>
     <datalist id="kmJobs">${KM_JOBS.map(j => `<option value="${j}">`).join('')}</datalist>
-    <div class="small" style="color:var(--sub);margin-top:6px">並びは職種の順（管理者→サービス管理責任者→職業指導員→生活支援員…）。有給の日は「休」と入れます。退勤の打刻がない日は0時間なので、Excelで直してください。</div>
+    <div class="small" style="color:var(--sub);margin-top:6px">並びは職種の順（管理者→サービス管理責任者→職業指導員→生活支援員…）。有給の日は「休」と入れます。勤務パターンは「予定」として、実績と違う日は Excel で直してください。</div>
     <div class="bar" style="position:static;padding:0;margin-top:10px;gap:8px"><button class="btn s" id="kmSave">設定を保存</button><button class="btn p" id="kmMake" style="flex:1"${used.length ? '' : ' disabled'}>📄 記入済みExcelを作る</button></div><div id="kmOut" class="small" style="margin-top:8px"></div></div>`;
   const keep = () => { try { LS.set('fb_kasan_' + st.dk, doc); } catch (e) {} };
   const re = () => { keep(); if (KSN.drawing) return; KSN.drawing = true; const y = window.scrollY; try { kmDraw(); } finally { KSN.drawing = false; } window.scrollTo(0, y); };
   [['kmPlan', 'plan'], ['kmSpan', 'span'], ['kmSoto', 'soto'], ['kmBrk', 'brk'], ['kmWeek', 'week'], ['kmMonth', 'month'], ['kmSvc', 'svc']].forEach(([id, k]) => $(id).onchange = e => { doc[k] = e.target.value; re(); });
+  box.querySelectorAll('[data-kmsrc]').forEach(b => b.onclick = () => { (doc.people[b.dataset.kmsrc] = doc.people[b.dataset.kmsrc] || {}).src = b.dataset.v; re(); });
+  box.querySelectorAll('[data-kmpat]').forEach(i => i.onchange = () => { const a = doc.people[i.dataset.kmpat] = doc.people[i.dataset.kmpat] || {}; a.pat = a.pat || {}; a.pat[i.dataset.dow] = i.value.replace(/[^\d.]/g, ''); re(); });
+  box.querySelectorAll('[data-kmdow]').forEach(i => i.onchange = () => { const set = new Set(doc.openDow || [1, 2, 3, 4, 5]); i.checked ? set.add(Number(i.dataset.kmdow)) : set.delete(Number(i.dataset.kmdow)); doc.openDow = [...set].sort(); keep(); });
+  if ($('kmClosed')) $('kmClosed').onchange = e => { doc.closed = e.target.value; keep(); };
+  box.querySelectorAll('[data-kmpv]').forEach(i => i.onchange = () => { const pv = kmPrev(st); pv[Number(i.dataset.kmpv)][i.dataset.f] = Number(i.value.replace(/\D/g, '')) || 0; doc.prev = doc.prev || {}; doc.prev[st.data.fy] = pv; keep(); });
   box.querySelectorAll('[data-kmu]').forEach(i => i.onchange = () => { (doc.people[i.dataset.kmu] = doc.people[i.dataset.kmu] || {}).use = i.checked; re(); });
-  box.querySelectorAll('[data-kmk]').forEach(i => i.onchange = () => { (doc.people[i.dataset.kmk] = doc.people[i.dataset.kmk] || {})[i.dataset.f] = i.value.trim(); if (i.dataset.f === 'job') re(); else keep(); });
+  box.querySelectorAll('[data-kmk]').forEach(i => i.onchange = () => { (doc.people[i.dataset.kmk] = doc.people[i.dataset.kmk] || {})[i.dataset.f] = i.value.trim(); if (/job|off|paidDays/.test(i.dataset.f)) re(); else keep(); });
   $('kmSave').onclick = () => runAction(() => isDemo() ? Promise.resolve({ message:'（デモ）保存しました' }) : apiPost({ app:'kasanDocSave', dk: st.dk, doc }), () => {});
   $('kmMake').onclick = kmMake;
+}
+/* 前年度の月ごとの値：手で入れたもの → 打刻 の順 */
+function kmPrev(st){
+  const saved = st.doc.prev && st.doc.prev[st.data.fy];
+  return (st.data.prev || []).map((p, i) => saved && saved[i] && (saved[i].use || saved[i].open) ? { ...saved[i] } : { use: p.use, open: p.open });
 }
 async function kmMake(){
   const st = KSN.km, doc = st.doc, out = $('kmOut');
@@ -2724,9 +2760,11 @@ async function kmMake(){
       }
     }
     const svc = Number(doc.svc) || '';
-    for (let d = 1; d <= 31; d++) set(xlColName(5 + d) + '33', d <= days && svc && st.data.usersByDay[d] ? svc : '');
+    const hasLog = Object.keys(st.data.usersByDay || {}).length, dows = doc.openDow || [1, 2, 3, 4, 5], closed = kmDays(doc.closed);
+    const isOpen = d => hasLog ? !!st.data.usersByDay[d] : dows.includes(new Date(Y, M - 1, d).getDay()) && !closed.includes(d);
+    for (let d = 1; d <= 31; d++) set(xlColName(5 + d) + '33', d <= days && svc && isOpen(d) ? svc : '');
     const pcols = ['D', 'E', 'F', 'I', 'L', 'O', 'R', 'U', 'X', 'AA', 'AD', 'AG'];
-    (st.data.prev || []).forEach((p, i) => { set(pcols[i] + '40', p.use || ''); set(pcols[i] + '41', p.open || ''); });
+    kmPrev(st).forEach((p, i) => { set(pcols[i] + '40', p.use || ''); set(pcols[i] + '41', p.open || ''); });
     const blob = await xlBuild(zip, map, order, { [S]: w }, S);
     await xlDownloadAndSave(blob, `勤務形態一覧表_${office.name || ''}_${ksYmLabel(st.ym)}.xlsx`, '勤務形態一覧表/' + (office.name || '事業所'), out);
     out.insertAdjacentHTML('beforeend', '<br>Excel では「国標準様式４」が開きます。合計・週平均・常勤換算・必要な配置数は様式の計算式で出ます。');
