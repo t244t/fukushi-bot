@@ -2407,10 +2407,10 @@ function ksSougei(){
   const prev = (() => { const d = jst(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
   const st = KSN.sg = KSN.sg || { office: (KSN.conf.offices[0] || {}).id || '', ym: prev, data: null, skip: {} };
   $('ksBody').innerHTML = ksNeedConf() + `<div class="box"><h3>送迎実績状況表（市別紙23）</h3>
-    <div class="small" style="color:var(--sub);margin-bottom:6px">打刻の「送迎：往復・往・復」から、利用者ごと・日ごとの送迎回数（片道1・往復2）と、迎え・送りの実施日を入れます。氏名はイニシャルで書きます。</div>
+    <div class="small" style="color:var(--sub);margin-bottom:6px">「実績記録のチェック」で読み取った手書きの実績記録の送迎欄（往・復の〇）と、打刻の「送迎：往復・往・復」から、利用者ごと・日ごとの送迎回数（片道1・往復2）と迎え・送りの実施日を入れます。同じ人・同じ月に両方あれば用紙の方を使います。氏名はイニシャルで書きます。</div>
     <div class="sg-row"><label class="js-f" style="flex:2"><span>事業所</span><select id="ksSgO">${ksOfficeOpts(st.office)}</select></label>
     <label class="js-f" style="flex:1"><span>月</span><input type="month" id="ksSgM" value="${esc(st.ym)}"></label></div>
-    <button class="btn p wide" id="ksSgLoad">打刻から読み込む</button></div><div id="ksSgRes"></div>`;
+    <button class="btn p wide" id="ksSgLoad">読み込む</button></div><div id="ksSgRes"></div>`;
   $('ksSgO').onchange = e => { st.office = e.target.value; st.data = null; ksSgDraw(); };
   $('ksSgM').onchange = e => { st.ym = e.target.value; st.data = null; ksSgDraw(); };
   $('ksSgLoad').onclick = async () => {
@@ -2439,6 +2439,8 @@ function ksSgDraw(){
   const c = ksSgCalc(st), all = st.data.users || [];
   const ini = u => KSN.conf.initials[u.key] != null ? KSN.conf.initials[u.key] : ksInitial(u.kana);
   box.innerHTML = `<div class="box"><h3>${esc(ksYmLabel(st.ym))}　${all.length}人</h3>
+    ${st.data.paper ? `<div class="small" style="color:var(--sub)">うち ${st.data.paper}人は手書きの実績記録（読み取り結果）から</div>` : ''}
+    ${!all.length ? '<div class="note">この月の送迎の記録がありません。手書きの実績記録は、「実績記録のチェック」で読み取ってチェックすると、ここで使えるようになります。</div>' : ''}
     ${!st.data.filtered ? '<div class="small" style="color:var(--warn)">この事業所の「利用者の店舗名」が未設定のため、送迎のある利用者を全員出しています（設定タブ）。</div>' : ''}
     ${all.length > 25 ? '<div class="note">様式は25人までです。26人目からは入りません（外すか、2枚に分けてください）。</div>' : ''}
     <div class="counts" style="grid-template-columns:repeat(3,1fr);margin:8px 0"><div style="background:var(--g2)"><b>${c.nobe}</b><span>延べ人数（回）</span></div><div style="background:var(--g2)"><b>${c.kai}</b><span>送迎実施の回数</span></div><div style="background:var(--g2)"><b>${c.sdays}</b><span>送迎した日数</span></div></div>
@@ -2693,11 +2695,11 @@ function kmDraw(){
       <label class="js-f"><span>常勤が勤務すべき時間（週）</span><input id="kmWeek" inputmode="decimal" value="${esc(doc.week)}"></label>
       <label class="js-f"><span>同（月）</span><input id="kmMonth" inputmode="decimal" value="${esc(doc.month)}"></label>
       <label class="js-f"><span>1日のサービス提供時間（開所日）</span><input id="kmSvc" inputmode="decimal" value="${esc(doc.svc)}" placeholder="例：6"></label></div>
-    ${openDays ? `<div class="small" style="color:var(--sub)">開所日（利用者の出勤があった日）：${openDays}日</div>` : `<div class="js-f"><span>開所する曜日（サービス提供時間を入れる日）</span><div class="km-dow">${'日月火水木金土'.split('').map((w, i) => `<label class="js-ok"><input type="checkbox" data-kmdow="${i}"${(doc.openDow || [1, 2, 3, 4, 5]).includes(i) ? ' checked' : ''}> ${w}</label>`).join('')}</div>
+    ${openDays ? `<div class="small" style="color:var(--sub)">開所日（利用者の利用があった日・打刻と実績記録の読み取りから）：${openDays}日</div>` : `<div class="js-f"><span>開所する曜日（サービス提供時間を入れる日）</span><div class="km-dow">${'日月火水木金土'.split('').map((w, i) => `<label class="js-ok"><input type="checkbox" data-kmdow="${i}"${(doc.openDow || [1, 2, 3, 4, 5]).includes(i) ? ' checked' : ''}> ${w}</label>`).join('')}</div>
       <label class="js-f" style="margin-top:6px"><span>休業日（この月・日付を「,」区切り）</span><input id="kmClosed" value="${esc(doc.closed || '')}" placeholder="例：3,23"></label></div>`}
     <details class="km-prev"${(st.data.prev || []).some(p => p.use) ? '' : ' open'}><summary><b>前年度（令和${st.data.fy - 2018}年度）の利用者延べ数・開所日数</b><span class="small">人員基準の計算に使います</span></summary>
       <div class="km-prevg">${kmPrev(st).map((p, i) => `<div><span>${[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3][i]}月</span><input data-kmpv="${i}" data-f="use" inputmode="numeric" value="${esc(p.use || '')}" placeholder="延べ"><input data-kmpv="${i}" data-f="open" inputmode="numeric" value="${esc(p.open || '')}" placeholder="日数"></div>`).join('')}</div>
-      <div class="small" style="color:var(--sub)">打刻があれば自動で入ります。手書きの実績表から入れる場合は、月ごとの延べ人数と開所日数を入れてください。</div></details>
+      <div class="small" style="color:var(--sub)">打刻と、「実績記録のチェック」で読み取った手書きの実績記録から自動で入ります。読み取っていない月は、月ごとの延べ人数と開所日数を手で入れてください。</div></details>
     ${rows.length > 20 ? '<div class="note">様式は20人までです。21人目からは入りません。</div>' : ''}
     <div class="km-list">${rows.map(r => { const a = r.a, avg = Math.round(r.total / weeks * 10) / 10; return `<div class="km-p ${r.use ? '' : 'off'}">
       <div class="km-h"><label class="js-ok" style="flex:0 1 auto"><input type="checkbox" data-kmu="${esc(r.key)}"${r.use ? ' checked' : ''}> <b>${esc(r.name)}</b></label><span class="small">${Object.keys(r.hours).length}日・${r.total}時間（週平均 ${avg}）${r.paid.length ? '・有給' + r.paid.length + '日' : ''}</span></div>
