@@ -498,6 +498,9 @@ body.pc .sg-off{grid-template-columns:repeat(4,1fr)}
 .ks-ul{border-top:1px solid var(--rule)}.ks-u{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--rule);padding:4px 0}.ks-u.off{opacity:.55}
 .ks-ini{width:96px;min-height:40px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 8px;font-size:15px;background:var(--paper);color:var(--ink);text-align:center}
 body.pc .ks-off{grid-template-columns:repeat(4,1fr)}body.pc .ks-ul{display:grid;grid-template-columns:1fr 1fr;column-gap:24px}
+.ks-iko{border:1px solid var(--rule);border-radius:var(--r-m);padding:8px 10px;margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.ks-iko-h{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center}
+.ks-iko input,#ksIkoCap,#ksIkoN,#ksIkoK{min-height:42px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 8px;font-size:15px;background:var(--paper);color:var(--ink);width:100%}
+body.pc .ks-iko{grid-template-columns:repeat(3,1fr)}
 </style>
 </head>
 <body>
@@ -2469,11 +2472,150 @@ async function ksSgMake(){
   finally { $('busy').classList.remove('on'); }
 }
 
+/* ===== シート全体を読む（見出しの文字から書く欄を探すため） ===== */
+async function xlSheetAll(zip, map, sheet){
+  const path = map[xlFind(map, sheet)];
+  if (!path) throw new Error('「' + sheet + '」のシートがありません');
+  const ssx = zip.file('xl/sharedStrings.xml') ? await zip.file('xl/sharedStrings.xml').async('string') : '';
+  const ss = [...ssx.matchAll(/<si>([\s\S]*?)<\/si>/g)].map(m => sgXmlUnesc([...m[1].replace(/<rPh\b[\s\S]*?<\/rPh>/g, '').matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x => x[1]).join('')));
+  const x = await zip.file(path).async('string'), cells = {};
+  for (const m of x.matchAll(/<c r="([A-Z]+\d+)"(\s[^>]*?)?(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+    if (!m[3]) continue;
+    const t = ((m[2] || '').match(/\st="([^"]+)"/) || [])[1], v = (m[3].match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+    let val = '';
+    if (t === 's') val = ss[Number(v)] || '';
+    else if (t === 'inlineStr') val = sgXmlUnesc([...m[3].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(y => y[1]).join(''));
+    else if (v != null) val = t === 'str' || t === 'e' ? sgXmlUnesc(v) : (isNaN(Number(v)) ? sgXmlUnesc(v) : Number(v));
+    if (val !== '') cells[m[1]] = val;
+  }
+  const merges = [...x.matchAll(/<mergeCell ref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/g)].map(m => ({ c1: xlCol(m[1] + '1'), r1: +m[2], c2: xlCol(m[3] + '1'), r2: +m[4] }));
+  const rc = ref => ({ c: xlCol(ref), r: Number(ref.match(/\d+$/)[0]) });
+  const mergeOf = ref => { const { c, r } = rc(ref); return merges.find(g => c >= g.c1 && c <= g.c2 && r >= g.r1 && r <= g.r2); };
+  const find = (test, rows) => Object.keys(cells).filter(k => { const r = rc(k).r; return (!rows || (r >= rows[0] && r <= rows[1])) && test(xlNorm(cells[k]), cells[k]); })
+    .sort((a, b) => rc(a).r - rc(b).r || rc(a).c - rc(b).c);
+  /* 見出しのセルの右どなり（結合していれば結合の右端の次）を返す */
+  const rightOf = ref => { const g = mergeOf(ref), { c, r } = rc(ref); return xlColName((g ? g.c2 : c) + 1) + (g ? g.r1 : r); };
+  return { cells, merges, find, rightOf, rc };
+}
+/* B型は 4・5月分 と 6月以降 の2枚。適用開始日で選ぶ */
+function ksIkoSheetName(names, svcKey, start){
+  const n = names.map(x => [x, xlNorm(x)]);
+  const hit = n.filter(([, k]) => new RegExp('51-?' + (svcKey === 'B' ? '3' : '2')).test(k)).map(([x]) => x);
+  if (!hit.length) return '';
+  if (hit.length === 1) return hit[0];
+  const m = Number(String(start).slice(5, 7));
+  return hit.find(x => (m >= 4 && m <= 5) === /4月|４月|5月|５月/.test(xlNorm(x))) || hit[0];
+}
+const ksAddMonths = (ymdStr, m, minusDay) => { const d = batchUtc(ymdStr); if (!d) return ''; const day = d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + m); const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); d.setUTCDate(Math.min(day, last)); if (minusDay) d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
+const ksFy = ymdStr => { const [y, m] = String(ymdStr).split('-').map(Number); return m >= 4 ? y : y - 1; };
+const ksWa = ymdStr => { if (!ymdStr) return ''; const [y, m, d] = String(ymdStr).split('-').map(Number); return `R${y - 2018}.${m}.${d}`; };
+const KS_IKO_COLS = [['name', '氏名'], ['start', '就職日'], ['comp', '就職先'], ['place', '勤務地'], ['m6', '6月に達した日'], ['status', '継続状況'], ['city', '支給決定自治体'], ['years', '算定年度'], ['past', '算定実績']];
+function ksIkoCount(iko, start){
+  const fy = ksFy(start) - 1, from = `${fy}-04-01`, to = `${fy + 1}-03-31`;
+  return (iko.people || []).filter(p => p.name && p.m6 && p.m6 >= from && p.m6 <= to).length;
+}
+/* 基本報酬の算定区分の選択肢を、登録した様式から読む */
+async function ksIkoOptions(office, start){
+  const key = ksTplKey(office), svcKey = office.svc === 'B' ? 'B' : 'A';
+  const { zip, map, order } = await xlOpen(await ksTplBuf(key));
+  const sheet = ksIkoSheetName(order, svcKey, start);
+  if (!sheet) throw new Error('この様式には就労移行支援体制加算（別紙51）のシートがありません');
+  const S = await xlSheetAll(zip, map, sheet);
+  const top = S.find(n => n.includes('基本報酬の算定区分'))[0], head = S.find(n => n === '氏名')[0];
+  const r0 = top ? S.rc(top).r : 14, r1 = head ? S.rc(head).r - 1 : 45, opts = [];
+  let group = '';
+  for (let r = r0; r <= r1; r++) {
+    const c = S.cells['C' + r], f = S.cells['F' + r], g = S.cells['G' + r];
+    if (c && r > r0) group = String(c).replace(/\s+/g, ' ');
+    if (f !== undefined && g) opts.push({ ref: 'F' + r, label: `${f}　${String(g).replace(/\s+/g, ' ')}`, group });
+  }
+  return { sheet, opts };
+}
+function ksIkoBody(t, office){
+  const iko = t.iko, cnt = ksIkoCount(iko, t.start), fy = ksFy(t.start) - 1;
+  const opt = KSN.ikoOpts && KSN.ikoOpts.key === ksTplKey(office) + '|' + office.svc + '|' + t.start.slice(5, 7) ? KSN.ikoOpts : null;
+  const row = (p, i) => `<div class="ks-iko">
+    <div class="ks-iko-h"><b>${i + 1}</b><button class="link" data-ikodel="${i}" style="color:var(--err)">外す</button></div>
+    ${KS_IKO_COLS.map(([k, l]) => `<label class="js-f"><span>${l}${k === 'm6' ? '（空なら就職日から計算）' : ''}</span><input data-iko="${i}" data-f="${k}" ${/start|m6/.test(k) ? 'type="date"' : ''} value="${esc(p[k] || '')}" placeholder="${k === 'status' ? '継続中／R8.3.31離職 など' : k === 'years' ? '例：なし／R6' : ''}"></label>`).join('')}</div>`;
+  return `<div class="small" style="color:var(--sub);margin-bottom:6px">前年度（令和${fy - 2018}年度：${fy}年4月〜${fy + 1}年3月）に、就労継続が6か月に達した人（就労定着者）を入れます。最大20人。</div>
+    <div class="fgrid"><label class="js-f"><span>前年度の9月30日時点の定員（人）</span><input id="ksIkoCap" inputmode="numeric" value="${esc(iko.cap || office.cap || '')}"></label>
+      <label class="js-f"><span>前年度の就労定着者の数（人）</span><input id="ksIkoN" inputmode="numeric" value="${esc(iko.n != null && iko.n !== '' ? iko.n : '')}" placeholder="一覧から ${cnt}人"></label></div>
+    <div class="js-f"><span>基本報酬の算定区分</span>${opt ? `<select id="ksIkoK"><option value="">選んでください</option>${opt.opts.map(o => `<option value="${o.ref}"${iko.kref === o.ref ? ' selected' : ''}>${esc((o.group ? o.group.slice(0, 18) + '｜' : '') + o.label)}</option>`).join('')}</select><div class="small" style="color:var(--sub)">様式「${esc(opt.sheet)}」の選択肢です。</div>` : `<button class="btn s" id="ksIkoLoad" style="min-height:40px">様式から選択肢を読む</button>`}</div>
+    <div class="sec-title">就労定着者の一覧</div>
+    ${(iko.people || []).map(row).join('') || '<div class="small" style="color:var(--sub)">まだ入っていません</div>'}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn s" id="ksIkoAdd" style="min-height:40px">＋ 人を足す</button><button class="btn s" id="ksIkoSave" style="min-height:40px">一覧を保存</button></div>`;
+}
+function ksIkoBind(t, office, re){
+  const iko = t.iko, dk = 'iko_' + (office.id || 'x').replace(/[^A-Za-z0-9_-]/g, '') + '_' + (ksFy(t.start) - 1);
+  const B = $('ksBody');
+  B.querySelectorAll('[data-iko]').forEach(i => i.onchange = () => {
+    const p = iko.people[Number(i.dataset.iko)]; p[i.dataset.f] = i.value.trim();
+    if (i.dataset.f === 'start' && p.start && !p.m6Manual) p.m6 = ksAddMonths(p.start, 6, true);
+    if (i.dataset.f === 'm6') p.m6Manual = !!p.m6;
+    LS.set('fb_kasan_' + dk, iko); re();
+  });
+  B.querySelectorAll('[data-ikodel]').forEach(b => b.onclick = () => { iko.people.splice(Number(b.dataset.ikodel), 1); LS.set('fb_kasan_' + dk, iko); re(); });
+  $('ksIkoAdd').onclick = () => { if (iko.people.length >= 20) { toast('様式は20人までです'); return; } iko.people.push({ name:'', start:'', comp:'', place:'', m6:'', status:'継続中', city:'', years:'', past:'' }); re(); };
+  $('ksIkoCap').onchange = e => { iko.cap = e.target.value.replace(/\D/g, ''); LS.set('fb_kasan_' + dk, iko); };
+  $('ksIkoN').onchange = e => { iko.n = e.target.value.replace(/\D/g, ''); LS.set('fb_kasan_' + dk, iko); };
+  if ($('ksIkoK')) $('ksIkoK').onchange = e => { iko.kref = e.target.value; LS.set('fb_kasan_' + dk, iko); };
+  if ($('ksIkoLoad')) $('ksIkoLoad').onclick = async () => {
+    $('busy').classList.add('on');
+    try { const o = await ksIkoOptions(office, t.start); KSN.ikoOpts = { key: ksTplKey(office) + '|' + office.svc + '|' + t.start.slice(5, 7), ...o }; re(); }
+    catch (e) { msgSheet('読めませんでした', e.message); }
+    finally { $('busy').classList.remove('on'); }
+  };
+  $('ksIkoSave').onclick = () => runAction(() => isDemo() ? Promise.resolve({ message:'（デモ）保存しました' }) : apiPost({ app:'kasanDocSave', dk, doc: iko }), () => {});
+  // 事業所・年度が変わったら、保存してある一覧を読む
+  if (iko._dk !== dk) {
+    iko._dk = dk;
+    const local = LS.get('fb_kasan_' + dk, null);
+    if (local) { Object.assign(iko, local, { _dk: dk }); re(); }
+    else if (!isDemo()) api({ app:'kasanDoc', dk }).then(j => { if (j.doc && t.iko._dk === dk) { Object.assign(t.iko, j.doc, { _dk: dk }); re(); } }).catch(() => {});
+    else { iko.people = []; iko.n = ''; iko.kref = ''; }
+  }
+}
+/* 別紙51 に書く */
+async function ksIkoWrite(zip, map, order, set, t, office, D){
+  const iko = t.iko, svcKey = office.svc === 'B' ? 'B' : 'A';
+  const sheet = ksIkoSheetName(order, svcKey, t.start);
+  if (!sheet) throw new Error('この様式には就労移行支援体制加算（別紙51）のシートがありません');
+  const S = await xlSheetAll(zip, map, sheet), w = (ref, v) => set(sheet, ref, v);
+  const dateCell = S.find((n, raw) => /年\s*月\s*日/.test(String(raw).replace(/[　\s]+/g, ' ')) && !/[0-9]/.test(n), [1, 3])[0];
+  if (dateCell) w(dateCell, D.text);
+  const nameL = S.find(n => n === '事業所の名称', [1, 8])[0]; if (nameL) w(S.rightOf(nameL), office.name || '');
+  const idouL = S.find(n => n === '異動区分', [1, 8])[0];
+  if (idouL) { const ref = S.rightOf(idouL); w(ref, ksMarkNum(S.cells[ref] || '　１　新規　　　　２　変更　　　　　３　終了', ksIdouNo(t.idou))); }
+  const n = iko.n !== '' && iko.n != null ? Number(iko.n) : ksIkoCount(iko, t.start);
+  const unit = test => { const l = S.find(test, [5, 14])[0]; if (!l) return ''; const { r } = S.rc(l); return Object.keys(S.cells).filter(k => S.rc(k).r === r && xlNorm(S.cells[k]) === '人')[0] || ''; };
+  const nRef = unit(x => x.includes('就労定着者の数')), cRef = unit(x => x.includes('定員数'));
+  if (nRef) w(nRef, n + '人');
+  if (cRef && (iko.cap || office.cap)) w(cRef, (iko.cap || office.cap) + '人');
+  if (iko.kref && S.cells[iko.kref] !== undefined) w(iko.kref, '〇' + S.cells[iko.kref]);
+  const head = S.find(x => x === '氏名')[0];
+  if (!head) throw new Error(sheet + 'に一覧の見出し（氏名）が見つかりません');
+  const hr = S.rc(head).r, cols = {};
+  Object.keys(S.cells).filter(k => S.rc(k).r === hr).forEach(k => {
+    const h = xlNorm(S.cells[k]);
+    const hit = KS_IKO_COLS.find(([, l]) => h.includes(xlNorm(l)) || (l === '就職先' && h.includes('就職先事業所')));
+    if (hit && !cols[hit[0]]) cols[hit[0]] = k.match(/^[A-Z]+/)[0];
+  });
+  const people = (iko.people || []).filter(p => p.name);
+  for (let i = 0; i < 20; i++) {
+    const p = people[i], r = hr + 1 + i;
+    if (typeof S.cells['A' + r] !== 'number') break;
+    KS_IKO_COLS.forEach(([k]) => { if (!cols[k]) return; let v = p ? p[k] || '' : ''; if (p && (k === 'start' || k === 'm6')) v = ksWa(k === 'm6' ? (p.m6 || ksAddMonths(p.start, 6, true)) : p.start); w(cols[k] + r, v); });
+  }
+  if (people.length > 20) toast('21人目からは様式に入りません', 3600);
+  return { sheet, n };
+}
+
 /* ===== 加算の届出書（送迎加算・福祉専門職員配置等加算）=====
    市：様式第６号＋国別紙１＋国別紙48／国別紙３-１　　県：届出書＋別紙１-１＋別紙48／別紙３-１ */
 const KS_KASAN = {
   sougei: { label:'送迎加算', taisei:'送迎体制', sheet:{ city:'国別紙48', pref:'別紙48' } },
-  senmon: { label:'福祉専門職員配置等加算', taisei:'福祉専門職員配置等', sheet:{ city:'国別紙３-１', pref:'別紙３-１' } }
+  senmon: { label:'福祉専門職員配置等加算', taisei:'福祉専門職員配置等', sheet:{ city:'国別紙３-１', pref:'別紙３-１' } },
+  iko:    { label:'就労移行支援体制加算', taisei:'就労移行支援体制', sheet:null }
 };
 /* 「１　新規　　２　変更」「①　新規」「１．なし　３．Ⅰ」などの番号 n の選択肢を【】で囲む */
 function ksMarkNum(text, n){
@@ -2490,16 +2632,19 @@ const ksIdouNo = idou => ({ 新規:'１', 変更:'２', 終了:'３' })[idou];
 const ksPct = (a, b) => Number(b) > 0 ? Math.round(Number(a) / Number(b) * 1000) / 10 : null;
 function ksTodoke(){
   const t = KSN.td = KSN.td || { office: (KSN.conf.offices[0] || {}).id || '', kasan:'sougei', date: ymd(), start:'', idou:'変更', before:'', after:'',
-    sg:{ kubun:'Ⅰ', jo1:true, jo2:true }, sm:{ kubun:'', a1:'', a2:'', b1:'', b2:'', c1:'', c2:'' } };
+    sg:{ kubun:'Ⅰ', jo1:true, jo2:true }, sm:{ kubun:'', a1:'', a2:'', b1:'', b2:'', c1:'', c2:'' }, iko:{ people:[], cap:'', n:'', kref:'' } };
+  t.iko = t.iko || { people:[], cap:'', n:'', kref:'' };
   const office = KSN.conf.offices.find(o => o.id === t.office) || {};
   if (!t.start) { const d = jst(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + 1); t.start = d.toISOString().slice(0, 10); }
   const K = KS_KASAN[t.kasan], sm = t.sm;
   const p1 = ksPct(sm.a2, sm.a1), p2 = ksPct(sm.b2, sm.b1), p3 = ksPct(sm.c2, sm.c1);
   const smSug = p1 != null && p1 >= 35 ? 'Ⅰ' : p1 != null && p1 >= 25 ? 'Ⅱ' : (p2 != null && p2 >= 75) || (p3 != null && p3 >= 30) ? 'Ⅲ' : '';
   if (t.kasan === 'senmon' && !sm.kubun && smSug) sm.kubun = smSug;
-  const kubun = t.kasan === 'sougei' ? t.sg.kubun : sm.kubun;
+  const kubun = t.kasan === 'sougei' ? t.sg.kubun : t.kasan === 'iko' ? 'あり' : sm.kubun;
   const S = ksReiwa(t.start).text;
-  const at = { before: t.idou === '新規' ? `${K.label} なし` : t.idou === '終了' ? `${K.label}（${kubun}）` : `${K.label}（　）`,
+  const at = t.kasan === 'iko'
+    ? { before: t.idou === '新規' ? `${K.label} なし` : `${K.label} あり`, after: t.idou === '終了' ? `${K.label} なし（${S}から）` : `${K.label} あり　就労定着者数 ${t.iko.n !== '' && t.iko.n != null ? t.iko.n : ksIkoCount(t.iko, t.start)}人（${S}から）` }
+    : { before: t.idou === '新規' ? `${K.label} なし` : t.idou === '終了' ? `${K.label}（${kubun}）` : `${K.label}（　）`,
     after: t.idou === '終了' ? `${K.label} なし（${S}から）` : `${K.label}（${kubun || '　'}）（${S}から）` };
   const seg = (attr, cur, list, fmt) => `<div class="sg-seg" style="width:max-content">${list.map(x => `<button data-${attr}="${x}" aria-pressed="${cur === x}">${fmt ? fmt(x) : x}</button>`).join('')}</div>`;
   const num = (k, l) => `<label class="js-f"><span>${l}</span><input data-sm="${k}" inputmode="decimal" value="${esc(sm[k])}"></label>`;
@@ -2516,12 +2661,13 @@ function ksTodoke(){
     <div class="sec-title">常勤職員の状況（加算Ⅲ）</div><div class="fgrid">${num('b1', '① 生活支援員等の総数（常勤換算）')}${num('b2', '② ①のうち常勤の者')}</div>${judge(p2, 75, '常勤の割合')}
     <div class="sec-title">勤続年数の状況（加算Ⅲ）</div><div class="fgrid">${num('c1', '① 生活支援員等の総数（常勤）')}${num('c2', '② ①のうち勤続3年以上')}</div>${judge(p3, 30, '勤続3年以上の割合')}
     <div class="js-f"><span>届け出る区分${smSug ? `（目安：${smSug}）` : ''}</span>${seg('smk', sm.kubun, ['Ⅰ', 'Ⅱ', 'Ⅲ'], x => `（${x}）`)}</div>`;
-  const needs = t.kasan === 'sougei'
+  if (t.kasan === 'iko' && t.idou !== '終了') body = ksIkoBody(t, office);
+  const needs = t.kasan === 'iko' ? ['表紙・体制等状況一覧表 … このファイルに入ります', '就労移行支援体制加算に関する届出書（別紙51-２／51-３）… このファイルに入ります', '就労定着者の就労継続を確かめられるもの（在籍証明・雇用契約書など）'] : t.kasan === 'sougei'
     ? ['表紙（市：様式第６号／県：届出書）・体制等状況一覧表 … このファイルに入ります', '送迎加算に関する届出書（別紙48）… このファイルに入ります', '送迎実績状況表（市別紙23）… 送迎体制を変えるとき（新規のときは不要）']
     : ['表紙・体制等状況一覧表 … このファイルに入ります', '福祉専門職員配置等加算に関する届出書（別紙３-１）… このファイルに入ります', '勤務形態一覧表（国標準様式４）', '資格証の写し（社会福祉士・介護福祉士・精神保健福祉士・公認心理師）', '勤続年数を確かめられるもの（雇用契約書など）'];
   $('ksBody').innerHTML = ksNeedConf() + `<div class="box"><h3>加算の届出書をつくる</h3>
     <div class="sg-row"><label class="js-f" style="flex:2"><span>事業所</span><select id="ksTdO">${ksOfficeOpts(t.office)}</select></label>
-      <label class="js-f" style="flex:2"><span>加算</span><select id="ksTdK">${Object.entries(KS_KASAN).map(([k, v]) => `<option value="${k}"${k === t.kasan ? ' selected' : ''}>${v.label}</option>`).join('')}<option value="" disabled>就労移行支援体制加算（準備中）</option></select></label></div>
+      <label class="js-f" style="flex:2"><span>加算</span><select id="ksTdK">${Object.entries(KS_KASAN).map(([k, v]) => `<option value="${k}"${k === t.kasan ? ' selected' : ''}>${v.label}</option>`).join('')}</select></label></div>
     <div class="small" style="color:var(--sub);margin-bottom:6px">使う様式：${office.auth === '福岡県' ? '福岡県（届出書・別紙１-１）' : '福岡市（様式第６号・国別紙１）'}　${KSN.tpl[ksTplKey(office)] ? '' : '<span style="color:var(--warn)">— ひな形が未登録です（設定タブ）</span>'}</div>
     <div class="fgrid">
       <label class="js-f"><span>届出日</span><input type="date" id="ksTdD" value="${esc(t.date)}"></label>
@@ -2548,6 +2694,7 @@ function ksTodoke(){
   if ($('ksJo2')) $('ksJo2').onchange = e => { t.sg.jo2 = e.target.checked; t.sg.kubun = t.sg.jo1 && t.sg.jo2 ? 'Ⅰ' : 'Ⅱ'; re(); };
   $('ksTdB').oninput = e => { t.before = e.target.value; };
   $('ksTdA').oninput = e => { t.after = e.target.value; };
+  if (t.kasan === 'iko' && t.idou !== '終了') ksIkoBind(t, office, re);
   $('ksTdMake').onclick = () => ksTdMake(at, kubun);
 }
 async function ksTdMake(at, kubun){
@@ -2560,8 +2707,9 @@ async function ksTdMake(at, kubun){
   }
   $('busy').classList.add('on');
   try {
-    const cover = pref ? '届出書' : '様式第６号', taiseiSheet = pref ? '別紙１-１' : '国別紙１', kSheet = K.sheet[pref ? 'pref' : 'city'];
-    const { zip, map, order } = await xlOpen(await ksTplBuf(ksTplKey(office)), [cover, taiseiSheet, kSheet]);
+    const cover = pref ? '届出書' : '様式第６号', taiseiSheet = pref ? '別紙１-１' : '国別紙１';
+    const { zip, map, order } = await xlOpen(await ksTplBuf(ksTplKey(office)), K.sheet ? [cover, taiseiSheet, K.sheet[pref ? 'pref' : 'city']] : [cover, taiseiSheet]);
+    let kSheet = K.sheet ? K.sheet[pref ? 'pref' : 'city'] : ksIkoSheetName(order, svcKey, t.start);
     const rd = await xlReader(zip, map), W = {};
     const set = (s, ref, v) => { const n = xlFind(map, s); (W[n] = W[n] || {})[ref] = v; };
     const D = ksReiwa(t.date), S = ksReiwa(t.start);
@@ -2606,14 +2754,21 @@ async function ksTdMake(at, kubun){
     let row = 0;
     for (let r = from; r < to; r++) { if (xlNorm(await rd(taiseiSheet, 'AF' + r)) === xlNorm(K.taisei)) { row = r; break; } }
     if (!row) throw new Error(taiseiSheet + 'に「' + K.taisei + '」の行が見つかりません');
-    const optNo = t.idou === '終了' ? '１' : t.kasan === 'sougei' ? (kubun === 'Ⅰ' ? '３' : '４') : ({ Ⅰ:'５', Ⅱ:'３', Ⅲ:'４' })[kubun];
+    const optNo = t.idou === '終了' ? '１' : t.kasan === 'sougei' ? (kubun === 'Ⅰ' ? '３' : '４') : t.kasan === 'iko' ? '２' : ({ Ⅰ:'５', Ⅱ:'３', Ⅲ:'４' })[kubun];
     set(taiseiSheet, 'AL' + row, ksMarkNum(await rd(taiseiSheet, 'AL' + row), optNo));
     set(taiseiSheet, 'BA' + row, S.text);
+    if (t.kasan === 'iko' && t.idou !== '終了' && xlNorm(await rd(taiseiSheet, 'AF' + (row + 1))).includes('就労定着者数')) {
+      const nn = t.iko.n !== '' && t.iko.n != null ? t.iko.n : ksIkoCount(t.iko, t.start);
+      set(taiseiSheet, 'AL' + (row + 1), `就労定着者数（ ${nn} ）`); set(taiseiSheet, 'BA' + (row + 1), S.text);
+    }
     // 加算ごとの届出書
     if (t.kasan === 'sougei') {
       set(kSheet, 'E2', D.text); set(kSheet, 'C6', office.name || ''); set(kSheet, 'C7', svc);
       set(kSheet, 'C8', ksMarkNum(await rd(kSheet, 'C8'), ({ 新規:'①', 変更:'②', 終了:'③' })[t.idou]));
       if (t.idou !== '終了') { set(kSheet, 'C9', '〇1'); set(kSheet, 'C10', t.sg.jo1 ? '〇1' : 1); set(kSheet, 'C11', t.sg.jo2 ? '〇2' : 2); }
+    } else if (t.kasan === 'iko') {
+      const r = await ksIkoWrite(zip, map, order, set, t, office, D); kSheet = r.sheet;
+      if (!isDemo() && t.iko._dk) apiPost({ app:'kasanDocSave', dk: t.iko._dk, doc: t.iko }).catch(() => {});
     } else {
       const sm = t.sm, n = v => v === '' || v == null ? '' : v + '人', pc = (a, b) => { const p = ksPct(a, b); return p == null ? '' : p + '％'; };
       set(kSheet, 'H2', D.text); set(kSheet, 'C6', office.name || ''); set(kSheet, 'C8', svc);
