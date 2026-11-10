@@ -2345,13 +2345,15 @@ function ksConf(){
       <input type="file" id="ksTplFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream" hidden></div>
     <div class="box"><h3>申請者（法人）</h3><div class="fgrid">
       ${f('corp.name', '名称', corp.name, '例：一般社団法人○○')}${f('corp.no', '法人番号（13桁）', corp.no, '', ' inputmode="numeric"')}
-      ${f('corp.addr', '主たる事務所の所在地', corp.addr)}${f('corp.rep', '代表者の職・氏名', corp.rep, '例：代表理事 ○○ ○○')}</div></div>
+      ${f('corp.addr', '主たる事務所の所在地', corp.addr)}${f('corp.rep', '代表者の職・氏名', corp.rep, '例：代表理事 ○○ ○○')}
+      ${f('corp.tanto', '記入担当者名（県の届出書）', corp.tanto)}${f('corp.tel', '連絡先（県の届出書）', corp.tel, '電話番号', ' inputmode="tel"')}</div></div>
     <div class="box"><h3>事業所</h3><div class="small" style="color:var(--sub)">指定権者・サービスごとに1つずつ。「利用者の店舗名」は、スタッフ一覧の店舗名で、この事業所の利用者を見分けるのに使います（空なら全員）。</div>
       ${c.offices.map((o, i) => `<div class="ks-off">
         <label class="js-f"><span>事業所名</span><input data-o="${i}" data-f="name" list="ksNames" value="${esc(o.name || '')}"></label>
         <label class="js-f"><span>指定権者</span><select data-o="${i}" data-f="auth">${['福岡市', '福岡県'].map(x => `<option${x === o.auth ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
         <label class="js-f"><span>サービス</span><select data-o="${i}" data-f="svc">${['A', 'B'].map(x => `<option value="${x}"${x === o.svc ? ' selected' : ''}>${KS_SVC[x]}</option>`).join('')}</select></label>
         <label class="js-f"><span>事業所番号（10桁）</span><input data-o="${i}" data-f="no" inputmode="numeric" value="${esc(o.no || '')}"></label>
+        <label class="js-f"><span>郵便番号</span><input data-o="${i}" data-f="zip" inputmode="numeric" value="${esc(o.zip || '')}" placeholder="819-0000"></label>
         <label class="js-f"><span>所在地</span><input data-o="${i}" data-f="addr" value="${esc(o.addr || '')}"></label>
         <label class="js-f"><span>電話番号</span><input data-o="${i}" data-f="tel" inputmode="tel" value="${esc(o.tel || '')}"></label>
         <label class="js-f"><span>利用定員（人）</span><input data-o="${i}" data-f="cap" inputmode="numeric" value="${esc(o.cap || '')}"></label>
@@ -2372,7 +2374,7 @@ function ksConf(){
     $('busy').classList.add('on');
     try {
       const { buf, name } = await xlCheckFile(file);
-      await xlOpen(buf, tk === 'pref_A' ? [] : ['様式第６号', '国別紙１', '国別紙48', '市別紙23']);
+      await xlOpen(buf, tk === 'pref_A' ? ['届出書', '別紙１-１', '別紙48', '別紙３-１'] : ['様式第６号', '国別紙１', '国別紙48', '国別紙３-１', '市別紙23']);
       KSN.bufs[tk] = buf;
       if (isDemo()) KSN.tpl[tk] = { name, updated:'この端末で読み込み中' };
       else { const j = await apiPost({ app:'xlsxTplSave', tk, name, b64: sgB64(buf) }); KSN.tpl[tk] = j.tpl || { name }; }
@@ -2467,89 +2469,166 @@ async function ksSgMake(){
   finally { $('busy').classList.remove('on'); }
 }
 
-/* ===== 加算の届出書（いまは送迎加算。様式第６号＋国別紙１＋国別紙48） ===== */
+/* ===== 加算の届出書（送迎加算・福祉専門職員配置等加算）=====
+   市：様式第６号＋国別紙１＋国別紙48／国別紙３-１　　県：届出書＋別紙１-１＋別紙48／別紙３-１ */
+const KS_KASAN = {
+  sougei: { label:'送迎加算', taisei:'送迎体制', sheet:{ city:'国別紙48', pref:'別紙48' } },
+  senmon: { label:'福祉専門職員配置等加算', taisei:'福祉専門職員配置等', sheet:{ city:'国別紙３-１', pref:'別紙３-１' } }
+};
+/* 「１　新規　　２　変更」「①　新規」「１．なし　３．Ⅰ」などの番号 n の選択肢を【】で囲む */
+function ksMarkNum(text, n){
+  const t = String(text || ''), isNo = c => /[0-9０-９①-⑨]/.test(c), sep = c => /[．.　 ]/.test(c || '');
+  let i = -1;
+  for (let k = 0; k < t.length; k++) if (t[k] === n && (sep(t[k + 1]) || /[①-⑨]/.test(n)) && (k === 0 || !isNo(t[k - 1]))) { i = k; break; }
+  if (i < 0) return t;
+  let j = t.length;
+  for (let k = i + 1; k < t.length; k++) if (isNo(t[k]) && (sep(t[k + 1]) || /[①-⑨]/.test(t[k])) && /[　 ]/.test(t[k - 1] || '')) { j = k; break; }
+  const seg = t.slice(i, j).replace(/[\s　]+$/, ''), rest = t.slice(i + seg.length);
+  return t.slice(0, i) + '【' + seg + '】' + rest;
+}
+const ksIdouNo = idou => ({ 新規:'１', 変更:'２', 終了:'３' })[idou];
+const ksPct = (a, b) => Number(b) > 0 ? Math.round(Number(a) / Number(b) * 1000) / 10 : null;
 function ksTodoke(){
-  const t = KSN.td = KSN.td || { office: (KSN.conf.offices[0] || {}).id || '', kasan:'sougei', date: ymd(), start:'', idou:'変更', sgKubun:'Ⅰ', jo1:true, jo2:true, before:'', after:'' };
+  const t = KSN.td = KSN.td || { office: (KSN.conf.offices[0] || {}).id || '', kasan:'sougei', date: ymd(), start:'', idou:'変更', before:'', after:'',
+    sg:{ kubun:'Ⅰ', jo1:true, jo2:true }, sm:{ kubun:'', a1:'', a2:'', b1:'', b2:'', c1:'', c2:'' } };
   const office = KSN.conf.offices.find(o => o.id === t.office) || {};
-  const pref = office.auth === '福岡県';
   if (!t.start) { const d = jst(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + 1); t.start = d.toISOString().slice(0, 10); }
-  const autoText = () => {
-    const s = ksReiwa(t.start).text;
-    const now = t.idou === '新規' ? `送迎加算（${t.sgKubun}）を算定（${s}から）` : t.idou === '終了' ? `送迎加算 なし（${s}から）` : `送迎加算（${t.sgKubun}）（${s}から）`;
-    return { before: t.idou === '新規' ? '送迎加算 なし' : t.idou === '終了' ? `送迎加算（${t.sgKubun}）` : `送迎加算（${t.sgKubun === 'Ⅰ' ? 'Ⅱ' : 'Ⅰ'}）`, after: now };
-  };
-  const at = autoText();
+  const K = KS_KASAN[t.kasan], sm = t.sm;
+  const p1 = ksPct(sm.a2, sm.a1), p2 = ksPct(sm.b2, sm.b1), p3 = ksPct(sm.c2, sm.c1);
+  const smSug = p1 != null && p1 >= 35 ? 'Ⅰ' : p1 != null && p1 >= 25 ? 'Ⅱ' : (p2 != null && p2 >= 75) || (p3 != null && p3 >= 30) ? 'Ⅲ' : '';
+  if (t.kasan === 'senmon' && !sm.kubun && smSug) sm.kubun = smSug;
+  const kubun = t.kasan === 'sougei' ? t.sg.kubun : sm.kubun;
+  const S = ksReiwa(t.start).text;
+  const at = { before: t.idou === '新規' ? `${K.label} なし` : t.idou === '終了' ? `${K.label}（${kubun}）` : `${K.label}（　）`,
+    after: t.idou === '終了' ? `${K.label} なし（${S}から）` : `${K.label}（${kubun || '　'}）（${S}から）` };
+  const seg = (attr, cur, list, fmt) => `<div class="sg-seg" style="width:max-content">${list.map(x => `<button data-${attr}="${x}" aria-pressed="${cur === x}">${fmt ? fmt(x) : x}</button>`).join('')}</div>`;
+  const num = (k, l) => `<label class="js-f"><span>${l}</span><input data-sm="${k}" inputmode="decimal" value="${esc(sm[k])}"></label>`;
+  const judge = (p, need, l) => p == null ? '' : `<div class="sg-judge ${p >= need ? 'ok' : 'ng'}">${l}：${p}％（${need}％以上）</div>`;
+  let body = '';
+  if (t.kasan === 'sougei' && t.idou !== '終了') body = `<div class="js-f"><span>送迎加算の区分</span>${seg('sgk', t.sg.kubun, ['Ⅰ', 'Ⅱ'], x => `（${x}）`)}</div>
+    <div class="js-f"><span>送迎の状況②（該当するもの）</span>
+      <label class="js-ok"><input type="checkbox" id="ksJo1"${t.sg.jo1 ? ' checked' : ''}> 1回の送迎につき平均10人以上（定員20人未満は定員の半分以上）</label>
+      <label class="js-ok"><input type="checkbox" id="ksJo2"${t.sg.jo2 ? ' checked' : ''}> 週3回以上の送迎を実施</label>
+      <div class="small" style="color:var(--sub)">両方なら（Ⅰ）、どちらか一方なら（Ⅱ）。送迎実績状況表タブの結果で確かめられます。</div></div>`;
+  if (t.kasan === 'senmon' && t.idou !== '終了') body = `<div class="small" style="color:var(--sub);margin-bottom:6px">生活支援員等＝就労継続支援では職業指導員と生活支援員。人数を入れると割合を計算し、区分の目安を出します。</div>
+    <div class="sec-title">社会福祉士等の状況（加算Ⅰ・Ⅱ）</div><div class="fgrid">${num('a1', '① 生活支援員等の総数（常勤）')}${num('a2', '② ①のうち社会福祉士等（常勤）')}</div>
+    ${judge(p1, sm.kubun === 'Ⅰ' ? 35 : 25, '社会福祉士等の割合')}
+    <div class="sec-title">常勤職員の状況（加算Ⅲ）</div><div class="fgrid">${num('b1', '① 生活支援員等の総数（常勤換算）')}${num('b2', '② ①のうち常勤の者')}</div>${judge(p2, 75, '常勤の割合')}
+    <div class="sec-title">勤続年数の状況（加算Ⅲ）</div><div class="fgrid">${num('c1', '① 生活支援員等の総数（常勤）')}${num('c2', '② ①のうち勤続3年以上')}</div>${judge(p3, 30, '勤続3年以上の割合')}
+    <div class="js-f"><span>届け出る区分${smSug ? `（目安：${smSug}）` : ''}</span>${seg('smk', sm.kubun, ['Ⅰ', 'Ⅱ', 'Ⅲ'], x => `（${x}）`)}</div>`;
+  const needs = t.kasan === 'sougei'
+    ? ['表紙（市：様式第６号／県：届出書）・体制等状況一覧表 … このファイルに入ります', '送迎加算に関する届出書（別紙48）… このファイルに入ります', '送迎実績状況表（市別紙23）… 送迎体制を変えるとき（新規のときは不要）']
+    : ['表紙・体制等状況一覧表 … このファイルに入ります', '福祉専門職員配置等加算に関する届出書（別紙３-１）… このファイルに入ります', '勤務形態一覧表（国標準様式４）', '資格証の写し（社会福祉士・介護福祉士・精神保健福祉士・公認心理師）', '勤続年数を確かめられるもの（雇用契約書など）'];
   $('ksBody').innerHTML = ksNeedConf() + `<div class="box"><h3>加算の届出書をつくる</h3>
     <div class="sg-row"><label class="js-f" style="flex:2"><span>事業所</span><select id="ksTdO">${ksOfficeOpts(t.office)}</select></label>
-      <label class="js-f" style="flex:1"><span>加算</span><select id="ksTdK"><option value="sougei">送迎加算</option><option value="" disabled>福祉専門職員配置等加算（準備中）</option><option value="" disabled>就労移行支援体制加算（準備中）</option></select></label></div>
-    ${pref ? '<div class="note">福岡県の様式（加算届出書）への書き込みは次の段階で対応します。いまは福岡市の様式で作れます。</div>' : ''}
+      <label class="js-f" style="flex:2"><span>加算</span><select id="ksTdK">${Object.entries(KS_KASAN).map(([k, v]) => `<option value="${k}"${k === t.kasan ? ' selected' : ''}>${v.label}</option>`).join('')}<option value="" disabled>就労移行支援体制加算（準備中）</option></select></label></div>
+    <div class="small" style="color:var(--sub);margin-bottom:6px">使う様式：${office.auth === '福岡県' ? '福岡県（届出書・別紙１-１）' : '福岡市（様式第６号・国別紙１）'}　${KSN.tpl[ksTplKey(office)] ? '' : '<span style="color:var(--warn)">— ひな形が未登録です（設定タブ）</span>'}</div>
     <div class="fgrid">
       <label class="js-f"><span>届出日</span><input type="date" id="ksTdD" value="${esc(t.date)}"></label>
-      <label class="js-f"><span>適用開始日（変更年月日）</span><input type="date" id="ksTdS" value="${esc(t.start)}"></label></div>
-    <div class="js-f"><span>異動区分</span><div class="sg-seg" style="width:max-content">${['新規', '変更', '終了'].map(x => `<button data-idou="${x}" aria-pressed="${t.idou === x}">${x}</button>`).join('')}</div></div>
-    ${t.idou !== '終了' ? `<div class="js-f"><span>送迎加算の区分</span><div class="sg-seg" style="width:max-content">${['Ⅰ', 'Ⅱ'].map(x => `<button data-sgk="${x}" aria-pressed="${t.sgKubun === x}">（${x}）</button>`).join('')}</div></div>
-    <div class="js-f"><span>送迎の状況②（該当するもの）</span>
-      <label class="js-ok"><input type="checkbox" id="ksJo1"${t.jo1 ? ' checked' : ''}> 1回の送迎につき平均10人以上（定員20人未満は定員の半分以上）</label>
-      <label class="js-ok"><input type="checkbox" id="ksJo2"${t.jo2 ? ' checked' : ''}> 週3回以上の送迎を実施</label>
-      <div class="small" style="color:var(--sub)">両方なら（Ⅰ）、どちらか一方なら（Ⅱ）。送迎実績状況表タブで読み込んだ結果で確かめられます。</div></div>` : ''}
-    <div class="fgrid"><label class="js-f"><span>変更の内容（変更前）</span><textarea id="ksTdB" placeholder="${esc(at.before)}">${esc(t.before)}</textarea></label>
-      <label class="js-f"><span>変更の内容（変更後）</span><textarea id="ksTdA" placeholder="${esc(at.after)}">${esc(t.after)}</textarea></label></div>
+      <label class="js-f"><span>適用開始日（異動年月日）</span><input type="date" id="ksTdS" value="${esc(t.start)}"></label></div>
+    <div class="js-f"><span>異動区分</span>${seg('idou', t.idou, ['新規', '変更', '終了'])}</div>
+    ${body}
+    <div class="fgrid"><label class="js-f"><span>変更前</span><textarea id="ksTdB" placeholder="${esc(at.before)}">${esc(t.before)}</textarea></label>
+      <label class="js-f"><span>変更後</span><textarea id="ksTdA" placeholder="${esc(at.after)}">${esc(t.after)}</textarea></label></div>
     <div class="small" style="color:var(--sub)">空欄なら、薄い字の内容を入れます。</div>
-    <div class="bar" style="position:static;padding:0;margin-top:10px"><button class="btn p" id="ksTdMake" style="flex:1"${pref || !KSN.conf.offices.length ? ' disabled' : ''}>📄 記入済みExcelを作る</button></div><div id="ksTdOut" class="small" style="margin-top:8px"></div></div>
-    <div class="box"><h3>一緒に出すもの（送迎加算）</h3><ul class="sg-due">
-      <li>様式第６号（変更届出書）・国別紙１（体制等状況一覧表）… このファイルに入ります</li>
-      <li>国別紙48（送迎加算に関する届出書）… このファイルに入ります</li>
-      <li>市別紙23（送迎実績状況表）… 送迎体制を変えるときに提出（新規のときは不要）。毎月作って保管</li></ul>
-      <div class="small" style="color:var(--sub)">国別紙１は、変えた行（送迎体制）だけを書きます。ほかの行がいまの体制のとおりか、提出前に確かめてください。</div></div>`;
-  const re = () => ksTodoke();
+    <div class="bar" style="position:static;padding:0;margin-top:10px"><button class="btn p" id="ksTdMake" style="flex:1"${KSN.conf.offices.length ? '' : ' disabled'}>📄 記入済みExcelを作る</button></div><div id="ksTdOut" class="small" style="margin-top:8px"></div></div>
+    <div class="box"><h3>一緒に出すもの（${esc(K.label)}）</h3><ul class="sg-due">${needs.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="small" style="color:var(--sub)">体制等状況一覧表は、この加算の行だけを書きます。ほかの行がいまの体制のとおりか、提出前に確かめてください。</div></div>`;
+  const re = () => { const y = window.scrollY; ksTodoke(); window.scrollTo(0, y); };
+  const B = $('ksBody');
   $('ksTdO').onchange = e => { t.office = e.target.value; re(); };
+  $('ksTdK').onchange = e => { t.kasan = e.target.value; t.before = t.after = ''; re(); };
   $('ksTdD').onchange = e => { t.date = e.target.value; };
   $('ksTdS').onchange = e => { t.start = e.target.value; re(); };
-  $('ksBody').querySelectorAll('[data-idou]').forEach(b => b.onclick = () => { t.idou = b.dataset.idou; re(); });
-  $('ksBody').querySelectorAll('[data-sgk]').forEach(b => b.onclick = () => { t.sgKubun = b.dataset.sgk; t.jo1 = t.jo2 = b.dataset.sgk === 'Ⅰ'; if (b.dataset.sgk === 'Ⅱ') t.jo1 = true; re(); });
-  if ($('ksJo1')) $('ksJo1').onchange = e => { t.jo1 = e.target.checked; t.sgKubun = t.jo1 && t.jo2 ? 'Ⅰ' : 'Ⅱ'; re(); };
-  if ($('ksJo2')) $('ksJo2').onchange = e => { t.jo2 = e.target.checked; t.sgKubun = t.jo1 && t.jo2 ? 'Ⅰ' : 'Ⅱ'; re(); };
+  B.querySelectorAll('[data-idou]').forEach(b => b.onclick = () => { t.idou = b.dataset.idou; re(); });
+  B.querySelectorAll('[data-sgk]').forEach(b => b.onclick = () => { t.sg.kubun = b.dataset.sgk; if (b.dataset.sgk === 'Ⅰ') t.sg.jo1 = t.sg.jo2 = true; re(); });
+  B.querySelectorAll('[data-smk]').forEach(b => b.onclick = () => { sm.kubun = b.dataset.smk; re(); });
+  B.querySelectorAll('[data-sm]').forEach(i => i.onchange = () => { sm[i.dataset.sm] = i.value.replace(/[^\d.]/g, ''); re(); });
+  if ($('ksJo1')) $('ksJo1').onchange = e => { t.sg.jo1 = e.target.checked; t.sg.kubun = t.sg.jo1 && t.sg.jo2 ? 'Ⅰ' : 'Ⅱ'; re(); };
+  if ($('ksJo2')) $('ksJo2').onchange = e => { t.sg.jo2 = e.target.checked; t.sg.kubun = t.sg.jo1 && t.sg.jo2 ? 'Ⅰ' : 'Ⅱ'; re(); };
   $('ksTdB').oninput = e => { t.before = e.target.value; };
   $('ksTdA').oninput = e => { t.after = e.target.value; };
-  $('ksTdMake').onclick = () => ksTdMake(at);
+  $('ksTdMake').onclick = () => ksTdMake(at, kubun);
 }
-async function ksTdMake(at){
-  const t = KSN.td, out = $('ksTdOut');
+async function ksTdMake(at, kubun){
+  const t = KSN.td, out = $('ksTdOut'), K = KS_KASAN[t.kasan];
   const office = KSN.conf.offices.find(o => o.id === t.office) || {}, corp = KSN.conf.corp || {};
-  if (t.idou !== '終了' && !t.jo1 && !t.jo2) { msgSheet('確認してください', '送迎の状況②に、どちらか1つは当てはまる必要があります。'); return; }
+  const pref = office.auth === '福岡県', svcKey = office.svc === 'B' ? 'B' : 'A', svc = KS_SVC[svcKey];
+  if (t.idou !== '終了') {
+    if (t.kasan === 'sougei' && !t.sg.jo1 && !t.sg.jo2) { msgSheet('確認してください', '送迎の状況②に、どちらか1つは当てはまる必要があります。'); return; }
+    if (t.kasan === 'senmon' && !kubun) { msgSheet('確認してください', '届け出る区分（Ⅰ・Ⅱ・Ⅲ）を選んでください。'); return; }
+  }
   $('busy').classList.add('on');
   try {
-    const key = ksTplKey(office);
-    const { zip, map, order } = await xlOpen(await ksTplBuf(key), ['様式第６号', '国別紙１', '国別紙48']);
+    const cover = pref ? '届出書' : '様式第６号', taiseiSheet = pref ? '別紙１-１' : '国別紙１', kSheet = K.sheet[pref ? 'pref' : 'city'];
+    const { zip, map, order } = await xlOpen(await ksTplBuf(ksTplKey(office)), [cover, taiseiSheet, kSheet]);
     const rd = await xlReader(zip, map), W = {};
     const set = (s, ref, v) => { const n = xlFind(map, s); (W[n] = W[n] || {})[ref] = v; };
-    const D = ksReiwa(t.date), S = ksReiwa(t.start), svc = KS_SVC[office.svc === 'B' ? 'B' : 'A'];
-    const digits = (s, from, n, row) => { const ds = String(s || '').replace(/\D/g, '').split(''); for (let i = 0; i < n; i++) set('様式第６号', xlColName(from + i) + row, ds[i] || ''); };
-    // 様式第６号
-    set('様式第６号', 'Z6', '令和' + D.y); set('様式第６号', 'AE6', D.m); set('様式第６号', 'AH6', D.d);
-    set('様式第６号', 'W8', corp.addr || ''); set('様式第６号', 'W9', corp.name || ''); set('様式第６号', 'Z10', corp.rep || '');
-    digits(corp.no, xlCol('X1'), 13, 21); digits(office.no, xlCol('AA1'), 10, 22);
-    set('様式第６号', 'W23', office.name || ''); set('様式第６号', 'W25', office.addr || ''); set('様式第６号', 'T28', svc);
-    set('様式第６号', 'T29', '令和' + S.y); set('様式第６号', 'Z29', S.m); set('様式第６号', 'AD29', S.d);
-    set('様式第６号', 'B54', '○');
-    set('様式第６号', 'T31', '（変更前）\n' + (t.before.trim() || at.before)); set('様式第６号', 'T43', '（変更後）\n' + (t.after.trim() || at.after));
-    // 国別紙１：「送迎体制」の行を探して、選んだ区分に【】・適用開始日
-    let row = 0;
-    for (let r = 6; r <= 80; r++) { if (xlNorm(await rd('国別紙１', 'AF' + r)) === xlNorm('送迎体制')) { row = r; break; } }
-    if (!row) throw new Error('国別紙１に「送迎体制」の行が見つかりません');
-    const opt = await rd('国別紙１', 'AL' + row);
-    set('国別紙１', 'AL' + row, ksMark(opt, t.idou === '終了' ? '１．なし' : t.sgKubun === 'Ⅰ' ? '３．Ⅰ' : '４．Ⅱ'));
-    set('国別紙１', 'BA' + row, S.text);
-    // 国別紙48
-    set('国別紙48', 'E2', D.text); set('国別紙48', 'C6', office.name || ''); set('国別紙48', 'C7', svc);
-    set('国別紙48', 'C8', ksMark(await rd('国別紙48', 'C8'), { 新規:'①　新規', 変更:'②　変更', 終了:'③　終了' }[t.idou]));
-    if (t.idou !== '終了') {
-      set('国別紙48', 'C9', '〇1');
-      set('国別紙48', 'C10', t.jo1 ? '〇1' : 1); set('国別紙48', 'C11', t.jo2 ? '〇2' : 2);
+    const D = ksReiwa(t.date), S = ksReiwa(t.start);
+    const before = t.before.trim() || at.before, after = t.after.trim() || at.after;
+    const digits = (sheet, s, cols, row) => { const ds = String(s || '').replace(/\D/g, '').split(''); cols.forEach((c, i) => set(sheet, c + row, ds[i] || '')); };
+    const span = (from, n, step) => Array.from({ length: n }, (_, i) => xlColName(xlCol(from + '1') + i * (step || 1)));
+    if (!pref) {
+      // 様式第６号（福岡市）
+      set(cover, 'Z6', '令和' + D.y); set(cover, 'AE6', D.m); set(cover, 'AH6', D.d);
+      set(cover, 'W8', corp.addr || ''); set(cover, 'W9', corp.name || ''); set(cover, 'Z10', corp.rep || '');
+      digits(cover, corp.no, span('X', 13), 21); digits(cover, office.no, span('AA', 10), 22);
+      set(cover, 'W23', office.name || ''); set(cover, 'W25', office.addr || ''); set(cover, 'T28', svc);
+      set(cover, 'T29', '令和' + S.y); set(cover, 'Z29', S.m); set(cover, 'AD29', S.d);
+      set(cover, 'B54', '○');
+      set(cover, 'T31', '（変更前）\n' + before); set(cover, 'T43', '（変更後）\n' + after);
+    } else {
+      // 届出書（福岡県）
+      set(cover, 'Z4', '令和'); set(cover, 'AB4', D.y); set(cover, 'AE4', D.m); set(cover, 'AH4', D.d);
+      set(cover, 'W7', corp.addr || ''); set(cover, 'W9', corp.name || ''); set(cover, 'W11', corp.rep || '');
+      digits(cover, office.no, span('H', 10, 2), 15);
+      set(cover, 'H17', office.name || ''); set(cover, 'L18', office.zip || ''); set(cover, 'R18', office.addr || '');
+      let r = 0;
+      for (let k = 20; k <= 110; k++) { if (xlNorm(await rd(cover, 'C' + k)) === xlNorm(svcKey === 'B' ? '就労継続支援（Ｂ型）' : '就労継続支援（Ａ型）')) { r = k + 1; break; } }
+      if (!r) throw new Error('届出書に「' + svc + '」の行が見つかりません');
+      set(cover, 'K' + r, '○');
+      const no = ksIdouNo(t.idou), col = { '１':'O', '２':'S', '３':'W' }[no];
+      set(cover, col + r, '【' + String(await rd(cover, col + r) || '').trim() + '】');
+      set(cover, 'AC' + r, S.y); set(cover, 'AF' + r, S.m); set(cover, 'AI' + r, S.d);
+      // 特記事項は欄が狭いので、加算名は「異動項目」に書き、変更前・変更後は区分だけ
+      const sb = t.idou === '新規' ? 'なし' : t.idou === '終了' ? `（${kubun}）` : '（　）', sa = t.idou === '終了' ? 'なし' : `（${kubun}）`;
+      set(cover, 'C110', K.label); set(cover, 'P110', t.before.trim() || sb); set(cover, 'AA110', t.after.trim() || sa);
+      if (corp.tanto) set(cover, 'S114', corp.tanto);
+      if (corp.tel) set(cover, 'AC114', corp.tel);
     }
-    const blob = await xlBuild(zip, map, order, W, '様式第６号');
-    await xlDownloadAndSave(blob, `加算届_送迎加算_${office.name || ''}_${D.text}.xlsx`, '届出/' + (office.name || '事業所'), out);
-    out.insertAdjacentHTML('beforeend', '<br>選んだ項目は【　】で囲んでいます（例：【②　変更】）。様式第６号・国別紙１・国別紙48 を確かめて、要るシートを印刷してください。');
+    // 体制等状況一覧表：その加算の行（県はサービスの区画の中を探す）
+    let from = 6, to = 80;
+    if (pref) {
+      from = 0;
+      for (let r = 150; r <= 320; r++) { const b = xlNorm(await rd(taiseiSheet, 'B' + r)); if (!from && b === xlNorm(svc)) { from = r; continue; } if (from && b) { to = r; break; } }
+      if (!from) throw new Error('別紙１-１に「' + svc + '」の区画が見つかりません');
+    }
+    let row = 0;
+    for (let r = from; r < to; r++) { if (xlNorm(await rd(taiseiSheet, 'AF' + r)) === xlNorm(K.taisei)) { row = r; break; } }
+    if (!row) throw new Error(taiseiSheet + 'に「' + K.taisei + '」の行が見つかりません');
+    const optNo = t.idou === '終了' ? '１' : t.kasan === 'sougei' ? (kubun === 'Ⅰ' ? '３' : '４') : ({ Ⅰ:'５', Ⅱ:'３', Ⅲ:'４' })[kubun];
+    set(taiseiSheet, 'AL' + row, ksMarkNum(await rd(taiseiSheet, 'AL' + row), optNo));
+    set(taiseiSheet, 'BA' + row, S.text);
+    // 加算ごとの届出書
+    if (t.kasan === 'sougei') {
+      set(kSheet, 'E2', D.text); set(kSheet, 'C6', office.name || ''); set(kSheet, 'C7', svc);
+      set(kSheet, 'C8', ksMarkNum(await rd(kSheet, 'C8'), ({ 新規:'①', 変更:'②', 終了:'③' })[t.idou]));
+      if (t.idou !== '終了') { set(kSheet, 'C9', '〇1'); set(kSheet, 'C10', t.sg.jo1 ? '〇1' : 1); set(kSheet, 'C11', t.sg.jo2 ? '〇2' : 2); }
+    } else {
+      const sm = t.sm, n = v => v === '' || v == null ? '' : v + '人', pc = (a, b) => { const p = ksPct(a, b); return p == null ? '' : p + '％'; };
+      set(kSheet, 'H2', D.text); set(kSheet, 'C6', office.name || ''); set(kSheet, 'C8', svc);
+      set(kSheet, 'C7', ksMarkNum(await rd(kSheet, 'C7'), ksIdouNo(t.idou)));
+      if (t.idou !== '終了') {
+        set(kSheet, 'C9', ksMarkNum(await rd(kSheet, 'C9'), ({ Ⅰ:'１', Ⅱ:'２', Ⅲ:'３' })[kubun]));
+        set(kSheet, 'F12', n(sm.a1)); set(kSheet, 'F13', n(sm.a2)); set(kSheet, 'G13', pc(sm.a2, sm.a1));
+        set(kSheet, 'F16', n(sm.b1)); set(kSheet, 'F17', n(sm.b2)); set(kSheet, 'G17', pc(sm.b2, sm.b1));
+        set(kSheet, 'F20', n(sm.c1)); set(kSheet, 'F21', n(sm.c2)); set(kSheet, 'G21', pc(sm.c2, sm.c1));
+        set(kSheet, kubun === 'Ⅲ' ? 'I15' : 'I11', '【有】・無');
+      }
+    }
+    const blob = await xlBuild(zip, map, order, W, cover);
+    await xlDownloadAndSave(blob, `加算届_${K.label}_${office.name || ''}_${D.text}.xlsx`, '届出/' + (office.name || '事業所'), out);
+    out.insertAdjacentHTML('beforeend', `<br>選んだ項目は【　】で囲んでいます。${esc(cover)}・${esc(taiseiSheet)}・${esc(kSheet)} を確かめて、要るシートを印刷してください。`);
   } catch (e) { msgSheet('Excel を作れませんでした', e.message); }
   finally { $('busy').classList.remove('on'); }
 }
