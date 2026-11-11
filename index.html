@@ -513,6 +513,7 @@ body.pc .km-f{grid-template-columns:repeat(4,1fr)}
 .km-prevg{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px;margin:8px 0}.km-prevg div{display:grid;grid-template-columns:36px 1fr 1fr;gap:4px;align-items:center;font-size:13px}.km-prevg input,#kmClosed{min-height:38px;border:1px solid var(--rule);border-radius:var(--r-s);padding:0 6px;font-size:14px;background:var(--paper);color:var(--ink);width:100%}
 body.pc .km-prevg{grid-template-columns:repeat(4,1fr)}
 .km-scan{margin:10px 0}.km-ng{font-size:13px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.km-ng select{min-height:38px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--paper);color:var(--ink)}
+.field.cond{border-left:3px solid var(--gc, var(--brand));animation:condIn .18s ease-out}@keyframes condIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -813,6 +814,11 @@ async function demoApi(p){
   if (p.app === 'monthly') return { month:p.month, exists:true, head:['氏名','出勤日数','出勤時間','送迎回数','有給回数','欠勤回数','合計日数','合計出勤時間'], rows:[['峰 恭子','18','98.5','34','0','1','18','98.5','利用者',''],['松川 忠義','15','80.2','15','0','2','15','80.2','利用者','10/14 退勤なし'],['石橋 強','20','152.0','0','1','0','20','152.0','正社員','']], total:{ users:'33', hours:'178.7' }, message:'（デモ）集計しました' };
   if (['safetySend','safetyResend','safetyNotify','safetyReport','eventAnswer','eventSend','eventCreate','broadcast','meetingCreate','meetingCancel'].includes(p.app)) { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）完了しました' }; }
   if (p.app === 'view') return { id:p.id, title:(DEMO_VIEWS.find(v => v.id === p.id) || {}).title, ...(DEMO_VIEW[p.id] || { kind:'feed', items:[] }) };
+  if (p.app === 'fields' && p.sheet === '欠席時対応(加算)記録表') return { sheet:p.sheet, fields: [
+    { index:0, label:'受付日付', type:'date', required:true }, { index:3, label:'対応方法', type:'text', options:['TEL','その他'], strict:true },
+    { index:8, label:'欠席理由', type:'text', options:['発熱','発作','体調不良','感染症','その他'], strict:true, required:true },
+    { index:9, label:'体温', type:'text', options:['37.5','38.0'] }, { index:13, label:'その他', type:'text' },
+    { index:15, label:'その他(病院等)', type:'text', options:['入院','病院に受診','家庭にて安静'], strict:true }, { index:17, label:'利用者名', type:'text', options:['みのり 太郎'], strict:true } ] };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : p.sheet === '相談記録表' ? DEMO_SOUDAN : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
   if (p.app === 'formPreviewBatch') { await new Promise(r => setTimeout(r, 900)); return { files:[{ name:'preview.pdf', b64: window.DEMO_PDF || '' }] }; }
@@ -3242,6 +3248,7 @@ function renderForm(sheet, fields, keepValues, edit){
     ${hasPdfOf(sheet) === false ? '' : '<button class="btn s" id="fPrev" title="入力中の内容を書式（テンプレート）で見る" style="padding:0 14px">📄 書式</button>'}<button class="btn p" id="send">${edit ? '修正内容を確認' : '内容を確認'}</button></div></div>`;
   $('view').innerHTML = html;
   bindForm();
+  applyCond();
   updateProgress();
   if ($('batchBox')) drawSendBatch();
   if ($('vcOpen')) $('vcOpen').onclick = () => openVoice(sheet);
@@ -3295,7 +3302,43 @@ function setValue(i, v){
   F.values[i] = v;
   const w = $('w' + i);
   if (w) { w.classList.toggle('filled', !!String(v).trim()); w.classList.remove('miss'); }
+  applyCond();
   saveDraft(); updateProgress();
+}
+/* ===== 選んだ内容によって出す欄（例：欠席理由が「その他」のときだけ、理由を書く欄） =====
+   target：出し入れする欄の見出し　when：きっかけの欄の見出し　is：出す条件　label：出すときの見出し　req：出したときは必須 */
+const FORM_COND = {
+  '欠席時対応(加算)記録表': [
+    { target: /^その他(の理由|の欠席理由|[（(]欠席理由[)）])?$/, when: /^欠席理由$/, is: v => /その他/.test(v), label: 'その他の理由（欠席理由の内容）', req: true }
+  ]
+};
+function condRules(){
+  const rules = (F && FORM_COND[F.sheet]) || [];
+  return rules.map(r => ({ r, t: F.fields.find(f => !f.hidden && r.target.test(String(f.label).trim())), w: F.fields.find(f => !f.hidden && r.when.test(String(f.label).trim())) })).filter(x => x.t && x.w);
+}
+function applyCond(){
+  if (!F) return;
+  F.condHidden = F.condHidden || {};
+  condRules().forEach(({ r, t, w }) => {
+    const on = r.is(String(F.values[w.index] ?? ''));
+    F.condHidden[t.index] = !on;
+    const tw = $('w' + t.index), ww = $('w' + w.index);
+    if (!tw || !ww) return;
+    if (ww.nextElementSibling !== tw) ww.after(tw);
+    tw.style.display = on ? '' : 'none';
+    tw.classList.toggle('cond', on);
+    if (r.label && !tw.dataset.relabeled) {
+      const lab = tw.querySelector('label, .label');
+      if (lab && lab.firstChild && lab.firstChild.nodeType === 3) lab.firstChild.textContent = r.label;
+      if (lab && r.req && !lab.querySelector('.req')) lab.insertAdjacentHTML('beforeend', '<span class="req">必須</span>');
+      tw.dataset.relabeled = '1';
+    }
+    if (!on && String(F.values[t.index] ?? '').trim()) {
+      F.values[t.index] = '';
+      tw.querySelectorAll('.in').forEach(x => { x.value = ''; });
+      tw.classList.remove('filled');
+    }
+  });
 }
 let saveTimer;
 function saveDraft(){
@@ -3309,7 +3352,7 @@ function saveDraft(){
   }, 400);
 }
 function updateProgress(){
-  const vis = F.fields.filter(f => !f.hidden);
+  const vis = F.fields.filter(f => !f.hidden && !(F.condHidden || {})[f.index]);
   const done = vis.filter(f => f.type === 'image' ? (F.files[f.index] || String(F.values[f.index] ?? '').trim()) : String(F.values[f.index] ?? '').trim()).length;
   const c = $('count'); if (c) c.textContent = `記入 ${done} / ${vis.length}`;
   const bar = $('prog').querySelector('i'); bar.style.width = (vis.length ? done / vis.length * 100 : 0) + '%';
@@ -3415,7 +3458,8 @@ const batchKey = s => 'fb_batch_' + s;
 const getBatch = s => LS.get(batchKey(s), []) || [];
 function formMissing(show){
   const vis = F.fields.filter(f => !f.hidden);
-  const missing = vis.filter(f => f.required && (f.type === 'image' ? !F.files[f.index] : !String(F.values[f.index] ?? '').trim()));
+  const missing = vis.filter(f => !(F.condHidden || {})[f.index] && f.required && (f.type === 'image' ? !F.files[f.index] : !String(F.values[f.index] ?? '').trim()));
+  condRules().forEach(({ r, t }) => { if (r.req && !(F.condHidden || {})[t.index] && !String(F.values[t.index] ?? '').trim() && !missing.includes(t)) missing.push({ ...t, label: r.label || t.label }); });
   if (missing.length && show) {
     missing.forEach(f => $('w' + f.index)?.classList.add('miss'));
     $('w' + missing[0].index)?.scrollIntoView({ behavior:'smooth', block:'center' });
@@ -3543,7 +3587,7 @@ async function submitBatch(list, withCurrent){
 
 /* ===== 送信前の確認 ===== */
 function openReview(){
-  const vis = F.fields.filter(f => !f.hidden);
+  const vis = F.fields.filter(f => !f.hidden && !(F.condHidden || {})[f.index]);
   if (!vis.some(f => String(F.values[f.index] ?? '').trim()) && !Object.keys(F.files).length) { toast('まだ何も入力されていません'); return; }
   if (formMissing(true).length) return;
   const filled = vis.filter(f => f.type === 'image' ? (F.files[f.index] || String(F.values[f.index] ?? '').trim()) : String(F.values[f.index] ?? '').trim());
@@ -3554,7 +3598,8 @@ function openReview(){
     if (f.type === 'datetime') return esc(String(v).replace('T', ' '));
     return esc(f.multi ? splitMulti(v).join('、') : v);
   };
-  const rows = filled.map(f => `<dt>${esc(f.label)}</dt><dd>${show(f)}</dd>`).join('');
+  const condLabel = {}; condRules().forEach(({ r, t }) => { if (r.label) condLabel[t.index] = r.label; });
+  const rows = filled.map(f => `<dt>${esc(condLabel[f.index] || f.label)}</dt><dd>${show(f)}</dd>`).join('');
   const blanks = vis.length - filled.length;
   if (F.edit) {
     const o = F.edit.orig || {};
