@@ -523,6 +523,11 @@ body.pc .km-prevg{grid-template-columns:repeat(4,1fr)}
 .gm-hist{margin-top:6px;border-top:1px solid var(--rule)}.gm-hr{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--rule)}
 .gm-conf summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}.gm-conf summary .small{color:var(--sub)}
 .gm-cr{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule);font-size:14px}.gm-cr select{min-height:40px;border:1px solid var(--rule);border-radius:var(--r-s);background:var(--paper);color:var(--ink);max-width:48%}
+.hl-sum{margin:12px 0;padding:12px 14px;border-radius:var(--r-m);font-weight:700}.hl-sum.ok{background:var(--g1-bg);color:var(--g1)}.hl-sum.ng{background:var(--warn-bg);color:var(--warn)}
+.hl-list{background:var(--paper);border-radius:var(--r-m);border:1px solid var(--rule)}.hl-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--rule)}.hl-row:last-child{border-bottom:0}
+.hl-dot{width:10px;height:10px;border-radius:50%;flex:none}.hl-m{flex:1;min-width:0;display:grid}.hl-m .small{color:var(--sub)}.hl-st{font-size:12px;font-weight:700;white-space:nowrap}
+.hl-err{padding:8px 12px;border-bottom:1px solid var(--rule);font-size:14px}.hl-err .small{color:var(--sub)}.hl-bk{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule)}.hl-bk .small{color:var(--sub)}
+body.pc .hl-list{display:grid;grid-template-columns:1fr 1fr}body.pc .hl-row:nth-last-child(2){border-bottom:0}
 </style>
 </head>
 <body>
@@ -757,6 +762,9 @@ async function demoApi(p){
     return { place, ym, places, items: items.filter(x => x.freq === '毎日'), records: recs };
   }
   if (p.app === 'eiseiSave') return { message:'（デモ）記録しました' };
+  if (p.app === 'health') return { items:[['checkUserDeadlines','利用者の期限の通知','ok','','11/11 11:02',3200],['checkHeatstrokeInfoAndNotify','熱中症情報','ok','','11/11 14:45',900],['fetchWeatherInfoEmails_v2','天候情報メール','ng','前回失敗：Exceeded maximum execution time','11/11 13:00',360000],['appSougeiCheck','送迎アラーム','ok','','11/11 14:55',400],['appPrefNewsCheck','福岡県 障がい福祉課の新着','warn','見守りなしで動いています（「定期実行をまとめて設定」をもう一度）','11/11 12:00',2100],['appBackupMonthly','毎月の控え','wait','まだ1回も動いていません','',0]].map(([fn,label,status,note,last,ms]) => ({ fn, label, status, note, last, ms, fails: status === 'ng' ? 1 : 0 })),
+    conf:['LINE_MUTE=1（LINEを送らないテスト設定のまま）'], errors:[{ at:'11/11 13:06', kind:'定期実行', name:'天候情報メール', msg:'Exceeded maximum execution time' }], errors24:1, backups:[] };
+  if (p.app === 'healthRun' || p.app === 'backupNow') return { message:'（デモ）実行しました' };
   if (p.app === 'gimu') { const mk = (id, group, name, months, gensan, last, status, due, left) => ({ id, group, name, months, base:months, gensan, last: last ? { date:last, src:'会議録', note:'会議録：' + name } : null, due, left, status, history:[] });
     return { today:'2026-11-11', items:[ mk('gyaku_iinkai', '虐待防止', '虐待防止委員会の開催（結果を職員に周知）', 12, '虐待防止措置未実施減算（1%）', '2025-11-20', 'soon', '2026-11-20', 9), mk('gyaku_kenshu', '虐待防止', '虐待防止の研修', 12, '虐待防止措置未実施減算（1%）', '2026-06-10', 'ok', '2027-06-10', 211), mk('gyaku_tanto', '虐待防止', '虐待防止の担当者の配置', 0, '虐待防止措置未実施減算（1%）', null, 'none', '', null),
       mk('kousoku_iinkai', '身体拘束の適正化', '身体拘束適正化検討委員会の開催（結果を職員に周知）', 12, '身体拘束廃止未実施減算（1%）', '2025-10-01', 'over', '2026-10-01', -41), mk('kansen_iinkai', '感染症の予防・まん延防止', '感染症対策委員会の開催', 6, '（運営基準）', '2026-08-01', 'ok', '2027-02-01', 82), mk('koukai', '情報公表', '障害福祉サービス等情報公表システムへの報告', 12, '情報公表未報告減算（5%）', null, 'none', '', null) ] }; }
@@ -3085,6 +3093,33 @@ function gmAdd(x){
   $('gmOk').onclick = () => { const date = $('gmD').value, note = $('gmN').value.trim(); if (!date) { toast('実施日を入れてください'); return; } closeSheet(); runAction(() => apiPost({ app:'gimuSave', item: x.id, date, note }), () => showGimu()); };
 }
 
+/* ================= 動作の見守り ================= */
+const HL_ST = { ok:['正常', 'var(--g1)'], warn:['要確認', 'var(--warn)'], wait:['まだ', 'var(--sub)'], ng:['要対応', 'var(--err)'] };
+async function showHealth(){
+  setTop({ title:'動作の見守り', back:true });
+  if (!isAdmin()) { $('view').innerHTML = '<div class="note err">管理者だけが使えます</div>'; return; }
+  const token = viewToken;
+  $('view').innerHTML = '<div class="empty">点検しています…</div>';
+  let h; try { h = await api({ app:'health' }); } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
+  if (token !== viewToken) return;
+  const ng = h.items.filter(x => x.status === 'ng').length, warn = h.items.filter(x => x.status === 'warn').length;
+  const good = !ng && !warn && !h.conf.length && !h.errors24;
+  $('view').innerHTML = `<div class="hl-sum ${good ? 'ok' : 'ng'}">${good ? '✓ すべて正常に動いています' : `⚠️ 確認が必要なものがあります（要対応 ${ng}・要確認 ${warn}・この24時間のエラー ${h.errors24}${h.conf.length ? '・設定 ' + h.conf.length : ''}）`}</div>
+    ${h.conf.length ? `<div class="box"><h3>設定</h3><ul class="sg-due">${h.conf.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    <div class="sec-title">定期実行（${h.items.length}）</div>
+    <div class="hl-list">${h.items.map(x => { const st = HL_ST[x.status]; return `<div class="hl-row"><span class="hl-dot" style="background:${st[1]}" title="${st[0]}"></span>
+      <div class="hl-m"><b>${esc(x.label)}</b><span class="small">${x.last ? '最後 ' + esc(x.last) + (x.ms ? `（${(x.ms / 1000).toFixed(1)}秒）` : '') : '記録なし'}${x.note ? `<br><span style="color:${st[1]}">${esc(x.note)}</span>` : ''}</span></div>
+      <span class="hl-st" style="color:${st[1]}">${st[0]}</span></div>`; }).join('')}</div>
+    <div class="sec-title">この1週間のエラー（${h.errors.length}件）</div>
+    ${h.errors.length ? `<div class="hl-list">${h.errors.slice(0, 30).map(e => `<div class="hl-err"><span class="small">${esc(e.at)}　${esc(e.kind)}：${esc(e.name)}</span><div>${esc(e.msg)}</div></div>`).join('')}</div>` : '<div class="empty" style="padding:16px">ありません</div>'}
+    <div class="sec-title">毎月の控え（スプレッドシートのコピー）</div>
+    <div class="box">${h.backups.length ? h.backups.map(b => `<div class="hl-bk"><a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.name)}</a><span class="small">${esc(b.date)}</span></div>`).join('') : '<div class="small" style="color:var(--sub)">まだ控えはありません。毎月1日の朝3時に自動で作ります。</div>'}
+      <div class="small" style="color:var(--sub);margin-top:6px">Drive の 福祉ボット2／控え に、約1年分を残します。</div></div>
+    <div class="bar"><button class="btn s" id="hlBackup">今すぐ控えを作る</button><button class="btn p" id="hlRun" style="flex:1">今すぐ点検してLINEへ</button></div>`;
+  $('hlRun').onclick = () => runAction(() => apiPost({ app:'healthRun' }), () => showHealth());
+  $('hlBackup').onclick = () => confirmSheet('控えを作りますか？', 'スプレッドシート（と打刻のスプレッドシート）のコピーを Drive の 福祉ボット2／控え に作ります。1分ほどかかることがあります。', '作る', () => runAction(() => apiPost({ app:'backupNow' }), () => showHealth()));
+}
+
 /* ================= 画面の切り替え（#/…） ================= */
 let viewToken = 0;
 function route(){
@@ -3127,6 +3162,7 @@ function route(){
   if (page === 'admin' && arg === 'shogu') return showShogu();
   if (page === 'admin' && arg === 'kasan') return showKasan();
   if (page === 'admin' && arg === 'gimu') return showGimu();
+  if (page === 'admin' && arg === 'health') return showHealth();
   if (page === 'admin') return arg === 'monthly' ? showMonthly() : arg.startsWith('attend') ? showAttendDay(arg.split('/')[1] || '') : showDeadlines();
   if (page === 'drafts' || page === 'history') return showLog();
   if (page === 'settings') return showSettings();
@@ -5075,6 +5111,7 @@ function drawerItems(){
     a ? ['届出・報告', '🗂', [it('#/admin/gimu', '減算・義務のチェック', '虐待防止・身体拘束・BCP・感染症・情報公表'), it('#/admin/kasan', '加算の届出（正式な様式）', '送迎実績・勤務形態・届出書'),
       it('#/admin/shogu', '処遇改善加算 計画書の準備', '見込額・要件・職場環境等の取組'), it('#/admin/tenken', '運営指導 自己点検表')]] : null,
     ['情報', 'ℹ️', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
+    a ? ['見守り', '🩺', [it('#/admin/health', '動作の見守り', '定期実行・エラー・毎月の控え')]] : null,
     ['', '', [it('#/settings', '設定')]]
   ].filter(Boolean);
 }
