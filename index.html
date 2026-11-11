@@ -817,7 +817,7 @@ async function demoApi(p){
   if (p.app === 'fields' && p.sheet === '欠席時対応(加算)記録表') return { sheet:p.sheet, fields: [
     { index:0, label:'受付日付', type:'date', required:true }, { index:3, label:'対応方法', type:'text', options:['TEL','その他'], strict:true },
     { index:8, label:'欠席理由', type:'text', options:['発熱','発作','体調不良','感染症','その他'], strict:true, required:true },
-    { index:9, label:'体温', type:'text', options:['37.5','38.0'] }, { index:13, label:'その他', type:'text' },
+    { index:9, label:'体温', type:'text', options:['37.5','38.0'] }, { index:11, label:'発作状態は', type:'text' }, { index:13, label:'列14', type:'text', hidden:true },
     { index:15, label:'その他(病院等)', type:'text', options:['入院','病院に受診','家庭にて安静'], strict:true }, { index:17, label:'利用者名', type:'text', options:['みのり 太郎'], strict:true } ] };
   if (p.app === 'fields') return { sheet:p.sheet, fields: p.sheet === 'アルコールチェッカー記録' ? DEMO_ALC : p.sheet === '相談記録表' ? DEMO_SOUDAN : DEMO_FIELDS };
   if (p.app === 'ping') return { message:'デモ表示です' };
@@ -3230,6 +3230,8 @@ function renderForm(sheet, fields, keepValues, edit){
   if (!draft && !keepValues) { const fd = fields.find(f => !f.hidden && f.type === 'date'); if (fd) values[fd.index] = ymd(); }
   const files = (F && F.sheet === sheet && keepValues) ? F.files : {};
   F = { sheet, fields, values, group, files, edit: edit || null };
+  // 条件で出す欄は、シートで「表示しない」扱いの列でも描いておく（出し入れは applyCond）
+  condRules().forEach(({ t }) => { if (t.hidden) { t.hidden = false; t.type = t.type === 'image' ? 'text' : t.type; t.options = []; t.strict = false; } });
   const vis = fields.filter(f => !f.hidden);
 
   let html = `<div class="${gClass(group)}">`;
@@ -3309,12 +3311,13 @@ function setValue(i, v){
    target：出し入れする欄の見出し　when：きっかけの欄の見出し　is：出す条件　label：出すときの見出し　req：出したときは必須 */
 const FORM_COND = {
   '欠席時対応(加算)記録表': [
-    { target: /^その他(の理由|の欠席理由|[（(]欠席理由[)）])?$/, when: /^欠席理由$/, is: v => /その他/.test(v), label: 'その他の理由（欠席理由の内容）', req: true }
+    // N列（14列目）＝転記で「その他」として帳票の欠席理由「その他」の行に入る列。見出しが空でも使う
+    { col: 13, target: /^その他$/, when: /^欠席理由$/, is: v => /その他/.test(v), label: 'その他の理由（欠席理由の内容）', req: true }
   ]
 };
 function condRules(){
   const rules = (F && FORM_COND[F.sheet]) || [];
-  return rules.map(r => ({ r, t: F.fields.find(f => !f.hidden && r.target.test(String(f.label).trim())), w: F.fields.find(f => !f.hidden && r.when.test(String(f.label).trim())) })).filter(x => x.t && x.w);
+  return rules.map(r => ({ r, t: r.col != null ? F.fields.find(f => f.index === r.col) : F.fields.find(f => !f.hidden && r.target.test(String(f.label).trim())), w: F.fields.find(f => !f.hidden && r.when.test(String(f.label).trim())) })).filter(x => x.t && x.w && !x.t.auto);
 }
 function applyCond(){
   if (!F) return;
