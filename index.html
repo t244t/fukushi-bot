@@ -289,7 +289,11 @@ table.mt th{font-size:12px;color:var(--sub);font-weight:700}
 .drawer{position:fixed;top:0;bottom:0;left:0;width:min(300px,84vw);background:var(--paper);z-index:41;transform:translateX(-102%);visibility:hidden;transition:transform .22s ease,visibility 0s .22s;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 10px) 0 calc(env(safe-area-inset-bottom) + 20px)}
 .drawer.on{transform:none;visibility:visible;transition:transform .22s ease;box-shadow:4px 0 18px rgba(0,0,0,.18)}
 .dr-head{display:flex;align-items:center;gap:10px;padding:4px 18px 12px;border-bottom:1px solid var(--rule)}
-.dr-sec{font-size:12px;color:var(--sub);font-weight:700;padding:14px 18px 4px}.dr-sep{border-top:1px solid var(--rule);margin:10px 0 4px}
+.dr-sec{font-size:12px;color:var(--sub);font-weight:700;padding:14px 18px 4px}
+.dr-grp{border-bottom:1px solid var(--rule)}.dr-grp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 18px;font-size:14px;color:var(--ink)}.dr-grp>summary::-webkit-details-marker{display:none}
+.dr-grp>summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--sub);border-bottom:2px solid var(--sub);transform:rotate(-45deg);margin-left:auto;transition:transform .15s}.dr-grp[open]>summary::after{transform:rotate(45deg)}
+.dr-ic{width:22px;text-align:center}.dr-gl{font-weight:700}.dr-n{font-size:11px;color:var(--sub);background:var(--soft);border-radius:999px;padding:1px 7px;font-weight:400}
+.dr-grp .dr-item{padding-left:48px}.dr-one{gap:8px;border-bottom:1px solid var(--rule);font-size:14px}.dr-sep{border-top:1px solid var(--rule);margin:10px 0 4px}
 .dr-item{display:flex;align-items:center;min-height:48px;padding:6px 18px;color:inherit;text-decoration:none;font-size:16px}
 .dr-item small{display:block;font-size:12px;color:var(--sub)}
 .dr-item[aria-current="page"]{background:var(--soft);box-shadow:inset 4px 0 0 var(--brand);font-weight:700}
@@ -5050,27 +5054,50 @@ function editBookRow(r){
 
 
 /* ===== サイドメニュー（三本線） ===== */
+/* サイドメニュー：使う場面ごとのカテゴリー。カテゴリーは開け閉めでき、開いている状態は覚える（今の画面のカテゴリーは自動で開く） */
 function drawerItems(){
   const a = isAdmin(), m = isMember();
   const it = (href, label, sub) => ({ href, label, sub });
-  if (m) return [['毎日', [it('#/attend', '出退勤'), ME && ME.name ? it('#/book/' + encodeURIComponent(ME.name), '自分の出勤簿') : null]], ['見る', [it('#/manual', '緊急・対応マニュアル'), it('#/info', '情報')]], ['', [it('#/settings', '設定')]]];
+  if (m) return [
+    ['毎日', '🕘', [it('#/attend', '出退勤'), ME && ME.name ? it('#/book/' + encodeURIComponent(ME.name), '自分の出勤簿') : null]],
+    ['見る', '📖', [it('#/manual', '緊急・対応マニュアル'), it('#/info', '情報')]],
+    ['', '', [it('#/settings', '設定')]]
+  ];
   return [
-    ['毎日', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き')]],
-    ['連絡・災害', [it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'), it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫'), it('#/info/shelter', 'ハザードマップ・避難場所')]],
-    ['業務', [it('#/work', 'やること'), it('#/eisei', '衛生管理の記録', '店舗のHACCP・事業所の衛生'), it('#/deadlines', '利用者の期限・カレンダー'), it('#/sougei', '送迎の予定とアラーム', '送迎30分前に担当へ通知'), it('#/quarantine', '感染症の待機期間'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
-    a ? ['管理', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック'), it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/roster', '名簿の管理', '利用者・スタッフの登録と確認'), it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名'), it('#/admin/gimu', '減算・義務のチェック', '虐待防止・身体拘束・BCP・感染症・情報公表'), it('#/admin/kasan', '加算の届出（正式な様式）', '送迎実績状況表・届出書'), it('#/admin/shogu', '処遇改善加算 計画書の準備', '見込額・要件・職場環境等の取組'), it('#/admin/tenken', '運営指導 自己点検表'), it('#/admin/monthly', '月別集計')]] : null,
-    ['見る', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
-    ['', [it('#/settings', '設定')]]
+    ['毎日', '🕘', [it('#/attend', '出退勤', '出勤・退勤・連絡'), it('#/', '記録する', '帳票の入力'), it('#/drafts', '履歴', '送った記録・下書き'), it('#/work', 'やること')]],
+    ['利用者', '🧑‍🤝‍🧑', [it('#/deadlines', '利用者の期限・カレンダー'), it('#/sougei', '送迎の予定とアラーム', '送迎30分前に担当へ通知'), it('#/quarantine', '感染症の待機期間'),
+      a ? it('#/admin/jusetsu', '重要事項説明書（署名）', '契約時にタッチ・マウスで署名') : null, a ? it('#/admin/roster', '名簿の管理', '利用者・スタッフの登録と確認') : null]],
+    a ? ['出勤・実績', '📅', [it('#/admin/attend', '出退勤の一覧'), it('#/books', '出勤簿'), it('#/admin/jisseki', '実績記録のチェック', '手書きの実績記録を写真・PDFで読み取り'),
+      it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/monthly', '月別集計')]] : null,
+    ['店舗・作業', '🏪', [it('#/eisei', '衛生管理の記録', '店舗のHACCP・事業所の衛生'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
+    ['連絡・安全', '📣', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'),
+      it('#/info/shelter', 'ハザードマップ・避難場所'), it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫')]],
+    a ? ['届出・報告', '🗂', [it('#/admin/gimu', '減算・義務のチェック', '虐待防止・身体拘束・BCP・感染症・情報公表'), it('#/admin/kasan', '加算の届出（正式な様式）', '送迎実績・勤務形態・届出書'),
+      it('#/admin/shogu', '処遇改善加算 計画書の準備', '見込額・要件・職場環境等の取組'), it('#/admin/tenken', '運営指導 自己点検表')]] : null,
+    ['情報', 'ℹ️', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
+    ['', '', [it('#/settings', '設定')]]
   ].filter(Boolean);
 }
+const drIsCur = (href, cur) => href === cur || (href !== '#/' && cur.startsWith(href + '/'));
 function fillDrawer(){
   const cur = location.hash || '#/';
   $('drHome').setAttribute('href', isMember() ? '#/attend' : '#/');
   $('drHome').onclick = () => closeDrawer();
   $('drWho').innerHTML = ME && ME.name ? esc(ME.name) + ' さん' + (isAdmin() ? '<span class="admin-mark">管理者</span>' : '') : '';
-  $('drBody').innerHTML = drawerItems().map(([g, list]) => `${g ? `<div class="dr-sec">${esc(g)}</div>` : '<div class="dr-sep"></div>'}${list.filter(Boolean).map(x =>
-    `<a class="dr-item" href="${x.href}"${x.href === cur || (x.href !== '#/' && cur.startsWith(x.href + '/')) ? ' aria-current="page"' : ''}><span>${esc(x.label)}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`).join('')}`).join('');
+  const open = LS.get('fb_dr_open', null) || { '毎日': true };
+  // 今の画面がいちばん合う項目を1つだけ選ぶ（#/admin/kasan と #/admin のような重なりを避ける）
+  let best = '';
+  drawerItems().forEach(([, , list]) => list.filter(Boolean).forEach(x => { if (drIsCur(x.href, cur) && x.href.length > best.length) best = x.href; }));
+  $('drBody').innerHTML = drawerItems().map(([g, ic, list]) => {
+    const items = list.filter(Boolean);
+    const links = items.map(x => `<a class="dr-item" href="${x.href}"${x.href === best ? ' aria-current="page"' : ''}><span>${esc(x.label)}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`).join('');
+    if (!g) return `<div class="dr-sep"></div>${links}`;
+    if (items.length === 1) { const x = items[0]; return `<a class="dr-item dr-one" href="${x.href}"${x.href === best ? ' aria-current="page"' : ''}><span class="dr-ic" aria-hidden="true">${ic}</span><span><b>${esc(x.label)}</b>${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</span></a>`; }
+    const on = open[g] || items.some(x => x.href === best);
+    return `<details class="dr-grp" data-g="${esc(g)}"${on ? ' open' : ''}><summary class="dr-sec"><span class="dr-ic" aria-hidden="true">${ic}</span><span class="dr-gl">${esc(g)}</span><span class="dr-n">${items.length}</span></summary>${links}</details>`;
+  }).join('');
   $('drBody').querySelectorAll('a').forEach(x => x.onclick = () => closeDrawer());
+  $('drBody').querySelectorAll('.dr-grp').forEach(d => d.ontoggle = () => { const o = LS.get('fb_dr_open', null) || { '毎日': true }; o[d.dataset.g] = d.open; LS.set('fb_dr_open', o); });
 }
 function openDrawer(){
   fillDrawer();
