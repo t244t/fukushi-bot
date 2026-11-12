@@ -4712,7 +4712,7 @@ function drawBatch(){
     <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${done.length}</b><span>読み取り済み</span></div><div style="background:${need.length ? 'var(--err)' : 'var(--g1)'}"><b>${need.length}</b><span>要確認の人</span></div><div style="background:${errs.length ? 'var(--warn)' : 'var(--g2)'}"><b>${errs.length}</b><span>読めなかった</span></div></div>
     ${running ? (JS_JOB ? `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚は、裏で読み取っています。画面を閉じても進みます。全部終わったらLINEでお知らせします（この画面は1分ごとに更新）。</div>` : `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚。1枚30秒ほどかかります。画面を閉じずにお待ちください。</div>`) : '<div class="small">すべて読み取りました。名前を押すと、その人の結果を確認・修正できます。</div>'}
     ${!running && errs.some(x => x.b64) ? `<button class="btn s wide" id="jsRetry" style="margin-top:10px">読めなかった${errs.filter(x => x.b64).length}枚を読み直す</button>` : ''}
-    ${JS_JOB && errs.length ? `<button class="btn s wide" id="jsJobRetry" style="margin-top:10px">読めなかった${errs.length}枚を、もう一度預けて読み直す</button>` : ''}</div>`;
+    ${JS_JOB && (errs.length || JS_BATCH.some(x => x.state === 'wait' && x.next > Date.now())) ? `<button class="btn s wide" id="jsJobRetry" style="margin-top:10px">${errs.length ? `読めなかった${errs.length}枚と、時間をおいている分を今すぐ読み直す` : '時間をおいている分を、今すぐ読み直す'}</button><div class="small" style="margin-top:4px">Geminiの設定（お支払いなど）を直したあとに押してください。</div>` : ''}</div>`;
   html += `<table class="at-tbl"><thead><tr><th style="width:42%">利用者</th><th>出勤（用紙／記録）</th><th>要確認</th></tr></thead><tbody>${JS_BATCH.map((x, i) => {
     if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${/混み合って|high demand|overloaded|UNAVAILABLE/i.test(x.err) ? 'Geminiが混み合っていた' : /quota|RESOURCE_EXHAUSTED|limit|429/i.test(x.err) ? 'Geminiの回数の上限に当たった' : 'エラーになった'}ので、${x.next ? new Date(x.next).toTimeString().slice(0, 5) + 'ごろに' : ''}自動で読み直します${x.tries ? `（${x.tries}回目まで済）` : ''}</span><div class="small" style="color:var(--sub);word-break:break-all">${esc(String(x.err).slice(0, 160))}</div>` : '待機中'}</td></tr>`;
     if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${esc(x.err)}</span>` : '読み取り中…'}</td></tr>`;
@@ -4729,7 +4729,7 @@ function drawBatch(){
     $('jsOut').innerHTML = html;
     $('jsOut').querySelectorAll('[data-open]').forEach(tr => tr.onclick = () => openBatch(Number(tr.dataset.open)));
   }
-  if ($('jsJobRetry')) $('jsJobRetry').onclick = () => runAction(() => apiPost({ app:'jissekiJobRetry', jb: JS_JOB }), () => { openJissekiJob(JS_JOB); loadJissekiJobs(); });
+  if ($('jsJobRetry')) $('jsJobRetry').onclick = () => runAction(() => apiPost({ app:'jissekiJobRetry', jb: JS_JOB }), () => { apiPost({ app:'jissekiQueueNow' }).then(() => { openJissekiJob(JS_JOB); loadJissekiJobs(); }).catch(() => {}); openJissekiJob(JS_JOB); loadJissekiJobs(); });
   if ($('jsRetry')) $('jsRetry').onclick = async () => {
     const month = $('jsMonth').value;
     for (const it of JS_BATCH.filter(x => x.state === 'err' && x.b64)) {
