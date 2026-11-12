@@ -4714,7 +4714,7 @@ function drawBatch(){
     ${!running && errs.some(x => x.b64) ? `<button class="btn s wide" id="jsRetry" style="margin-top:10px">読めなかった${errs.filter(x => x.b64).length}枚を読み直す</button>` : ''}
     ${JS_JOB && errs.length ? `<button class="btn s wide" id="jsJobRetry" style="margin-top:10px">読めなかった${errs.length}枚を、もう一度預けて読み直す</button>` : ''}</div>`;
   html += `<table class="at-tbl"><thead><tr><th style="width:42%">利用者</th><th>出勤（用紙／記録）</th><th>要確認</th></tr></thead><tbody>${JS_BATCH.map((x, i) => {
-    if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? '<span style="color:var(--warn)">混み合っていたので、時間をおいて自動で読み直します</span>' : '待機中'}</td></tr>`;
+    if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${/混み合って|high demand|overloaded|UNAVAILABLE/i.test(x.err) ? 'Geminiが混み合っていた' : /quota|RESOURCE_EXHAUSTED|limit|429/i.test(x.err) ? 'Geminiの回数の上限に当たった' : 'エラーになった'}ので、${x.next ? new Date(x.next).toTimeString().slice(0, 5) + 'ごろに' : ''}自動で読み直します${x.tries ? `（${x.tries}回目まで済）` : ''}</span><div class="small" style="color:var(--sub);word-break:break-all">${esc(String(x.err).slice(0, 160))}</div>` : '待機中'}</td></tr>`;
     if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${esc(x.err)}</span>` : '読み取り中…'}</td></tr>`;
     if (x.state === 'err') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="flag">${esc(x.err)}</td></tr>`;
     const r = x.res, n = r.totals.issues + (r.headIssues || []).length;
@@ -4796,7 +4796,7 @@ async function openJissekiJob(jb){
   try {
     const j = await apiPost({ app:'jissekiJob', jb });
     if (JS_JOB !== jb || !$('jsOut')) return;
-    JS_BATCH = j.items.map(it => ({ ix: it.ix, label: it.label, state: it.state, res: it.res || null, err: it.err || '' }));
+    JS_BATCH = j.items.map(it => ({ ix: it.ix, label: it.label, state: it.state, res: it.res || null, err: it.err || '', tries: it.tries || 0, next: it.next || 0 }));
     if (first) $('jsOut').innerHTML = '';
     drawBatch();
     if (first) window.scrollTo(0, $('jsOut').offsetTop - 70);
