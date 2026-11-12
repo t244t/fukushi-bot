@@ -528,6 +528,13 @@ body.pc .km-prevg{grid-template-columns:repeat(4,1fr)}
 .hl-dot{width:10px;height:10px;border-radius:50%;flex:none}.hl-m{flex:1;min-width:0;display:grid}.hl-m .small{color:var(--sub)}.hl-st{font-size:12px;font-weight:700;white-space:nowrap}
 .hl-err{padding:8px 12px;border-bottom:1px solid var(--rule);font-size:14px}.hl-err .small{color:var(--sub)}.hl-bk{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule)}.hl-bk .small{color:var(--sub)}
 body.pc .hl-list{display:grid;grid-template-columns:1fr 1fr}body.pc .hl-row:nth-last-child(2){border-bottom:0}
+.wk-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}.wk-head b{font-size:16px;min-width:7.5em;text-align:center}.wk-head .link{font-size:22px;padding:0 10px;min-height:36px}.wk-head .small{font-size:12px;margin-left:auto}
+.wk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}.wk-w span{font-size:11px;color:var(--sub);padding:2px 0}
+.wk-d{border:0;background:none;font:inherit;color:inherit;border-radius:10px;min-height:42px;padding:4px 0 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:14px}
+.wk-d i{display:flex;gap:2px;height:6px}.wk-d i b,.wk-leg b,.wk-it>b{width:6px;height:6px;border-radius:50%;display:inline-block}
+.wk-d.today{background:var(--brand);color:#fff!important;font-weight:700}.wk-d.sel{outline:2px solid var(--brand);outline-offset:-2px}.wk-d.late{box-shadow:inset 0 -3px 0 var(--err)}
+.wk-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--sub);margin-top:6px}.wk-leg span{display:flex;align-items:center;gap:4px}
+.wk-list{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}.wk-it{display:flex;gap:8px;align-items:flex-start;padding:4px 0}.wk-it>b{margin-top:8px;flex:none}
 .js-imp summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}.js-imp summary .small{color:var(--sub)}.js-imp-t{overflow-x:auto;margin-top:8px}
 </style>
 </head>
@@ -837,7 +844,7 @@ async function demoApi(p){
       display:{ 0:'2026/11/01', 1:'松川 忠義', 2:'出勤', 3:'09:00', 4:'13:00', 5:'60', 6:'4.0h', 7:'無し', 8:'物販,配送', 9:'レジ補助を落ち着いてできた', 10:'無し', 11:'' } };
   if (p.app === 'post') { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）投稿しました' }; }
   if (p.app === 'update') { await new Promise(r => setTimeout(r, 700)); return { message:'（デモ）2項目を修正しました', pdfs:[] }; }
-  if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', done:true }] };
+  if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', endYmd:'2026-11-15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', endYmd:'2026-11-30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', endYmd:'2026-10-31', done:true }] };
   if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', img:'https://drive.google.com/uc?export=view&id=14FGABCFRWZt8ImltKwc40HdHm3ZoGfnl', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
   if (p.app === 'stockMove') { await new Promise(r => setTimeout(r, 500)); return { message:'（デモ）記録しました', stock:4 }; }
   if (p.app === 'deadlines' || p.app === 'deadlineSync') return { message:'（デモ）更新しました', people:[{ name:'山田 太郎', office:'あごら', staff:'神田', soon:2, items:[{ name:'受給者証支給終了', date:'2026/11/12', days:11 }, { name:'計画更新月', date:'2026/11/28', days:27 }, { name:'手帳有効期限', date:'2027/5/13', days:193 }] }, { name:'佐藤 花子', office:'木の実', staff:'松下', soon:0, items:[{ name:'暫定終了日', date:'2026/10/20', days:-12 }] }] };
@@ -5391,7 +5398,7 @@ function showWork(){
   const token = viewToken;
   const v = $('view');
   if (!signedIn() || authError) { v.innerHTML = `<div class="note${authError ? ' err' : ''}">${esc(authError || 'LINEから開くか、設定でアプリキーを入力すると使えます。')}</div>`; return; }
-  let html = `<div class="sec-title">やること</div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
+  let html = `<div class="sec-title">やること</div><div class="box wk-cal" id="wkCal"></div><div class="box" id="tkBox"><div class="small">読み込んでいます…</div></div>
     <div class="sec-title">健康・感染症</div>
     <a class="list-item" href="#/eisei" style="color:inherit;text-decoration:none;--gc:var(--g1)"><div class="main"><div class="t">衛生管理の記録</div><div class="m">店舗の衛生管理計画（HACCP）・事業所の衛生と感染対策</div></div>${ICON.chev}</a>
     <a class="list-item" href="#/sougei" style="color:inherit;text-decoration:none;--gc:var(--g2)"><div class="main"><div class="t">送迎の予定とアラーム</div><div class="m">今日の送迎と、30分前のLINE通知</div></div>${ICON.chev}</a>
@@ -5415,7 +5422,11 @@ function showWork(){
   }
   v.innerHTML = html;
   const live = () => token === viewToken;
+  WKCAL.tasks = null; WKCAL.events = []; WKCAL.dl = []; WKCAL.sel = '';
+  drawWkCal();
   loadTasks(live);
+  api({ app:'events' }).then(j => { if (!live()) return; WKCAL.events = (j.events || []).map(e => ({ d: wkYmd(e.date), kind:'ev', text: e.name + (e.time ? '（' + e.time + '）' : ''), sub: e.place || '' })).filter(x => x.d); drawWkCal(); }).catch(() => {});
+  if (isAdmin()) api({ app:'deadlines' }).then(j => { if (!live()) return; WKCAL.dl = []; (j.people || []).forEach(p => (p.items || []).forEach(it => { const d = wkYmd(it.date); if (d) WKCAL.dl.push({ d, kind:'dl', text: p.name + '：' + it.name, sub: p.staff ? '担当 ' + p.staff : '' }); })); drawWkCal(); }).catch(() => {});
   if (isAdmin()) loadAttendance(live);
   api({ app:'quarantine' }).then(j => { LS.set(qtKey(), j); const n = qtActive(j).length; if (live() && $('qtSub')) $('qtSub').innerHTML = n ? `<b style="color:var(--err)">いま待機中 ${n}人</b>` : '誰がいつまで待機中かをチャートで'; }).catch(() => {});
   api({ app:'views' }).then(j => { LS.set('fb_views_' + (isDemo() ? 'demo' : 'live'), j.views); if (live() && $('rpBox')) $('rpBox').innerHTML = workReports(); }).catch(() => {});
@@ -5560,6 +5571,38 @@ async function loadAttendance(live){
   } catch (e) { if (live()) $('atBox').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 
+/* ===== やること：上のカレンダー（やることの期限・行事・利用者の期限） ===== */
+const WKCAL = { ym:'', sel:'', tasks:null, events:[], dl:[] };
+const wkYmd = s => { const m = String(s || '').match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m ? m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0') : ''; };
+const WK_KIND = { tk:['var(--brand)', 'やること'], done:['var(--sub)', '完了'], ev:['var(--g2)', '行事'], dl:['var(--err)', '利用者の期限'] };
+function drawWkCal(){
+  const box = $('wkCal'); if (!box) return;
+  const today = ymd();
+  if (!WKCAL.ym) WKCAL.ym = today.slice(0, 7);
+  const [Y, M] = WKCAL.ym.split('-').map(Number);
+  const first = new Date(Y, M - 1, 1).getDay(), days = new Date(Y, M, 0).getDate();
+  const all = [].concat(WKCAL.tasks || [], WKCAL.events, WKCAL.dl);
+  const by = {}; all.forEach(x => { if (x.d.slice(0, 7) === WKCAL.ym) (by[x.d] = by[x.d] || []).push(x); });
+  let cells = '';
+  for (let i = 0; i < first; i++) cells += '<span></span>';
+  for (let d = 1; d <= days; d++) {
+    const k = WKCAL.ym + '-' + String(d).padStart(2, '0'), xs = by[k] || [], wd = (first + d - 1) % 7;
+    const kinds = [...new Set(xs.map(x => x.kind))];
+    cells += `<button class="wk-d${k === today ? ' today' : ''}${k === WKCAL.sel ? ' sel' : ''}${k < today && xs.some(x => x.kind === 'tk') ? ' late' : ''}" data-wkd="${k}" style="${wd === 0 ? 'color:var(--err)' : wd === 6 ? 'color:#3b82f6' : ''}" aria-label="${M}月${d}日${xs.length ? ' 予定' + xs.length + '件' : ''}">${d}<i>${kinds.map(c => `<b style="background:${WK_KIND[c][0]}"></b>`).join('')}</i></button>`;
+  }
+  const selXs = WKCAL.sel ? (by[WKCAL.sel] || []) : [];
+  const sd = WKCAL.sel ? new Date(WKCAL.sel + 'T00:00:00') : null;
+  box.innerHTML = `<div class="wk-head"><button class="link" id="wkPrev" aria-label="前の月">‹</button><b>${Y}年${M}月</b><button class="link" id="wkNext" aria-label="次の月">›</button>${WKCAL.ym !== today.slice(0, 7) ? '<button class="link small" id="wkToday">今月</button>' : ''}</div>
+    <div class="wk-grid wk-w">${'日月火水木金土'.split('').map(w => `<span>${w}</span>`).join('')}</div>
+    <div class="wk-grid">${cells}</div>
+    <div class="wk-leg">${Object.keys(WK_KIND).filter(k => k !== 'dl' || isAdmin()).map(k => `<span><b style="background:${WK_KIND[k][0]}"></b>${WK_KIND[k][1]}</span>`).join('')}${WKCAL.tasks === null ? '<span>読み込んでいます…</span>' : ''}</div>
+    ${WKCAL.sel ? `<div class="wk-list"><div class="small" style="font-weight:700;margin-bottom:4px">${sd.getMonth() + 1}月${sd.getDate()}日（${'日月火水木金土'[sd.getDay()]}）</div>${selXs.length ? selXs.map(x => `<div class="wk-it"><b style="background:${WK_KIND[x.kind][0]}"></b><div><div${x.kind === 'done' ? ' style="text-decoration:line-through;color:var(--sub)"' : ''}>${esc(x.text)}</div>${x.sub ? `<div class="small">${esc(x.sub)}</div>` : ''}</div></div>`).join('') : '<div class="small">予定はありません。</div>'}</div>` : ''}`;
+  const mv = n => { const d = new Date(Y, M - 1 + n, 1); WKCAL.ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); WKCAL.sel = ''; drawWkCal(); };
+  $('wkPrev').onclick = () => mv(-1); $('wkNext').onclick = () => mv(1);
+  if ($('wkToday')) $('wkToday').onclick = () => { WKCAL.ym = today.slice(0, 7); WKCAL.sel = today; drawWkCal(); };
+  box.querySelectorAll('[data-wkd]').forEach(b => b.onclick = () => { WKCAL.sel = WKCAL.sel === b.dataset.wkd ? '' : b.dataset.wkd; drawWkCal(); });
+}
+
 /* ===== やること ===== */
 const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 async function loadTasks(live){
@@ -5567,6 +5610,8 @@ async function loadTasks(live){
     const j = await api({ app:'tasks' });
     if (!live()) return;
     const ts = j.tasks || [];
+    WKCAL.tasks = ts.filter(t => t.endYmd).map(t => ({ d: t.endYmd, kind: t.done ? 'done' : 'tk', text: t.text || t.who, sub: (t.who && t.text ? t.who + '　' : '') + (t.done ? '完了' : '期限') }));
+    drawWkCal();
     const open = ts.filter(t => !t.done), done = ts.filter(t => t.done).slice(0, 5);
     const row = t => `<div class="task${t.done ? ' done' : ''}"><button class="ck" data-tk="${t.row}" aria-pressed="${t.done}" aria-label="${t.done ? '未完了に戻す' : '完了にする'}">${t.done ? CHECK_SVG : ''}</button>
       <div style="flex:1"><div class="tx">${esc(t.text || t.who)}</div><div class="small">${t.who && t.text ? esc(t.who) + '　' : ''}${t.end ? '期限 ' + esc(t.end) : ''}</div></div></div>`;
