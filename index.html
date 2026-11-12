@@ -800,6 +800,12 @@ async function demoApi(p){
     { name:'田中 尚樹', kubun:'利用者', state:'notice', inTime:'', outTime:'', workMin:0, awayMin:0, pickup:'', notes:['欠席（理由：体調不良）'], flags:[], logs:[{ time:'07:45', log:'【連絡】欠席（理由：体調不良）' }] }] };
   if (p.app === 'jissekiNames') return { names:['臼木 楓','峰 恭子','松川 忠義','田中 尚樹'] };
   if (p.app === 'jissekiScan' || p.app === 'jissekiCheck') return demoJisseki(p);
+  if (p.app === 'jissekiQueueAdd') { await new Promise(r => setTimeout(r, 300)); return { saved: JSON.parse(p.files).length }; }
+  if (p.app === 'jissekiQueueNow') return { message:'0枚読み取りました' };
+  if (p.app === 'jissekiJobs') return { jobs:[{ jb:'Jdemo1', at: Date.now() - 600000, label:'R8.9実績記録(ファーム).pdf', total:36, expected:36, done:30, wait:4, err:2, need:5, month:'2026-09', next: Date.now() + 240000 }, { jb:'Jdemo0', at: Date.now() - 86400000 * 3, label:'R8.8実績記録.pdf', total:34, expected:34, done:34, wait:0, err:0, need:2, month:'2026-08', next:0 }] };
+  if (p.app === 'jissekiJob') return { jb:p.jb, items: Array.from({ length:8 }, (_, i) => i < 5 ? { ix:i, label:'R8.9実績記録.pdf（' + (i + 1) + '/8枚目）', state:'done', res: demoJisseki({ month:'2026-09', name:['臼木 楓','山田 太郎','佐藤 花子','田中 一郎','鈴木 次郎'][i] }) } : i < 7 ? { ix:i, label:'R8.9実績記録.pdf（' + (i + 1) + '/8枚目）', state:'wait', err: i === 6 ? '混み合っています' : '', tries: i === 6 ? 1 : 0 } : { ix:i, label:'R8.9実績記録.pdf（8/8枚目）', state:'err', err:'読み取りに失敗しました：Geminiが混み合っています' }) };
+  if (p.app === 'jissekiJobRetry') return { message:'1枚をもう一度預けました。5分以内に読み取りを始めます' };
+  if (p.app === 'jissekiJobDel') return { message:'一覧から消しました' };
   if (p.app === 'voiceDraft') { await new Promise(r => setTimeout(r, 800)); return { main:'相談内容', fields:{ '対象者':'峰 恭子', '相談内容':'１．相談内容\n\n作業中の休憩の取り方について相談あり。\n本人より「午後になると集中が続かない」との申し出があった。\n\n２．事業所対応\n\n午後の作業を30分ごとに区切り、5分の小休憩を入れる方法を提案した。\n\n３．今後の対応・所見\n\n1週間試して、次回の面談で様子を確認する。職員間で休憩の声かけを共有する。' },
     transcript:'職員：今日はどうしました？\n本人：午後になると集中が続かなくて…\n職員：じゃあ30分ごとに5分休んでみましょうか。', points:['対象者の名前を確認してください'] }; }
   if (p.app === 'books') return { books:[{ name:'峰 恭子', type:'利用者', ym:'2026-10' }, { name:'松川 忠義', type:'利用者', ym:'2026-11' }, { name:'石橋 強', type:'スタッフ', ym:'2026-10' }, { name:'大原 里奈', type:'スタッフ', ym:'2026-11' }], month:'2026-11', auto:false };
@@ -4601,6 +4607,7 @@ async function showJisseki(){
     <div class="field" style="padding:0;margin-top:10px"><label for="jsMonth">年月（空なら用紙に書かれた年月）</label><input class="in" id="jsMonth" type="month" value=""></div>
     <label class="btn p wide" id="jsDrop" style="display:grid;place-items:center;margin-top:12px;cursor:pointer">写真・PDFを選ぶ（まとめて可）<input type="file" id="jsFile" accept="image/*,application/pdf" multiple hidden></label>
     <div class="small" style="margin-top:6px;text-align:center">複数ページのPDF（1ページ＝1人分）や、複数のファイルをまとめて選べます。パソコンではドラッグでも読み込めます。</div></div>
+    <div id="jsJobs"></div>
     <div id="jsOut"></div>
     <details class="box js-imp"><summary><b>読み取った月を、打刻の記録に取り込む</b><span class="small">手書きの出勤簿（実績記録）で運用している月に</span></summary>
       <div class="small" style="color:var(--sub);margin:6px 0">チェックした用紙の「開始・終了・送迎の往／復」を、打刻（利用者ログ）に「実績記録から」として入れます。月別集計・送迎実績状況表・勤務形態一覧表が、打刻と同じように使えます。LINE・QR・受付端末で打刻した日はそのまま残し、同じ月をもう一度取り込むと前の分と入れ替えます。</div>
@@ -4609,6 +4616,7 @@ async function showJisseki(){
       <button class="link" id="jsClr" style="margin-top:10px;color:var(--err)">この年月の読み取り結果を消す（年月を間違えて読み取ったとき）</button></details></div>`;
   $('jsImpBtn').onclick = jissekiImportPreview;
   $('jsClr').onclick = () => { const m = $('jsImpM').value; if (!m) { toast('年月を選んでください'); return; } confirmSheet(ksYmLabel(m) + 'の読み取り結果を消しますか？', 'シート「実績記録の読み取り」から、この月の全員分を消します（チェックの履歴と、取り込み済みの打刻の記録は消えません）。正しい年月で読み取り直してください。', '消す', () => runAction(() => apiPost({ app:'jissekiStoreClear', month: m }), () => { $('jsImpOut').innerHTML = ''; })); };
+  JS_JOB = null; loadJissekiJobs();
   api({ app:'jissekiNames' }).then(j => { LS.set('fb_jnames', j.names); if ($('jsName') && !names.length) { names = j.names; $('jsName').insertAdjacentHTML('beforeend', names.map(n => `<option>${esc(n)}</option>`).join('')); } }).catch(() => {});
   const drop = $('jsDrop');
   drop.ondragover = e => { e.preventDefault(); drop.style.opacity = .7; };
@@ -4663,6 +4671,8 @@ async function readJissekiFiles(files){
   } catch (err) { $('jsOut').innerHTML = `<div class="note err">${esc(err.message)}</div>`; return; }
   if (!items.length) { $('jsOut').innerHTML = '<div class="note err">画像かPDFを選んでください。</div>'; return; }
   const name = $('jsName').value, month = $('jsMonth').value;
+  if (items.length > 1 && !(await jsChooseMode(items.length))) { await queueJisseki(items, name, month); return; }
+  JS_JOB = null;
   JS_BATCH = items.map(x => ({ ...x, state:'wait', res:null, err:'' }));
   drawBatch();
   // 2件ずつ並べて読み取る。Gemini の利用上限（1分あたりの回数など）に当たったら、待ってから読み直す
@@ -4700,10 +4710,11 @@ function drawBatch(){
   const running = JS_BATCH.length - done.length - errs.length;
   let html = `<div class="box"><h3>まとめて読み取り（${JS_BATCH.length}枚）</h3>
     <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${done.length}</b><span>読み取り済み</span></div><div style="background:${need.length ? 'var(--err)' : 'var(--g1)'}"><b>${need.length}</b><span>要確認の人</span></div><div style="background:${errs.length ? 'var(--warn)' : 'var(--g2)'}"><b>${errs.length}</b><span>読めなかった</span></div></div>
-    ${running ? `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚。1枚30秒ほどかかります。画面を閉じずにお待ちください。</div>` : '<div class="small">すべて読み取りました。名前を押すと、その人の結果を確認・修正できます。</div>'}
-    ${!running && errs.some(x => x.b64) ? `<button class="btn s wide" id="jsRetry" style="margin-top:10px">読めなかった${errs.filter(x => x.b64).length}枚を読み直す</button>` : ''}</div>`;
+    ${running ? (JS_JOB ? `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚は、裏で読み取っています。画面を閉じても進みます。全部終わったらLINEでお知らせします（この画面は1分ごとに更新）。</div>` : `<div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>残り ${running}枚。1枚30秒ほどかかります。画面を閉じずにお待ちください。</div>`) : '<div class="small">すべて読み取りました。名前を押すと、その人の結果を確認・修正できます。</div>'}
+    ${!running && errs.some(x => x.b64) ? `<button class="btn s wide" id="jsRetry" style="margin-top:10px">読めなかった${errs.filter(x => x.b64).length}枚を読み直す</button>` : ''}
+    ${JS_JOB && errs.length ? `<button class="btn s wide" id="jsJobRetry" style="margin-top:10px">読めなかった${errs.length}枚を、もう一度預けて読み直す</button>` : ''}</div>`;
   html += `<table class="at-tbl"><thead><tr><th style="width:42%">利用者</th><th>出勤（用紙／記録）</th><th>要確認</th></tr></thead><tbody>${JS_BATCH.map((x, i) => {
-    if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">待機中</td></tr>`;
+    if (x.state === 'wait') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? '<span style="color:var(--warn)">混み合っていたので、時間をおいて自動で読み直します</span>' : '待機中'}</td></tr>`;
     if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${esc(x.err)}</span>` : '読み取り中…'}</td></tr>`;
     if (x.state === 'err') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="flag">${esc(x.err)}</td></tr>`;
     const r = x.res, n = r.totals.issues + (r.headIssues || []).length;
@@ -4718,6 +4729,7 @@ function drawBatch(){
     $('jsOut').innerHTML = html;
     $('jsOut').querySelectorAll('[data-open]').forEach(tr => tr.onclick = () => openBatch(Number(tr.dataset.open)));
   }
+  if ($('jsJobRetry')) $('jsJobRetry').onclick = () => runAction(() => apiPost({ app:'jissekiJobRetry', jb: JS_JOB }), () => { openJissekiJob(JS_JOB); loadJissekiJobs(); });
   if ($('jsRetry')) $('jsRetry').onclick = async () => {
     const month = $('jsMonth').value;
     for (const it of JS_BATCH.filter(x => x.state === 'err' && x.b64)) {
@@ -4729,7 +4741,68 @@ function drawBatch(){
   };
 }
 
-let JS_CUR = -1;
+let JS_CUR = -1, JS_JOB = null, JS_JOB_TM = null;
+/* 何枚もあるときは「預けて裏で読む」か「この画面で読む」かを選ぶ */
+function jsChooseMode(n){
+  return new Promise(res => {
+    $('jsOut').innerHTML = `<div class="box"><h3>${n}枚を読み取ります</h3>
+      <button class="btn p wide" id="jsModeQ" style="margin-top:4px">預けて裏で読み取る（おすすめ）</button>
+      <div class="small" style="margin:6px 0 12px">預けるのは1〜2分で終わります。そのあとは画面を閉じても、パソコンを切っても大丈夫です。5分おきに少しずつ読み取り、全部終わったらLINEでお知らせします（${n}枚で30分〜1時間ほど）。</div>
+      <button class="btn s wide" id="jsModeL">この画面で読み取る</button>
+      <div class="small" style="margin-top:6px">終わるまで（${n}枚で20〜30分ほど）画面を開いたままにしておく必要があります。</div></div>`;
+    $('jsModeQ').onclick = () => res(false);
+    $('jsModeL').onclick = () => res(true);
+  });
+}
+async function queueJisseki(items, name, month){
+  const jb = 'J' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const out = $('jsOut'), per = 3;
+  for (let i = 0; i < items.length; i += per) {
+    out.innerHTML = `<div class="box"><h3>預けています</h3><div class="small"><span class="spin" style="display:inline-block;width:16px;height:16px;border-width:3px;margin:0 6px -3px 0"></span>${Math.min(i, items.length)} / ${items.length}枚。終わるまで、この画面を閉じないでください。</div></div>`;
+    const files = items.slice(i, i + per).map((x, k) => ({ idx: i + k + 1, label: x.label, b64: x.b64, mime: x.mime }));
+    let ok = false, last = '';
+    for (let t = 0; t < 3 && !ok; t++) {
+      try { await apiPost({ app:'jissekiQueueAdd', jb, name: items.length === 1 ? name : '', month, total: items.length, files: JSON.stringify(files) }); ok = true; }
+      catch (e) { last = e.message; await new Promise(r => setTimeout(r, 3000)); }
+    }
+    if (!ok) { out.innerHTML = `<div class="note err">${i}枚まで預けたところで止まりました：${esc(last)}<br>もう一度ファイルを選び直してください（預けた分は「預けた読み取り」から消せます）。</div>`; loadJissekiJobs(); return; }
+  }
+  out.innerHTML = `<div class="note">✓ ${items.length}枚を預けました。この画面は閉じて大丈夫です。<br>5分以内に読み取りが始まり、全部終わったら管理者のLINEにお知らせが届きます。進み具合は上の「預けた読み取り」で見られます。</div>`;
+  apiPost({ app:'jissekiQueueNow' }).then(() => loadJissekiJobs()).catch(() => {});
+  loadJissekiJobs();
+}
+async function loadJissekiJobs(){
+  const box = $('jsJobs'); if (!box) return;
+  try {
+    const j = await api({ app:'jissekiJobs' });
+    const jobs = (j.jobs || []).slice(0, 6);
+    if (!jobs.length) { box.innerHTML = ''; return; }
+    const ago = ms => { const m = Math.round((Date.now() - ms) / 60000); return m < 60 ? m + '分前' : m < 1440 ? Math.round(m / 60) + '時間前' : Math.round(m / 1440) + '日前'; };
+    box.innerHTML = `<div class="box"><h3>預けた読み取り</h3>${jobs.map(x => {
+      const st = x.wait ? `<span style="color:var(--g1);font-weight:700">読み取り中</span>　${x.done}／${x.total}枚${x.next && x.next > Date.now() ? '（混み合っているので時間をおいています）' : ''}` : `<b>完了</b>　${x.done}枚${x.err ? `・<span style="color:var(--warn)">読めなかった ${x.err}枚</span>` : ''}`;
+      return `<div style="padding:10px 0;border-top:1px solid var(--line)"><div><b>${esc(x.label || '実績記録')}</b> <span class="small">${x.month ? esc(ksYmLabel(x.month)) + '・' : ''}${ago(x.at)}に預けた</span></div>
+        <div class="small" style="margin:4px 0">${st}${x.need ? `・<span style="color:var(--err);font-weight:700">要確認 ${x.need}人</span>` : ''}${x.expected && x.total < x.expected ? `・<span style="color:var(--err)">預けきれていません（${x.total}/${x.expected}枚）</span>` : ''}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn s" data-jbopen="${esc(x.jb)}">結果を見る</button><button class="link" data-jbdel="${esc(x.jb)}" style="color:var(--sub)">一覧から消す</button></div></div>`;
+    }).join('')}</div>`;
+    box.querySelectorAll('[data-jbopen]').forEach(b => b.onclick = () => openJissekiJob(b.dataset.jbopen));
+    box.querySelectorAll('[data-jbdel]').forEach(b => b.onclick = () => confirmSheet('一覧から消しますか？', '読み取った内容（シート「実績記録の読み取り」）や取り込んだ打刻は消えません。まだ読み取り中の分は読まれなくなります。', '消す', () => runAction(() => apiPost({ app:'jissekiJobDel', jb: b.dataset.jbdel }), () => { if (JS_JOB === b.dataset.jbdel) { JS_JOB = null; $('jsOut').innerHTML = ''; } loadJissekiJobs(); })));
+  } catch (e) { box.innerHTML = ''; }
+}
+async function openJissekiJob(jb){
+  clearTimeout(JS_JOB_TM);
+  const first = JS_JOB !== jb;
+  JS_JOB = jb;
+  if (first) { JS_CUR = -1; $('jsOut').dataset.detail = ''; $('jsOut').innerHTML = '<div class="box small">読み込んでいます…</div>'; }
+  try {
+    const j = await apiPost({ app:'jissekiJob', jb });
+    if (JS_JOB !== jb || !$('jsOut')) return;
+    JS_BATCH = j.items.map(it => ({ ix: it.ix, label: it.label, state: it.state, res: it.res || null, err: it.err || '' }));
+    if (first) $('jsOut').innerHTML = '';
+    drawBatch();
+    if (first) window.scrollTo(0, $('jsOut').offsetTop - 70);
+    if (JS_BATCH.some(x => x.state === 'wait')) JS_JOB_TM = setTimeout(() => { if (JS_JOB === jb && $('jsOut') && $('jsOut').dataset.detail !== '1') { openJissekiJob(jb); loadJissekiJobs(); } }, 60000);
+  } catch (e) { $('jsOut').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
 function openBatch(i){
   JS_CUR = i; JS_RES = JS_BATCH[i].res;
   if (isPC() && JS_BATCH.length > 1 && $('jsDetail')) { drawJisseki(JS_RES); drawBatch(); $('jsDetail').scrollTop = 0; return; }
@@ -4780,7 +4853,8 @@ async function recheckJisseki(over){
   const rows = j.rows.map(r => ({ day:r.day, wd:r.wd, absent:r.absent, start:r.start, end:r.end, work:r.work, rest:r.rest, use:r.use, ou:r.ou, fuku:r.fuku, meal:r.meal, stamp:r.stamp, note:r.note, unsure:r.unsure }));
   try {
     toast('照合しています…');
-    const res = await apiPost({ app:'jissekiCheck', name: over.name ?? j.name, month: over.month ?? j.month, rows: JSON.stringify(over.rows || rows),
+    const job = JS_JOB && JS_BATCH[JS_CUR] ? { jb: JS_JOB, ix: JS_BATCH[JS_CUR].ix } : {};
+    const res = await apiPost({ app:'jissekiCheck', ...job, name: over.name ?? j.name, month: over.month ?? j.month, rows: JSON.stringify(over.rows || rows),
       meta: JSON.stringify({ office:j.office, nameRead:j.nameRead, header:j.header, image:j.image }) });
     JS_RES = res; drawJisseki(res);
   } catch (e) { toast(e.message); }
