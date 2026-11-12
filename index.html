@@ -775,6 +775,7 @@ async function demoApi(p){
   if (p.app === 'kasanKinmu' && p.ym === '2026-09') return { ym:p.ym, fy:2025, staff:['みのり 花子', '糸島 一郎', '前原 さくら'].map(n => ({ name:n, key:n.replace(/\s/g, ''), kubun:'スタッフ', days:{}, paid:[], noLog:true })), usersByDay:{}, prev:[4,5,6,7,8,9,10,11,12,1,2,3].map(() => ({ ym:'', use:0, open:0 })), filtered:true };
   if (p.app === 'kasanKinmu') { const staff = ['みのり 花子', '糸島 一郎', '前原 さくら', '唐泊 健'].map((n, i) => { const days = {}, paid = []; for (let d = 1; d <= 31; d++) { const dow = new Date(2026, 9, d).getDay(); if (dow === 0 || dow === 6 || d > 31) continue; if (i === 2 && d % 3 === 0) continue; if (i === 0 && d === 15) { paid.push(d); continue; } days[d] = i === 3 ? 300 : 480; } return { name:n, key:n.replace(/\s/g, ''), kubun:'スタッフ', days, paid }; }); const ub = {}; for (let d = 1; d <= 31; d++) { const dow = new Date(2026, 9, d).getDay(); if (dow && dow < 6) ub[d] = 14; } return { ym:p.ym, fy:2025, staff, usersByDay:ub, prev:[4,5,6,7,8,9,10,11,12,1,2,3].map((m, i) => ({ ym:'', use:280 + i * 5, open:20 })), filtered:true }; }
   if (p.app === 'kasanDoc') return { doc: null };
+  if (p.app === 'jissekiStoreClear') return { message: p.month + ' の読み取り結果を 120行 消しました' };
   if (p.app === 'jissekiImport') { const people = DEMO_NAMES.slice(0, 5).map((n, i) => ({ name:n, days:18 - i, skip: i === 1 ? 2 : 0, absent: i % 2, noTime: i === 3 ? 1 : 0 })); return p.dry ? { month:p.month, people, total: people.reduce((a, x) => a + x.days, 0), replace:0 } : { message: p.month + ' の実績記録を打刻の記録に取り込みました（5人・80日）', people }; }
   if (p.app === 'kasanStaffScan') { await new Promise(r => setTimeout(r, 500)); const nm = ['みのり 花子', '糸島 一郎', '知らない 人'][(window.__kmScanN = (window.__kmScanN || 0) + 1) % 3]; const rows = []; for (let d = 1; d <= 30; d++) { const dow = new Date(2026, 8, d).getDay(); if (dow === 0 || dow === 6) continue; rows.push(d === 10 ? { day:d, kind:'有給' } : { day:d, start:'09:00', end:'17:30', rest:1, work:7.5, kind:'' }); } return { name:nm, key:nm.replace(/\s/g, ''), ym:p.month, rows }; }
   if (p.app === 'kasanSougei') { const users = DEMO_NAMES.slice(0, 12).map((n, i) => { const days = {}, ou = [], fuku = []; for (let d = 1; d <= 28; d++) { const dow = new Date(2026, 9, d).getDay(); if (dow === 0 || dow === 6 || (d + i) % 5 === 0) continue; const k = (d + i) % 3 === 0 ? 1 : 2; days[d] = k; ou.push(d); if (k === 2) fuku.push(d); } return { name:n, key:n.replace(/\s/g, ''), kana:'', days, ou, fuku }; }); return { ym:p.ym, office:null, users, filtered:true }; }
@@ -2804,7 +2805,7 @@ async function kmScan(files){
         results.push({ label: items[i].label, r, hit });
         break;
       } catch (e) {
-        if (/quota|RESOURCE_EXHAUSTED|rate.?limit|429|Too Many/i.test(e.message) && tries < 3) { tries++; await new Promise(res => setTimeout(res, 45000)); continue; }
+        if (/quota|RESOURCE_EXHAUSTED|rate.?limit|429|Too Many|混み合って|high demand/i.test(e.message) && tries < 3) { tries++; await new Promise(res => setTimeout(res, 45000)); continue; }
         results.push({ label: items[i].label, err: e.message }); break;
       }
     }
@@ -4597,15 +4598,17 @@ async function showJisseki(){
   $('view').innerHTML = `<div style="padding-top:12px;--gc:var(--g1)">
     <div class="box"><div class="small" style="margin-bottom:10px">紙の「就労継続支援提供実績記録」をスキャンしたPDFや写真を読み取り、打刻・支援経過記録と照合します。利用者はページごとに用紙の名前から自動で判定します。</div>
     <div class="field" style="padding:0"><label for="jsName">利用者</label><select class="in" id="jsName"><option value="">用紙の名前から自動で判定</option>${names.map(n => `<option>${esc(n)}</option>`).join('')}</select></div>
-    <div class="field" style="padding:0;margin-top:10px"><label for="jsMonth">年月</label><input class="in" id="jsMonth" type="month" value="${defMonth}"></div>
+    <div class="field" style="padding:0;margin-top:10px"><label for="jsMonth">年月（空なら用紙に書かれた年月）</label><input class="in" id="jsMonth" type="month" value=""></div>
     <label class="btn p wide" id="jsDrop" style="display:grid;place-items:center;margin-top:12px;cursor:pointer">写真・PDFを選ぶ（まとめて可）<input type="file" id="jsFile" accept="image/*,application/pdf" multiple hidden></label>
     <div class="small" style="margin-top:6px;text-align:center">複数ページのPDF（1ページ＝1人分）や、複数のファイルをまとめて選べます。パソコンではドラッグでも読み込めます。</div></div>
     <div id="jsOut"></div>
     <details class="box js-imp"><summary><b>読み取った月を、打刻の記録に取り込む</b><span class="small">手書きの出勤簿（実績記録）で運用している月に</span></summary>
       <div class="small" style="color:var(--sub);margin:6px 0">チェックした用紙の「開始・終了・送迎の往／復」を、打刻（利用者ログ）に「実績記録から」として入れます。月別集計・送迎実績状況表・勤務形態一覧表が、打刻と同じように使えます。LINE・QR・受付端末で打刻した日はそのまま残し、同じ月をもう一度取り込むと前の分と入れ替えます。</div>
       <div class="field" style="padding:0"><label for="jsImpM">取り込む年月</label><input class="in" id="jsImpM" type="month" value="${defMonth}"></div>
-      <button class="btn s wide" id="jsImpBtn" style="margin-top:10px">取り込む内容を確かめる</button><div id="jsImpOut"></div></details></div>`;
+      <button class="btn s wide" id="jsImpBtn" style="margin-top:10px">取り込む内容を確かめる</button><div id="jsImpOut"></div>
+      <button class="link" id="jsClr" style="margin-top:10px;color:var(--err)">この年月の読み取り結果を消す（年月を間違えて読み取ったとき）</button></details></div>`;
   $('jsImpBtn').onclick = jissekiImportPreview;
+  $('jsClr').onclick = () => { const m = $('jsImpM').value; if (!m) { toast('年月を選んでください'); return; } confirmSheet(ksYmLabel(m) + 'の読み取り結果を消しますか？', 'シート「実績記録の読み取り」から、この月の全員分を消します（チェックの履歴と、取り込み済みの打刻の記録は消えません）。正しい年月で読み取り直してください。', '消す', () => runAction(() => apiPost({ app:'jissekiStoreClear', month: m }), () => { $('jsImpOut').innerHTML = ''; })); };
   api({ app:'jissekiNames' }).then(j => { LS.set('fb_jnames', j.names); if ($('jsName') && !names.length) { names = j.names; $('jsName').insertAdjacentHTML('beforeend', names.map(n => `<option>${esc(n)}</option>`).join('')); } }).catch(() => {});
   const drop = $('jsDrop');
   drop.ondragover = e => { e.preventDefault(); drop.style.opacity = .7; };
@@ -4664,7 +4667,7 @@ async function readJissekiFiles(files){
   drawBatch();
   // 2件ずつ並べて読み取る。Gemini の利用上限（1分あたりの回数など）に当たったら、待ってから読み直す
   let next = 0, slow = false;
-  const isQuota = m => /quota|RESOURCE_EXHAUSTED|rate.?limit|429|Too Many/i.test(String(m));
+  const isQuota = m => /quota|RESOURCE_EXHAUSTED|rate.?limit|429|Too Many|混み合って|high demand/i.test(String(m));
   const worker = async (n) => {
     while (next < JS_BATCH.length) {
       if (slow && n > 0) return;                       // 上限に当たったら1件ずつにする
@@ -4704,7 +4707,7 @@ function drawBatch(){
     if (x.state === 'run') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="small">${x.err ? `<span style="color:var(--warn)">${esc(x.err)}</span>` : '読み取り中…'}</td></tr>`;
     if (x.state === 'err') return `<tr><td>${esc(x.label)}</td><td colspan="2" class="flag">${esc(x.err)}</td></tr>`;
     const r = x.res, n = r.totals.issues + (r.headIssues || []).length;
-    return `<tr data-open="${i}" style="cursor:pointer${n ? ';background:var(--err-bg)' : ''}"><td><b class="link" style="padding:0">${esc(r.name || '（名前不明）')}</b><div class="small">${esc(String(r.month).replace('-', '/'))}${r.hasSys ? '' : '　記録が見つからない'}</div></td>
+    return `<tr data-open="${i}" style="cursor:pointer${n ? ';background:var(--err-bg)' : ''}"><td><b class="link" style="padding:0">${esc(r.name || '（名前不明）')}</b><div class="small">${esc(String(r.month).replace('-', '/'))}${r.hasSys ? '' : '　手書きで運用（打刻なし）'}${r.monthNote ? '　<span style="color:var(--warn)">年月を用紙に合わせました</span>' : ''}</div></td>
       <td class="n">${r.totals.paperDays}／${r.totals.sysDays}日</td><td class="n" style="${n ? 'color:var(--err);font-weight:700' : ''}">${n ? n + '件' : 'なし'}</td></tr>`;
   }).join('')}</tbody></table>`;
   if (isPC() && JS_BATCH.length > 1) {
@@ -4748,7 +4751,8 @@ function drawJisseki(j){
     <div class="small">${esc(j.office)}${j.nameRead && j.nameRead !== j.name ? `　用紙の名前：${esc(j.nameRead)}` : ''}</div>
     <div class="counts" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--g2)"><b>${t.paperDays}</b><span>用紙の出勤</span></div><div style="background:var(--g2)"><b>${t.sysDays}</b><span>記録の出勤</span></div><div style="background:${t.issues ? 'var(--err)' : 'var(--g1)'}"><b>${t.issues}</b><span>要確認の日</span></div></div>
     <div class="small">送迎（用紙／記録）：往 ${t.ou}／${t.sysOu}回　復 ${t.fuku}／${t.sysFuku}回　確認印なし ${t.stampMissing}日</div>
-    ${j.hasSys ? '' : '<div class="note">この人のこの月の打刻・支援経過記録が見つかりません。用紙の中の確認だけ行っています（名前の書き方が違う場合は、利用者を選び直してください）。</div>'}
+    ${j.monthNote ? `<div class="note">${esc(j.monthNote)}</div>` : ''}
+    ${j.hasSys ? '' : '<div class="note">この人のこの月は打刻・支援経過記録がないため、手書きで運用している月として、用紙の中の確認（開始・終了・利用時間・確認印・合計欄）だけ行っています。打刻がある人なのにこう出るときは、名前の書き方が違う可能性があります（利用者を選び直してください）。</div>'}
     ${(j.headIssues || []).map(x => `<div class="note">${esc(x)}</div>`).join('')}</div>`;
   html += bad.length ? `<div class="sec-title">要確認の日（${bad.length}日）</div>` + bad.map(r => `<div class="card" style="--gc:var(--err)"><div style="display:flex;justify-content:space-between;align-items:center"><div class="t" style="margin:0">${r.day}日${wd(r)}</div><button class="link" data-fix="${r.day}">読み取りを直す</button></div>
       <div class="small">用紙：${paperTxt(r)}</div><div class="small">${sysTxt(r)}</div><ul style="margin:6px 0 0;padding-left:20px;color:var(--err)">${r.issues.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')
