@@ -4680,7 +4680,7 @@ async function readJissekiFiles(files){
           if (!isQuota(err.message) || tryNo === 3) break;
           slow = true;
           const wait = 45 + tryNo * 30;
-          for (let sec = wait; sec > 0; sec -= 5) { it.state = 'run'; it.err = `読み取りの上限に当たったので、${sec}秒待ってから読み直します（${tryNo + 1}回目）`; drawBatch(); await new Promise(r => setTimeout(r, 5000)); }
+          for (let sec = wait; sec > 0; sec -= 5) { it.state = 'run'; it.err = `${/混み合って|high demand/i.test(err.message) ? 'Gemini が混み合っている' : '読み取りの回数の上限に当たった'}ので、${sec}秒待ってから自動で読み直します（${tryNo + 1}回目）。このままお待ちください`; drawBatch(); await new Promise(r => setTimeout(r, 5000)); }
         }
       }
       if (it.state === 'done') delete it.b64;
