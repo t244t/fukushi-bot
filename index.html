@@ -4465,7 +4465,7 @@ function drawAttend(j){
 
   let html = '';
   if (j.test) html += '<div class="note">テストモード（LINE_MUTE=1）：打刻は「打刻ログ（テスト）」に記録され、本番の利用者ログには入りません。</div>';
-  html += `<div class="at-hero" style="--sc:${st.color}"><div style="font-weight:700">${esc(j.name || (ME && ME.name) || '')} さん</div>
+  html += `<div class="at-hero" style="--sc:${st.color}"><div style="font-weight:700">${esc(j.name || (ME && ME.name) || '')} さん <span class="small" style="font-weight:400;border:1px solid currentColor;border-radius:999px;padding:1px 8px;opacity:.75">${member ? '利用者' : 'スタッフ'}として記録</span></div>
     <div class="clock" id="atClock">${clock}</div><div style="margin:6px 0"><span class="st">${st.label}</span></div><div class="sub">${sub}</div>`;
   if (t.state === 'none' || t.state === 'notice') {
     if (member) html += `<div class="sec-title" style="text-align:left;margin-top:16px">送迎</div><div class="chips" id="atPick">${['往復','往','復','無し'].map(k =>
