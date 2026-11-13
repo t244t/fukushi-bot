@@ -567,7 +567,7 @@ body.pc .hl-list{display:grid;grid-template-columns:1fr 1fr}body.pc .hl-row:nth-
 <section class="bsheet" id="bsheet" role="dialog" aria-modal="true" aria-labelledby="bsTitle">
   <div class="grab"></div><h2 id="bsTitle"></h2><div class="body" id="bsBody"></div><div class="foot" id="bsFoot"></div>
 </section>
-<div class="busy" id="busy"><div><div class="spin"></div><b>送信しています</b><p class="small">記録・PDF作成・通知まで少しかかります。<br>画面を閉じずにお待ちください。</p></div></div>
+<div class="busy" id="busy" role="alert" aria-live="assertive"><div><div class="spin"></div><b id="busyT">送信しています</b><p class="small" id="busyS">記録・PDF作成・通知まで少しかかります。<br>画面を閉じずにお待ちください。</p></div></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script async id="liffSdk" src="https://static.line-scdn.net/liff/edge/2/sdk.js" charset="utf-8"></script>
@@ -4363,8 +4363,12 @@ function confirmSheet(title, text, okLabel, onOk, danger){
   $('cNo').onclick = closeSheet;
   $('cOk').onclick = async () => { $('cOk').disabled = true; try { await onOk(); } finally { const b = $('cOk'); if (b) b.disabled = false; } };
 }
+/* 送信中の表示（画面全体を覆うので、二度押しできない） */
+const BUSY_DEF = ['送信しています', '記録・PDF作成・通知まで少しかかります。<br>画面を閉じずにお待ちください。'];
+function busyOn(t, sub){ $('busyT').textContent = t || BUSY_DEF[0]; $('busyS').innerHTML = sub == null ? BUSY_DEF[1] : sub; $('busy').classList.add('on'); }
+function busyOff(){ $('busy').classList.remove('on'); $('busyT').textContent = BUSY_DEF[0]; $('busyS').innerHTML = BUSY_DEF[1]; }
 async function runAction(fn, after){
-  $('busy').classList.add('on');
+  busyOn();
   try { const j = await fn(); closeSheet(); toast(j.message || '完了しました', 3200); if (after) after(j); }
   catch (e) { closeSheet(); msgSheet('できませんでした', e.message); }
   finally { $('busy').classList.remove('on'); }
@@ -4512,7 +4516,9 @@ function openMendan(){
 async function doPunch(kind, reason, hours){
   const btns = $('view').querySelectorAll('[data-k]'); btns.forEach(b => b.disabled = true);
   const label = { in:'出勤', tele:'テレワーク開始', out:'退勤', away:'離席', back:'着席', late:'遅延の連絡', absent:'欠席の連絡', early:'早退の連絡', mendan:'面談の時間' }[kind];
-  toast(label + 'を記録しています…');
+  if (PUNCHING) return;
+  PUNCHING = true;
+  busyOn(label + 'を記録しています', '位置の確認と記録に、10秒ほどかかることがあります。<br>もう一度押さずに、このままお待ちください。');
   try {
     const noPos = ['late', 'absent', 'early', 'tele', 'mendan'].includes(kind);
     const pos = noPos ? null : await getPos();
@@ -4522,8 +4528,10 @@ async function doPunch(kind, reason, hours){
     if (location.hash.startsWith('#/attend')) drawAttend(j);
     const pj = j.punched || {};
     toast((pj.message || label + 'しました') + (/^QR確認/.test(pj.judge || '') ? '（QR確認済み）' : pj.judge === '事業所の外' ? '（事業所の外からの打刻として記録）' : pj.judge === '位置なし' && !noPos ? '（位置は取れませんでした）' : ''), 3500);
-  } catch (e) { toast(e.message); btns.forEach(b => b.disabled = false); }
+  } catch (e) { msgSheet(label + 'を記録できませんでした', e.message + '（通信の状態を確かめて、もう一度押してください）'); btns.forEach(b => b.disabled = false); }
+  finally { PUNCHING = false; busyOff(); }
 }
+let PUNCHING = false;
 
 function openAttendContact(working){
   let kind = working ? 'early' : 'late', reason = '';
