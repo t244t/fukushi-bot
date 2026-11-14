@@ -6024,7 +6024,8 @@ $('view').innerHTML = '<div class="empty">準備しています…</div>';
 /* リッチメニューなどから ?go=画面 で開いたとき */
 const GO_MAP = { attend:'#/attend', home:'#/', deadlines:'#/deadlines', sougei:'#/sougei', contact:'#/contact', manual:'#/manual', info:'#/info', mybook:'#/mybook', records:'#/drafts',
   shelter:'#/info/shelter', stock:'#/stock', eisei:'#/eisei', quarantine:'#/quarantine',
-  jisseki:'#/admin/jisseki', adattend:'#/admin/attend', kasan:'#/admin/kasan', gimu:'#/admin/gimu', roster:'#/admin/roster', health:'#/admin/health' };
+  jisseki:'#/admin/jisseki', adattend:'#/admin/attend', kasan:'#/admin/kasan', gimu:'#/admin/gimu', roster:'#/admin/roster', health:'#/admin/health',
+  heatman:'#/info/heatman', bosai:'#/bosai', bag:'#/bosai/bag' };
 function takeGoFromUrl(){
   const sp = new URLSearchParams(location.search);
   let go = sp.get('go');
