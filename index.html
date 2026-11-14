@@ -194,6 +194,11 @@ textarea.in{min-height:120px;resize:vertical;line-height:1.7}
 .dl .d{font-variant-numeric:tabular-nums;white-space:nowrap}
 .red{color:var(--err);font-weight:700}.amber{color:var(--warn);font-weight:700}
 .sthumb{width:56px;height:56px;flex:0 0 auto;border-radius:var(--r-s);object-fit:cover;background:var(--soft)}
+.bs summary{cursor:pointer;list-style:none}.bs summary::-webkit-details-marker{display:none}
+.bs-row{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.bs-row .main{flex:1;min-width:0}.bs-ic{width:20px;text-align:center;flex:none}
+.bs-link{align-items:flex-start}.bs-lic{font-size:24px;width:36px;flex:none;text-align:center;margin-top:2px}
+.bag-bar{height:10px;border-radius:99px;background:var(--soft);overflow:hidden;margin-top:8px}.bag-bar i{display:block;height:100%;background:var(--g1);border-radius:99px;transition:width .3s}
+.bag-it{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.bag-it:first-child{border-top:0}.bag-it input{width:22px;height:22px;margin-top:1px;flex:none;accent-color:var(--g1)}
 .stock-n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;min-width:56px;text-align:right}
 .stepper{display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0}
 .stepper button{width:56px;height:56px;border-radius:50%;border:1px solid var(--rule);background:var(--soft);font-size:26px}
@@ -845,6 +850,9 @@ async function demoApi(p){
   if (p.app === 'post') { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）投稿しました' }; }
   if (p.app === 'update') { await new Promise(r => setTimeout(r, 700)); return { message:'（デモ）2項目を修正しました', pdfs:[] }; }
   if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', endYmd:'2026-11-15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', endYmd:'2026-11-30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', endYmd:'2026-10-31', done:true }] };
+  if (p.app === 'bosaiCheck') return { items:{ gunte:{ by:'石橋', at:'2026-11-01' } }, last:{ at:'2026-05-10', by:'石橋' } };
+  if (p.app === 'bosaiCheckSet') return { items: p.ok ? { gunte:{ by:'石橋', at:'2026-11-01' }, [p.bk]:{ by:'デモ', at:'2026-11-14' } } : { gunte:{ by:'石橋', at:'2026-11-01' } }, last:{ at:'2026-05-10', by:'石橋' } };
+  if (p.app === 'bosaiCheckDone') return { message:'点検を記録しました', items:{}, last:{ at:'2026-11-14', by:'デモ' } };
   if (p.app === 'stock') return { items:[{ name:'緊急災害備蓄セット レスキュー3', img:'https://drive.google.com/uc?export=view&id=14FGABCFRWZt8ImltKwc40HdHm3ZoGfnl', stock:3, exp:'2029/02', expSoon:false }, { name:'飲料水 24本入', stock:5, exp:'2026/12', expSoon:true }, { name:'携帯用トイレ', stock:200, exp:'無し', expSoon:false }, { name:'応急手当セット', stock:0, exp:'', expSoon:false }] };
   if (p.app === 'stockMove') { await new Promise(r => setTimeout(r, 500)); return { message:'（デモ）記録しました', stock:4 }; }
   if (p.app === 'deadlines' || p.app === 'deadlineSync') return { message:'（デモ）更新しました', people:[{ name:'山田 太郎', office:'あごら', staff:'神田', soon:2, items:[{ name:'受給者証支給終了', date:'2026/11/12', days:11 }, { name:'計画更新月', date:'2026/11/28', days:27 }, { name:'手帳有効期限', date:'2027/5/13', days:193 }] }, { name:'佐藤 花子', office:'木の実', staff:'松下', soon:0, items:[{ name:'暫定終了日', date:'2026/10/20', days:-12 }] }] };
@@ -1188,6 +1196,7 @@ function mnMenu(){
   setTop({ title:'緊急・対応マニュアル', back: true });
   let html = `<div class="mn-call"><span>緊急時はまず通報</span><a href="tel:119">119</a><a href="tel:110">110</a></div>`;
   html += `<a class="mn-entry" href="#/info/shelter" style="border-color:var(--g2);background:var(--g2-bg)"><span class="ic" aria-hidden="true">🗺</span><span><b style="color:var(--g2)">ハザードマップ・避難場所</b><small>浸水・土砂災害・津波の区域と避難場所を地図で</small></span>${ICON.chev}</a>`;
+  html += `<a class="mn-entry" href="#/bosai" style="border-color:var(--g2);background:var(--g2-bg)"><span class="ic" aria-hidden="true">📡</span><span><b style="color:var(--g2)">糸島の防災情報・リンク</b><small>避難所の開設状況・防災行政無線の放送内容・市のハザードマップ</small></span>${ICON.chev}</a>`;
   let cur = '';
   html += trainBox();
   mnMenuFor().forEach(m => {
@@ -3149,7 +3158,7 @@ function route(){
   if (!page && !signedIn() && kioskKey()) { location.replace('#/kiosk'); return; }
   if (isMember() && !['attend', 'info', 'settings', 'book', 'manual'].includes(page)) { location.replace('#/attend'); return; }
   document.body.classList.toggle('member', isMember());
-  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'contact', admin:'work', quarantine:'work', sougei:'work', eisei:'work', deadlines:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home', manual: isMember() ? 'info' : 'contact' })[page] || page || 'home');
+  const navKey = page === 'attend' ? (isMember() ? 'attend' : 'home') : page === 'info' && WORK_VIEWS[arg] ? 'work' : (({ history:'drafts', stock:'contact', bosai: isMember() ? 'info' : 'contact', admin:'work', quarantine:'work', sougei:'work', eisei:'work', deadlines:'work', books:'work', book: isMember() ? 'attend' : 'work', records:'home', record:'home', manual: isMember() ? 'info' : 'contact' })[page] || page || 'home');
   document.querySelectorAll('.nav a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
   $('nav').hidden = page === 'form' || page === 'edit' || page === 'record' || page === 'done' || (page === 'contact' && arg === 'broadcast');
   document.body.classList.toggle('no-nav', $('nav').hidden);
@@ -3161,6 +3170,7 @@ function route(){
   if (page === 'contact') return arg === 'broadcast' ? showBroadcast() : showContact();
   if (page === 'work') return showWork();
   if (page === 'stock') return showStock(arg);
+  if (page === 'bosai') return arg === 'bag' ? showBag() : showBosai();
   if (page === 'attend') return showAttend();
   if (page === 'manual') return showManual(arg);
   if (page === 'quarantine') return showQuarantine();
@@ -4077,6 +4087,7 @@ function renderView(id, data){
       ${(it.lines || []).length ? `<ul class="lines">${it.lines.map(l => `<li><span>${esc(l.k)}</span><b>${esc(l.v)}</b></li>`).join('')}</ul>` : ''}
       ${(it.fields || []).length ? `<dl class="kv">${it.fields.map(f => `<dt>${esc(f.k)}</dt><dd>${esc(f.v)}</dd>`).join('')}</dl>` : ''}</div>`).join('');
   } else if (data.kind === 'places') {
+    html += `<a class="list-item" href="#/bosai" style="color:inherit;text-decoration:none;--gc:var(--g2);margin-bottom:10px"><div class="main"><div class="t">糸島市のハザードマップ・防災情報</div><div class="m">市のWebマップ（ため池・高潮なども）・避難所の開設状況（まもるくん）</div></div>${ICON.chev}</a>`;
     const areas = [...new Set(items.map(it => (String(it.area).match(/^.+?[市町村]/) || [it.area])[0]).filter(Boolean))];
     html += `<div class="chips hz-chips" role="group" aria-label="ハザードマップを重ねる">${HZ_LAYERS.map(h => `<button class="chip mini" data-hz="${h.id}" aria-pressed="false" style="--gc:${h.c}">${h.label}</button>`).join('')}</div>
       <div class="hz-legend small" id="hzLegend" hidden></div>
@@ -4394,7 +4405,9 @@ async function showContact(){
   setTimeout(() => { if ($('bandBtn')) $('bandBtn').onclick = bandSchedule; }, 0);
   html += `<div class="sec-title">災害への備え</div>
     <a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">災害時の備蓄品</div><div class="m">在庫の確認・入庫・出庫（QRコード対応）</div></div>${ICON.chev}</a>
-    <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">ハザードマップ・避難場所</div><div class="m">浸水・土砂災害・津波の危険区域と、近くの避難場所</div></div>${ICON.chev}</a>`;
+    <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">ハザードマップ・避難場所</div><div class="m">浸水・土砂災害・津波の危険区域と、近くの避難場所</div></div>${ICON.chev}</a>
+    <a class="list-item" href="#/bosai" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">糸島の防災情報・リンク</div><div class="m">市のハザードマップ・防災ポータル・まもるくん・放送内容の確認</div></div>${ICON.chev}</a>
+    <a class="list-item" href="#/bosai/bag" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">わたしの持ち出し袋チェック</div><div class="m">首相官邸の「備え」チェックリストで、自分の持ち出し袋を確認</div></div>${ICON.chev}</a>`;
   html += `<div class="sec-title">イベント${isAdmin() ? '<span class="admin-mark">管理者</span>' : 'の出欠'}</div><div id="evBox"><div class="box small">読み込んでいます…</div></div>`;
   html += `<button class="list-item band-item" id="bandBtn" style="width:100%;text-align:left;border-top:0;border-right:0;border-bottom:0;color:inherit;--gc:#06c755"><span class="band-ic" aria-hidden="true">B</span><div class="main"><div class="t">BANDに予定を入れる</div><div class="m">予定名と日時を入れると、BANDの書き方に整えてコピーし、BANDを開きます</div></div>${ICON.chev}</button>`;
   if (isAdmin()) {
@@ -5222,7 +5235,7 @@ function drawerItems(){
       it('#/admin/jigai', '施設外就労（報告書・請求）'), it('#/admin/monthly', '月別集計')]] : null,
     ['店舗・作業', '🏪', [it('#/eisei', '衛生管理の記録', '店舗のHACCP・事業所の衛生'), it('#/info/ukeoi', '請負業務報告'), a ? it('#/info/mendan', '店舗面談の記録') : null]],
     ['連絡・安全', '📣', [it('#/contact', '連絡', '安否確認・行事・会議'), a ? it('#/contact/broadcast', '一斉連絡') : null, it('#/manual', '緊急・対応マニュアル', 'ケガ・火災・地震・虐待・苦情など'),
-      it('#/info/shelter', 'ハザードマップ・避難場所'), it('#/stock', '災害時の備蓄品', '在庫の確認・入庫・出庫')]],
+      it('#/info/shelter', 'ハザードマップ・避難場所'), it('#/bosai', '糸島の防災情報・リンク', '市のハザードマップ・防災ポータル・まもるくん'), it('#/stock', '災害時の備蓄品', '在庫・備えチェック'), it('#/bosai/bag', 'わたしの持ち出し袋チェック')]],
     a ? ['届出・報告', '🗂', [it('#/admin/gimu', '減算・義務のチェック', '虐待防止・身体拘束・BCP・感染症・情報公表'), it('#/admin/kasan', '加算の届出（正式な様式）', '送迎実績・勤務形態・届出書'),
       it('#/admin/shogu', '処遇改善加算 計画書の準備', '見込額・要件・職場環境等の取組'), it('#/admin/tenken', '運営指導 自己点検表')]] : null,
     ['情報', 'ℹ️', [it('#/info', '情報', '熱中症・避難所・研修動画など')]],
@@ -5657,6 +5670,7 @@ async function showStock(){
     const canScan = !!(window.liff && liff.id && liff.isInClient && liff.isInClient() && liff.scanCodeV2);
     $('view').innerHTML = `<div class="g3" style="padding-top:12px">
       ${canScan ? `<button class="btn p wide" id="scan" style="margin-bottom:10px">QRコードを読み取る</button>` : `<p class="small">LINEアプリから開くと、QRコードの読み取りが使えます。</p>`}
+      ${isMember() ? '' : '<div id="bsBox"></div>'}
       <label class="search" style="margin-top:0">${ICON.search}<input id="sq" type="search" placeholder="品名でさがす" aria-label="品名でさがす"></label>
       <div class="chips" style="margin:8px 0 12px"><button class="chip mini" id="expOnly" aria-pressed="false">期限が近いもの</button></div>
       <div id="slist">${STOCK ? '' : '<div class="empty">読み込んでいます…</div>'}</div></div>`;
@@ -5675,10 +5689,141 @@ async function showStock(){
     $('expOnly').onclick = () => { expOnly = !expOnly; $('expOnly').setAttribute('aria-pressed', expOnly); list(); };
     if ($('scan')) $('scan').onclick = scanStock;
     list();
+    drawBosaiCheck();
   };
+  if (!isMember()) api({ app:'bosaiCheck' }).then(j => { BSC = j; LS.set('fb_bsc', j); drawBosaiCheck(); }).catch(() => {});
   draw();
   try { STOCK = await api({ app:'stock' }); LS.set('fb_stock', STOCK); const q = $('sq') && $('sq').value; draw(); if (q) { $('sq').value = q; $('sq').dispatchEvent(new Event('input')); } }
   catch (e) { if (token === viewToken && !STOCK) $('slist').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+}
+
+
+/* ===== 防災：首相官邸「災害の『備え』チェックリスト」 ===== */
+// id, 区分, 品名, 補足, 在庫の品名と突き合わせる言葉（office: 事業所の備えチェックに入れるか）
+const BOSAI_LIST = [
+  ['mizu','bag','水','',['水'],1], ['shoku','bag','食品','アルファ米・レトルト食品・ビスケット・乾パンなど（最低3日分）',['食','アルファ米','レトルト','ビスケット','乾パン','缶詰','備蓄セット','レスキュー'],1],
+  ['helmet','bag','防災用ヘルメット・防災ずきん','',['ヘルメット','ずきん','頭巾'],1], ['ifuku','bag','衣類・下着','',['衣類','下着','肌着'],1],
+  ['rain','bag','レインウェア','',['レインウェア','雨具','カッパ','合羽','ポンチョ'],1], ['kutsu','bag','紐なしのズック靴','',['靴','ズック'],0],
+  ['light','bag','懐中電灯','手動充電式が便利',['懐中電灯','ライト','ランタン'],1], ['radio','bag','携帯ラジオ','手動充電式が便利',['ラジオ'],1],
+  ['denchi','bag','予備電池・携帯充電器','',['電池','充電器','バッテリー'],1], ['match','bag','マッチ・ろうそく','',['マッチ','ろうそく','ライター'],1],
+  ['kyukyu','bag','救急用品','ばんそうこう・包帯・消毒液・常備薬など',['救急','応急','ばんそうこう','絆創膏','包帯','消毒液'],1], ['kairo','bag','使い捨てカイロ','',['カイロ'],1],
+  ['blanket','bag','ブランケット','',['ブランケット','毛布','アルミシート','保温シート'],1], ['toilet','bag','携帯用トイレ','',['トイレ'],1],
+  ['gunte','bag','軍手','',['軍手','手袋'],1], ['senmen','bag','洗面用具','',['洗面'],0], ['haburashi','bag','歯ブラシ・歯磨き粉','',['歯ブラシ','歯磨'],0],
+  ['towel','bag','タオル','',['タオル'],1], ['pen','bag','ペン・ノート','',['ペン','ノート','筆記'],1],
+  ['mask','kansen','マスク','',['マスク'],1], ['alcohol','kansen','手指消毒用アルコール','',['アルコール','消毒'],1],
+  ['sekken','kansen','石けん・ハンドソープ','',['石けん','石鹸','ハンドソープ'],1], ['wet','kansen','ウェットティッシュ','',['ウェット'],1], ['taion','kansen','体温計','',['体温計'],1],
+  ['kicho','kicho','貴重品','通帳・現金・運転免許証・病院の診察券・マイナンバーカードなど',[],0],
+  ['milk','kodomo','粉ミルク（アレルギー用含む）又は液体ミルク','',[],0], ['honyu','kodomo','使い捨て哺乳瓶','',[],0], ['rinyu','kodomo','離乳食','',[],0],
+  ['cutlery','kodomo','携帯カトラリー','',[],0], ['omutsu','kodomo','こども用紙オムツ','',[],0], ['oshiri','kodomo','お尻ふき','',[],0],
+  ['senjo','kodomo','携帯用お尻洗浄機','',[],0], ['neck','kodomo','ネックライト','',[],0], ['dakko','kodomo','抱っこひも','',[],0], ['kkutsu','kodomo','こどもの靴','',[],0],
+  ['seiri','josei','生理用品','',['生理'],1], ['orimono','josei','おりものシート','',[],0], ['sanitary','josei','サニタリーショーツ','',[],0],
+  ['gomi_m','josei','中身の見えないごみ袋','',['ごみ袋','ゴミ袋'],1], ['buzzer','josei','防犯ブザー／ホイッスル','',['ブザー','ホイッスル','笛'],1],
+  ['pants','korei','大人用紙パンツ','',['紙パンツ','おむつ','オムツ'],1], ['kaigo','korei','介護食','',['介護食'],0], ['delicate','korei','デリケートゾーンの洗浄剤','',[],0],
+  ['tsue','korei','杖','',[],0], ['ireba','korei','入れ歯・入れ歯用洗浄液','',[],0], ['jibyo','korei','持病の薬','',[],0],
+  ['hochoki','korei','補聴器','',[],0], ['kyusui','korei','吸水パッド','',['吸水パッド','尿取'],0], ['techo','korei','お薬手帳のコピー','',[],0],
+  ['b_food','bichiku','食料や水（最低3日分！できれば1週間分）×人数','保存期間の長いものを多めに買い、使ったら補充する（ローリングストック）',['食','水','備蓄セット','レスキュー'],1],
+  ['b_life','bichiku','生活用品','ティッシュ・トイレットペーパー・ラップ・ゴミ袋・ポリタンクなど',['ティッシュ','トイレットペーパー','ラップ','ポリタンク'],1],
+  ['b_toilet','bichiku','携帯用トイレ（備蓄分）','',['トイレ'],1]
+].map(r => ({ id:r[0], g:r[1], name:r[2], note:r[3], kw:r[4], office:!!r[5] }));
+const BOSAI_GROUPS = { bag:['非常用持ち出し袋','避難の際に持ち出すもの'], kansen:['感染症対策','感染症対策にも有効です'], kicho:['貴重品','一緒に持ち出そう'], kodomo:['こどものための備え',''], josei:['女性の備え',''], korei:['高齢者のための備え',''], bichiku:['備蓄品','建物に備えておくもの'] };
+let BSC = LS.get('fb_bsc', null);
+
+/* ② 事業所の備えチェック（在庫と自動で突き合わせ） */
+function drawBosaiCheck(){
+  const box = $('bsBox'); if (!box) return;
+  const items = (STOCK && STOCK.items) || [];
+  const man = (BSC && BSC.items) || {}, last = BSC && BSC.last;
+  const rows = BOSAI_LIST.filter(x => x.office).map(x => {
+    const hit = x.kw.length ? items.filter(it => x.kw.some(k => it.name.includes(k))) : [];
+    const n = hit.reduce((a, it) => a + (Number(it.stock) || 0), 0);
+    const soon = hit.some(it => it.expSoon && it.stock > 0);
+    const st = hit.length ? (n > 0 ? (soon ? 'soon' : 'ok') : 'zero') : (man[x.id] ? 'ok' : 'none');
+    return { ...x, hit, n, soon, st, man: man[x.id] };
+  });
+  const ok = rows.filter(r => r.st === 'ok' || r.st === 'soon').length, ng = rows.filter(r => r.st === 'zero' || r.st === 'none');
+  const due = last && last.at ? Math.floor((Date.now() - new Date(last.at + 'T00:00:00+09:00').getTime()) / 864e5) : null;
+  const open = BSC_OPEN;
+  const icon = { ok:'<span style="color:var(--g1);font-weight:700">✓</span>', soon:'<span style="color:var(--warn);font-weight:700">!</span>', zero:'<span style="color:var(--err);font-weight:700">0</span>', none:'<span style="color:var(--err);font-weight:700">－</span>' };
+  let html = `<details class="box bs" ${open ? 'open' : ''} id="bsDet"><summary><b>備えチェック</b>　<span class="small">首相官邸「災害の『備え』チェックリスト」と照らし合わせ</span>
+    <div style="margin-top:6px"><span style="color:var(--g1);font-weight:700">そろっている ${ok}</span>　<span style="color:${ng.length ? 'var(--err)' : 'var(--sub)'};font-weight:700">足りない ${ng.length}</span>　<span class="small">${last && last.at ? `前回の点検 ${esc(last.at.replace(/-/g, '/'))}（${esc(last.by || '')}）${due > 183 ? '　<b style="color:var(--err)">半年を過ぎています</b>' : ''}` : '<b style="color:var(--warn)">まだ点検の記録がありません</b>'}</span></div></summary>
+    <div class="small" style="margin:8px 0">在庫に登録している品目は、在庫の数で自動で判定します。在庫で管理していない品目は、あれば「ある」を押してください（スタッフ全員で共有されます）。</div>`;
+  let cur = '';
+  rows.forEach(r => {
+    if (r.g !== cur) { cur = r.g; html += `<div class="sec-title" style="margin:12px 0 4px">${esc(BOSAI_GROUPS[r.g][0])}</div>`; }
+    const detail = r.hit.length ? `在庫 ${r.n}（${r.hit.map(it => esc(it.name)).slice(0, 2).join('・')}${r.hit.length > 2 ? ' ほか' : ''}）${r.soon ? '　<span style="color:var(--warn)">期限が近いものあり</span>' : ''}${r.n <= 0 ? '　<span style="color:var(--err)">在庫がありません</span>' : ''}`
+      : (r.man ? `ある（${esc(r.man.by || '')} ${esc(String(r.man.at || '').slice(5).replace('-', '/'))}確認）` : '在庫に登録なし');
+    html += `<div class="bs-row"><span class="bs-ic">${icon[r.st]}</span><div class="main"><div>${esc(r.name)}</div><div class="small">${detail}</div></div>
+      ${r.hit.length ? '' : `<button class="chip mini" data-bs="${r.id}" aria-pressed="${!!r.man}">${r.man ? 'ある' : 'ある？'}</button>`}</div>`;
+  });
+  html += `<button class="btn p wide" id="bsDone" style="margin-top:14px">点検を終えた（記録する）</button>
+    <div class="small" style="margin-top:4px">「減算・義務のチェック」の「防災備蓄の点検（6か月ごと）」にも記録されます。</div></details>`;
+  box.innerHTML = html;
+  $('bsDet').ontoggle = () => { BSC_OPEN = $('bsDet').open; };
+  box.querySelectorAll('[data-bs]').forEach(b => b.onclick = async () => {
+    const on = b.getAttribute('aria-pressed') !== 'true';
+    b.disabled = true;
+    try { BSC = await apiPost({ app:'bosaiCheckSet', bk: b.dataset.bs, ok: on }); LS.set('fb_bsc', BSC); drawBosaiCheck(); }
+    catch (e) { toast(e.message); b.disabled = false; }
+  });
+  $('bsDone').onclick = () => confirmSheet('点検を記録しますか？', ng.length ? `足りないもの（${ng.length}）：${ng.map(r => r.name).join('、')}` : 'すべてそろっています。', '記録する',
+    () => runAction(() => apiPost({ app:'bosaiCheckDone', note: ng.length ? '足りない：' + ng.map(r => r.name).join('、') : 'すべてそろっている' }), j => { if (j && j.items) { BSC = { items: j.items, last: j.last }; LS.set('fb_bsc', BSC); } drawBosaiCheck(); }));
+}
+let BSC_OPEN = false;
+
+/* ① 糸島の防災情報・リンク */
+const BOSAI_LINKS = [
+  { t:'ふくおか防災ナビ・まもるくん', d:'避難所の開設・混雑状況、気象警報・土砂災害・地震の情報、安否確認（家族の登録・確認）。福岡県の公式アプリ', u:'https://www.pref.fukuoka.lg.jp/contents/bousai-navi-mamorukun.html', ic:'📱', b:'アプリの入手方法' },
+  { t:'糸島市Webマップ（ハザードマップ）', d:'土砂災害警戒区域・洪水・家屋倒壊・津波・高潮・地震の揺れやすさ・ため池の浸水想定を、住所で調べられます', u:'https://www2.wagmap.jp/itoshima/', ic:'🗺' },
+  { t:'糸島防災ポータル', d:'防災ハンドブック・防災行政無線の放送内容・河川水位・JR九州の運行状況などをまとめたスマホ用サイト。ホーム画面に追加しておくと便利', u:'https://smappon.jp/w595nmlc', ic:'📡' },
+  { t:'防災行政無線の放送内容確認ダイヤル', d:'聞き逃した放送を電話で確認できます（無料）', u:'tel:0120315470', ic:'☎', b:'0120-315-470 に電話' },
+  { t:'マモリンク イトシマ（防災まなびポータル）', d:'防災啓発の動画・いとしま防災クイズ・防災ライブラリ。研修や、利用者さんとの防災の学習に', u:'https://mamolink-itoshima.jp', ic:'📚' },
+  { t:'糸島市役所 危機管理課', d:'防災についての問い合わせ先', u:'tel:0923322110', ic:'🏢', b:'092-332-2110 に電話' }
+];
+function showBosai(){
+  setTop({ title:'糸島の防災情報・リンク', back:true });
+  $('view').innerHTML = `<div style="padding-top:12px">
+    <div class="note">災害のときは、まず「まもるくん」で避難所の開設状況を、「糸島市Webマップ」で今いる場所の危険を確かめましょう。</div>
+    ${BOSAI_LINKS.map(x => `<a class="list-item bs-link" href="${esc(x.u)}" ${/^tel:/.test(x.u) ? '' : 'target="_blank" rel="noopener"'} style="color:inherit;text-decoration:none;--gc:var(--g2)">
+      <span class="bs-lic" aria-hidden="true">${x.ic}</span><div class="main"><div class="t">${esc(x.t)}</div><div class="m">${esc(x.d)}</div>${x.b ? `<div class="small" style="color:var(--g2);font-weight:700;margin-top:4px">${esc(x.b)} ›</div>` : ''}</div>${/^tel:/.test(x.u) ? '' : ICON.chev}</a>`).join('')}
+    <div class="sec-title">このアプリの中で</div>
+    <a class="list-item" href="#/info/shelter" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">ハザードマップ・避難場所</div><div class="m">地図で避難場所と危険区域を確認</div></div>${ICON.chev}</a>
+    ${isMember() ? '' : `<a class="list-item" href="#/stock" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">災害時の備蓄品・備えチェック</div><div class="m">事業所の備蓄を、首相官邸のチェックリストと照らし合わせ</div></div>${ICON.chev}</a>`}
+    <a class="list-item" href="#/bosai/bag" style="color:inherit;text-decoration:none;--gc:var(--g3)"><div class="main"><div class="t">わたしの持ち出し袋チェック</div><div class="m">自分や家族の持ち出し袋を確認</div></div>${ICON.chev}</a>
+    <p class="small" style="margin-top:14px">出典：糸島市役所 危機管理課「糸島市防災お役立ち情報」「糸島市Webマップ」、福岡県「ふくおか防災ナビ・まもるくん」</p></div>`;
+}
+
+/* ③ わたしの持ち出し袋チェック（この端末に保存） */
+function showBag(){
+  setTop({ title:'わたしの持ち出し袋チェック', back:true });
+  const st = LS.get('fb_bag', {}) || {}, show = LS.get('fb_bag_g', { kodomo:false, josei:true, korei:false });
+  const draw = () => {
+    const gs = Object.keys(BOSAI_GROUPS).filter(g => !(g in show) || show[g]);
+    const list = BOSAI_LIST.filter(x => gs.includes(x.g));
+    const done = list.filter(x => st[x.id]).length, pct = list.length ? Math.round(done / list.length * 100) : 0;
+    let html = `<div style="padding-top:12px"><div class="box"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>そろっている ${done} / ${list.length}</b><span class="small">${pct}%</span></div>
+      <div class="bag-bar"><i style="width:${pct}%"></i></div>
+      <div class="small" style="margin-top:8px">自分に関係する備えを表示：</div>
+      <div class="chips" style="margin-top:4px">${['kodomo','josei','korei'].map(g => `<button class="chip mini" data-sg="${g}" aria-pressed="${!!show[g]}" style="--gc:var(--g1)">${BOSAI_GROUPS[g][0].replace('のための備え', '').replace('の備え', '')}</button>`).join('')}</div>
+      <div class="small" style="margin-top:8px">チェックはこのスマホ（パソコン）に保存されます。</div></div>`;
+    gs.forEach(g => {
+      html += `<div class="sec-title">${esc(BOSAI_GROUPS[g][0])}${BOSAI_GROUPS[g][1] ? `<span class="small" style="font-weight:400;margin-left:8px">${esc(BOSAI_GROUPS[g][1])}</span>` : ''}</div><div class="box" style="padding:4px 14px">`;
+      html += BOSAI_LIST.filter(x => x.g === g).map(x => `<label class="bag-it"><input type="checkbox" data-bag="${x.id}"${st[x.id] ? ' checked' : ''}><span><span${st[x.id] ? ' style="color:var(--sub);text-decoration:line-through"' : ''}>${esc(x.name)}</span>${x.note ? `<span class="small" style="display:block">${esc(x.note)}</span>` : ''}</span></label>`).join('');
+      html += '</div>';
+    });
+    html += `<div class="at-row" style="margin-top:14px"><button class="btn s" id="bagShare">足りないものを送る・メモする</button><button class="btn s" id="bagReset">チェックを全部外す</button></div>
+      <p class="small" style="margin-top:12px">出典：首相官邸「災害の『備え』チェックリスト」（監修：内閣府政策統括官（防災担当）・内閣府男女共同参画局）。ほかにも、家庭で必要なものは日ごろから備えておきましょう。</p></div>`;
+    $('view').innerHTML = html;
+    $('view').querySelectorAll('[data-bag]').forEach(c => c.onchange = () => { if (c.checked) st[c.dataset.bag] = 1; else delete st[c.dataset.bag]; LS.set('fb_bag', st); draw(); });
+    $('view').querySelectorAll('[data-sg]').forEach(b => b.onclick = () => { show[b.dataset.sg] = !show[b.dataset.sg]; LS.set('fb_bag_g', show); draw(); });
+    $('bagReset').onclick = () => confirmSheet('チェックを全部外しますか？', '次の点検のときに使います。', '外す', () => { Object.keys(st).forEach(k => delete st[k]); LS.set('fb_bag', st); draw(); });
+    $('bagShare').onclick = async () => {
+      const miss = list.filter(x => !st[x.id]).map(x => '・' + x.name);
+      const text = '【持ち出し袋 足りないもの】\n' + (miss.length ? miss.join('\n') : 'すべてそろっています');
+      try { if (navigator.share) { await navigator.share({ text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.clipboard.writeText(text); toast('足りないものをコピーしました'); } catch (e) { msgSheet('足りないもの', text); }
+    };
+  };
+  draw();
 }
 
 async function scanStock(){
