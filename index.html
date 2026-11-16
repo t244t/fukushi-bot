@@ -533,6 +533,9 @@ body.pc .km-prevg{grid-template-columns:repeat(4,1fr)}
 .hl-dot{width:10px;height:10px;border-radius:50%;flex:none}.hl-m{flex:1;min-width:0;display:grid}.hl-m .small{color:var(--sub)}.hl-st{font-size:12px;font-weight:700;white-space:nowrap}
 .hl-err{padding:8px 12px;border-bottom:1px solid var(--rule);font-size:14px}.hl-err .small{color:var(--sub)}.hl-bk{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule)}.hl-bk .small{color:var(--sub)}
 body.pc .hl-list{display:grid;grid-template-columns:1fr 1fr}body.pc .hl-row:nth-last-child(2){border-bottom:0}
+.eis-d{border-radius:8px;height:34px;display:flex;align-items:center;justify-content:center;font-size:13px;margin:1px}
+.eis-d.ok{background:var(--g1);color:#fff}.eis-d.ng{background:var(--err);color:#fff;font-weight:700}.eis-d.cl{background:var(--soft);color:var(--sub)}
+.eis-d.miss{box-shadow:inset 0 0 0 2px var(--warn)}.eis-d.today{outline:2px solid var(--brand);outline-offset:-2px;font-weight:700}
 .wk-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}.wk-head b{font-size:16px;min-width:7.5em;text-align:center}.wk-head .link{font-size:22px;padding:0 10px;min-height:36px}.wk-head .small{font-size:12px;margin-left:auto}
 .wk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}.wk-w span{font-size:11px;color:var(--sub);padding:2px 0}
 .wk-d{border:0;background:none;font:inherit;color:inherit;border-radius:10px;min-height:42px;padding:4px 0 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:14px}
@@ -1807,7 +1810,7 @@ async function showEisei(){
   if (EI.tab === 'month') return eiMonth();
   const token = viewToken;
   $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
-  try { const j = await api({ app:'eisei', place: EI.place, date: EI.date }); if (token !== viewToken) return; EI.place = j.place; LS.set('fb_ei_place', j.place); eiDay(j); }
+  try { const j = await api({ app:'eisei', place: EI.place, date: EI.date }); if (token !== viewToken) return; EI.place = j.place; LS.set('fb_ei_place', j.place); EI.places = j.places; if (eiIsStore(j)) return eiStore(j); eiDay(j); }
   catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
 }
 function eiHead(places){
@@ -1864,6 +1867,58 @@ function eiDay(j){
   };
   $('eiCount').textContent = daily.length - done ? `あと${daily.length - done}項目` : '今日の毎日の点検は完了';
 }
+/* 店舗の衛生管理は「衛生管理記録」アプリ（eisei-kanri）の記録をそのまま使う（二重に記録しない）。
+   ここでは今日の記録の状況と、今月の記録の様子を見せて、アプリを開くボタンを出す */
+const EISEI_APP_URL = 'https://t244t.github.io/eisei-kanri/';
+const EISEI_GAS_URL = 'https://script.google.com/macros/s/AKfycbxkMJJ4l5j1ka4TudSAaPbbyAFnUlfdUdyOleRzVwsIZaI_KsZPamE-Xa5RbuV9sd8mJA/exec';
+const eiIsStore = j => { const p = (j.places || []).find(x => x.name === j.place); return !!(p && p.kind === '店舗'); };
+async function eiApi(action, params){
+  if (isDemo()) {
+    if (action === 'getRecord') return { recorder:'石橋 強', updated:'11/16 9:12', items:{ a:'○', b:'○' }, closed:false, confirm:'' };
+    const ym = params.ym, [y, m] = ym.split('-').map(Number), days = new Date(y, m, 0).getDate(), td = Number(ymd().slice(8, 10));
+    const cell = k => ({ v: k + 1 > td ? '' : (k + 1) % 7 === 3 ? '休' : (k + 1) === 5 || (k + 1) === 9 ? '' : '○', ng: (k + 1) === 4 });
+    return { ym, days, recorded: Math.max(0, td - 3), notes:[{ day:4, text:'冷蔵ショーケース 12℃。扉の閉め忘れ。閉めて30分後に7℃を確認' }], rows:[{ cells: Array.from({ length: days }, (_, k) => cell(k)) }] };
+  }
+  const r = await fetch(EISEI_GAS_URL + '?' + new URLSearchParams({ action, ...params, _: Date.now() }));
+  const j = await r.json(); if (!j.ok) throw new Error(j.error || '衛生管理記録アプリから読み込めませんでした'); return j.data;
+}
+async function eiStore(j){
+  const token = viewToken, store = j.place, today = ymd().replace(/\//g, '-');
+  const ym = EI.tab === 'month' ? EI.ym : today.slice(0, 7);
+  const appUrl = EISEI_APP_URL + '?store=' + encodeURIComponent(store);
+  $('view').innerHTML = eiHead(j.places) + `<div id="eiSt"><div class="empty">衛生管理記録アプリから読み込んでいます…</div></div>`;
+  eiBindHead();
+  let rec = null, M = null, err = '';
+  try { [rec, M] = await Promise.all([eiApi('getRecord', { store, date: today }), eiApi('getMonth', { store, ym })]); } catch (e) { err = e.message; }
+  if (token !== viewToken || !$('eiSt')) return;
+  const btns = `<a class="btn p wide" href="${esc(appUrl)}" target="_blank" rel="noopener" style="margin-top:12px;text-decoration:none;display:flex;justify-content:center;align-items:center">衛生管理記録アプリで記録する</a>
+    <div class="small" style="margin-top:6px">毎日の記録・月次記録表・計画書は「衛生管理記録」アプリで行います（項目は店舗の衛生管理計画書に合わせてあります）。</div>`;
+  if (err) { $('eiSt').innerHTML = `<div class="note err">${esc(err)}</div>` + btns; return; }
+  const ng = rec && !rec.none ? Object.keys(rec.items || {}).filter(k => rec.items[k] === '×').length : 0;
+  const st = !rec || rec.none ? ['未記録', 'var(--warn)', '今日の記録はまだありません'] : rec.closed ? ['休業日', 'var(--sub)', '休業日として記録済み'] : ng ? ['×あり', 'var(--err)', '×が' + ng + '件あります（特記事項を確認）'] : ['記録済み', 'var(--g1)', '記録者：' + (rec.recorder || '') + '　更新：' + (rec.updated || '')];
+  // 今月の様子（日ごとに：記録済み・×あり・休業・未記録）
+  const [y, m] = M.ym.split('-').map(Number), days = M.days;
+  const dayst = Array.from({ length: days }, (_, k) => {
+    const cs = M.rows.map(r => r.cells[k] || {});
+    if (cs.some(c => c.v === '休')) return 'cl';
+    if (cs.some(c => c.ng)) return 'ng';
+    if (cs.some(c => c.v !== '' && c.v != null)) return 'ok';
+    return '';
+  });
+  const first = new Date(y, m - 1, 1).getDay();
+  let cal = ''; for (let i = 0; i < first; i++) cal += '<span></span>';
+  dayst.forEach((c, k) => { const d = M.ym + '-' + String(k + 1).padStart(2, '0'); const past = d <= today;
+    cal += `<span class="eis-d ${c}${!c && past ? ' miss' : ''}${d === today ? ' today' : ''}" title="${k + 1}日">${k + 1}</span>`; });
+  const miss = dayst.filter((c, k) => !c && (M.ym + '-' + String(k + 1).padStart(2, '0')) < today).length;
+  $('eiSt').innerHTML = `<div class="box" style="border-left:6px solid ${st[1]}"><div class="small">今日（${today.slice(5).replace('-', '/')}）</div>
+      <div style="font-size:20px;font-weight:700;color:${st[1]}">${st[0]}</div><div class="small">${esc(st[2])}</div>
+      ${rec && !rec.none ? `<div class="small" style="margin-top:4px">責任者確認：${rec.confirm ? esc(rec.confirm) + '（' + esc(rec.confirmAt || '') + '）' : '<b style="color:var(--warn)">未確認</b>'}</div>` : ''}${btns}</div>
+    <div class="box"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>${y}年${m}月</b><span class="small">記録 ${M.recorded}／${days}日${miss ? `・<b style="color:var(--warn)">記録のない日 ${miss}</b>` : ''}</span></div>
+      <div class="wk-grid wk-w" style="margin-top:6px">${'日月火水木金土'.split('').map(w => `<span>${w}</span>`).join('')}</div>
+      <div class="wk-grid">${cal}</div>
+      <div class="wk-leg"><span><b style="background:var(--g1)"></b>記録済み</span><span><b style="background:var(--err)"></b>×あり</span><span><b style="background:var(--sub)"></b>休業日</span><span><b style="background:var(--warn)"></b>記録なし</span></div>
+      ${M.notes && M.notes.length ? `<div class="sec-title" style="margin-top:12px">特記事項</div><ul class="ei-notes">${M.notes.map(n => `<li><b>${n.day}日</b>　${esc(n.text)}</li>`).join('')}</ul>` : ''}</div>`;
+}
 async function eiMonth(){
   const token = viewToken;
   $('view').innerHTML = '<div class="empty">読み込んでいます…</div>';
@@ -1871,6 +1926,7 @@ async function eiMonth(){
   try { j = await api({ app:'eiseiMonth', place: EI.place, ym: EI.ym }); } catch (e) { if (token === viewToken) $('view').innerHTML = `<div class="note err">${esc(e.message)}</div>`; return; }
   if (token !== viewToken) return;
   EI.place = j.place;
+  if (eiIsStore({ place: j.place, places: j.places || EI.places })) return eiStore({ place: j.place, places: j.places || EI.places });
   const [y, m] = j.ym.split('-').map(Number), last = new Date(y, m, 0).getDate();
   const cell = {}; j.records.forEach(r => cell[r.date + '|' + r.item] = r);
   const nums = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'.split('');
