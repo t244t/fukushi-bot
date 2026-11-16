@@ -850,6 +850,7 @@ async function demoApi(p){
   if (p.app === 'post') { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）投稿しました' }; }
   if (p.app === 'update') { await new Promise(r => setTimeout(r, 700)); return { message:'（デモ）2項目を修正しました', pdfs:[] }; }
   if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', endYmd:'2026-11-15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', endYmd:'2026-11-30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', endYmd:'2026-10-31', done:true }] };
+  if (p.app === 'lastRecord') return p.person ? { found:true, personIndex:1, row:12, date:'2026/05/10', count:2, values:{ 2:'前回の長期目標（デモ）', 3:'前回の短期目標（デモ）', 4:'週3日の通所を続ける' } } : { found:false };
   if (p.app === 'bosaiCheck') return { items:{ gunte:{ by:'石橋', at:'2026-11-01' } }, last:{ at:'2026-05-10', by:'石橋' } };
   if (p.app === 'bosaiCheckSet') return { items: p.ok ? { gunte:{ by:'石橋', at:'2026-11-01' }, [p.bk]:{ by:'デモ', at:'2026-11-14' } } : { gunte:{ by:'石橋', at:'2026-11-01' } }, last:{ at:'2026-05-10', by:'石橋' } };
   if (p.app === 'bosaiCheckDone') return { message:'点検を記録しました', items:{}, last:{ at:'2026-11-14', by:'デモ' } };
@@ -3368,6 +3369,7 @@ function renderForm(sheet, fields, keepValues, edit){
     if (VOICE_FORMS[sheet] && !isMember()) html += `<button type="button" class="vc-start" id="vcOpen"><span class="vc-ic">${ICON_MIC}</span><span><b>面談を録音して下書きを作る</b><small>録音から「${esc(VOICE_FORMS[sheet])}」などを自動で書きます</small></span></button><div id="vcResult"></div>`;
   }
   html += `<div class="form-head"><span>${vis.length}項目</span><span id="count"></span></div>`;
+  if (!edit) html += '<div id="pfBox"></div>';
   html += '<div class="fgrid">'; vis.forEach(f => { html += fieldHtml(f, values[f.index] ?? ''); }); html += '</div>';
   if (!edit && BATCH_FORMS[sheet]) html += `<div id="batchBox"></div>`;
   html += `<div class="bar"><span class="saved" id="saved">${edit ? '' : draft ? '下書き保存済み' : '入力は自動で下書き保存されます'}</span>
@@ -3426,11 +3428,49 @@ function fieldHtml(f, raw){
 
 function setValue(i, v){
   F.values[i] = v;
+  if (!F.edit && pfPersonIdx(F.fields) == i) { clearTimeout(PF_TM); PF_TM = setTimeout(() => prefillCheck(String(v || '').trim()), 600); }
   const w = $('w' + i);
   if (w) { w.classList.toggle('filled', !!String(v).trim()); w.classList.remove('miss'); }
   applyCond();
   saveDraft(); updateProgress();
 }
+/* ===== 前回の記録から入れる（次の個別支援計画などを、前回の内容から作る） =====
+   計画・アセスメント・モニタリングなどは、利用者を選ぶと自動で前回の内容を入れる（ほかの欄が空のときだけ）。
+   それ以外の帳票は「前回の内容を入れる」ボタンを出す */
+const PF_AUTO = /計画|アセスメント|モニタリング|強みと課題|スキルシート/;
+let PF_TM = null, PF_UNDO = null;
+function pfPersonIdx(fields){
+  const vis = (fields || []).filter(f => !f.hidden && f.type !== 'textarea' && f.type !== 'image');
+  const f = vis.find(f => /^(対象者|利用者名?|利用者氏名|氏名|名前|受検者氏名|運転者|面接者氏名?|職員名|スタッフ名)$/.test(String(f.label).replace(/\s/g, ''))) || vis.find(f => /対象者|氏名|名前|利用者/.test(f.label));
+  return f ? f.index : null;
+}
+const pfSkip = f => f.hidden || f.type === 'date' || f.type === 'datetime' || f.type === 'image' || /タイムスタンプ|作成日|記入日|実施日|面談日|開催日|日付/.test(f.label);
+async function prefillCheck(person){
+  const box = $('pfBox'); if (!box || !F || F.edit) return;
+  if (!person) { box.innerHTML = ''; return; }
+  const sheet = F.sheet, pi = pfPersonIdx(F.fields), token = viewToken;
+  let j;
+  try { j = await api({ app:'lastRecord', sheet, person }); } catch (e) { return; }
+  if (token !== viewToken || !F || F.sheet !== sheet || String(F.values[pi] || '').trim() !== person) return;
+  if (!j.found) { box.innerHTML = `<div class="note small">${esc(person)} さんの前回の記録はありません（はじめての記録です）。</div>`; return; }
+  const others = F.fields.filter(f => f.index !== pi && !pfSkip(f) && String(F.values[f.index] ?? '').trim() !== '');
+  const apply = () => {
+    PF_UNDO = { ...F.values };
+    const v = { ...F.values };
+    F.fields.forEach(f => { if (f.index === pi || pfSkip(f)) return; const x = j.values[f.index]; if (x !== undefined && x !== '' && x !== null) v[f.index] = x; });
+    renderForm(sheet, F.fields, v);
+    saveDraft(); updateProgress();
+    $('pfBox').innerHTML = `<div class="note">✓ ${esc(person)} さんの前回の記録（${esc(j.date || j.row + '行目')}）の内容を入れました。日付は今日のまま、変わったところだけ直してください。
+      <div style="margin-top:6px"><button class="link" id="pfUndo">入れる前に戻す</button></div></div>`;
+    $('pfUndo').onclick = () => { renderForm(sheet, F.fields, PF_UNDO); saveDraft(); updateProgress(); $('pfBox').innerHTML = ''; };
+  };
+  if (PF_AUTO.test(sheet) && !others.length) return apply();
+  box.innerHTML = `<div class="note">${esc(person)} さんの前回の記録があります（${esc(j.date || '')}${j.count > 1 ? '・全' + j.count + '件' : ''}）。
+    <button class="btn s wide" id="pfApply" style="margin-top:8px">前回の内容を入れる</button>
+    ${others.length ? '<div class="small" style="margin-top:4px">今入力している欄は、前回の内容で上書きされます。</div>' : ''}</div>`;
+  $('pfApply').onclick = apply;
+}
+
 /* ===== 選んだ内容によって出す欄（例：欠席理由が「その他」のときだけ、理由を書く欄） =====
    target：出し入れする欄の見出し　when：きっかけの欄の見出し　is：出す条件　label：出すときの見出し　req：出したときは必須 */
 const FORM_COND = {
