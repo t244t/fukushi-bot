@@ -853,6 +853,7 @@ async function demoApi(p){
   if (p.app === 'post') { await new Promise(r => setTimeout(r, 600)); return { message:'（デモ）投稿しました' }; }
   if (p.app === 'update') { await new Promise(r => setTimeout(r, 700)); return { message:'（デモ）2項目を修正しました', pdfs:[] }; }
   if (p.app === 'tasks') return { tasks:[{ row:2, who:'石橋', text:'防災備蓄の賞味期限チェック', end:'11/15', endYmd:'2026-11-15', done:false }, { row:3, who:'大原', text:'個別支援計画の更新（2名）', end:'11/30', endYmd:'2026-11-30', done:false }, { row:4, who:'平山', text:'避難訓練の案内を掲示', end:'10/31', endYmd:'2026-10-31', done:true }] };
+  if (p.app === 'quarantineDel') return { message:'（デモ）消しました' };
   if (p.app === 'lastRecord') return p.person ? { found:true, personIndex:1, row:12, date:'2026/05/10', count:2, values:{ 2:'前回の長期目標（デモ）', 3:'前回の短期目標（デモ）', 4:'週3日の通所を続ける' } } : { found:false };
   if (p.app === 'bosaiCheck') return { items:{ gunte:{ by:'石橋', at:'2026-11-01' } }, last:{ at:'2026-05-10', by:'石橋' } };
   if (p.app === 'bosaiCheckSet') return { items: p.ok ? { gunte:{ by:'石橋', at:'2026-11-01' }, [p.bk]:{ by:'デモ', at:'2026-11-14' } } : { gunte:{ by:'石橋', at:'2026-11-01' } }, last:{ at:'2026-05-10', by:'石橋' } };
@@ -5077,6 +5078,11 @@ function drawQuarantine(j){
   const st = x => x.end < today ? 'done' : x.start > today ? 'soon' : 'now';
   const remain = x => dnum(x.end) - T;
   let html = `<div style="padding-top:12px"><div id="infBox">${infHtml(LS.get(infKey(), null))}</div><div class="counts" style="grid-template-columns:repeat(2,1fr)"><div style="background:${active.length ? 'var(--err)' : 'var(--g1)'}"><b>${active.length}</b><span>いま待機中</span></div><div style="background:var(--warn)"><b>${soon.length}</b><span>これから待機</span></div></div>`;
+  // 同じ人・同じ期間の登録が2件以上（二重登録）
+  const dupKey = x => x.name.replace(/\s/g, '') + '|' + x.start + '|' + x.end, dupN = {};
+  items.forEach(x => { dupN[dupKey(x)] = (dupN[dupKey(x)] || 0) + 1; });
+  const dups = Object.keys(dupN).filter(k => dupN[k] > 1);
+  if (dups.length) html += `<div class="note err">同じ人・同じ期間の登録が重なっています：${dups.map(k => esc(k.split('|')[0]) + '（' + dupN[k] + '件）').join('、')}<br>下のチャートでその人の帯を押し、「この登録を消す」で1件消してください。</div>`;
   if (active.length) html += `<div class="box">${active.map(x => `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0"><span><b>${esc(x.name)}</b><span class="small">　${esc(x.kind)}</span></span><span class="small">${md(dnum(x.end))}まで（${remain(x) ? 'あと' + remain(x) + '日' : '今日まで'}）</span></div>`).join('')}</div>`;
   html += `<div class="chips" style="margin:6px 0 10px">${[[14,'2週間'],[35,'5週間'],[91,'3か月']].map(([n, l]) => `<button class="chip mini" data-rg="${n}" aria-pressed="${n === qtRange}" style="--gc:var(--g2)">${l}</button>`).join('')}</div>`;
   // チャート
@@ -5104,8 +5110,11 @@ function drawQuarantine(j){
     const x = items[Number(b.dataset.qi)];
     const days = dnum(x.end) - dnum(x.start) + 1;
     openSheet(x.name + ' さんの待機期間', `<p>${esc(x.kind)}<br>${md(dnum(x.start))} 〜 ${md(dnum(x.end))}（${days}日間）<br>${st(x) === 'now' ? (remain(x) ? 'あと' + remain(x) + '日' : '今日で終了') : st(x) === 'soon' ? (dnum(x.start) - T) + '日後から' : '終了しました'}${x.note ? '<br>' + esc(x.note) : ''}</p>`,
-      `<button class="btn s" id="qtClose">閉じる</button><a class="btn p" href="#/record/${encodeURIComponent('待機期間管理')}/${x.row}" style="display:grid;place-items:center;text-decoration:none;--gc:var(--brand)">記録を開く・直す</a>`);
+      `<button class="btn s" id="qtClose">閉じる</button><a class="btn p" href="#/record/${encodeURIComponent('待機期間管理')}/${x.row}" style="display:grid;place-items:center;text-decoration:none;--gc:var(--brand)">記録を開く・直す</a>
+       ${isMember() ? '' : `<button class="link" id="qtDel" style="color:var(--err);grid-column:1/-1;margin-top:4px">この登録を消す${dupN[dupKey(x)] > 1 ? '（同じ登録が' + dupN[dupKey(x)] + '件あります）' : ''}</button>`}`);
     $('qtClose').onclick = closeSheet;
+    if ($('qtDel')) $('qtDel').onclick = () => confirmSheet(x.name + ' さんの待機期間（' + md(dnum(x.start)) + '〜' + md(dnum(x.end)) + '）を消しますか？', '二重に登録したときなどに使います。消した内容は「動作ログ」シートに残ります。', '消す',
+      () => runAction(() => apiPost({ app:'quarantineDel', row: x.row, name: x.name, start: x.start }), () => showQuarantine()));
   });
 }
 
