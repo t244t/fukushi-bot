@@ -3683,6 +3683,9 @@ const getBatch = s => LS.get(batchKey(s), []) || [];
 function formMissing(show){
   const vis = F.fields.filter(f => !f.hidden);
   const missing = vis.filter(f => !(F.condHidden || {})[f.index] && f.required && (f.type === 'image' ? !F.files[f.index] : !String(F.values[f.index] ?? '').trim()));
+  // 名前（利用者氏名など）の欄が空のままでは送れないようにする（名前のない記録・PDFを防ぐ）
+  const pi = pfPersonIdx(F.fields), pf = F.fields.find(f => f.index === pi);
+  if (pf && !(F.condHidden || {})[pi] && !String(F.values[pi] ?? '').trim() && !missing.includes(pf)) missing.unshift(pf);
   condRules().forEach(({ r, t }) => { if (r.req && !(F.condHidden || {})[t.index] && !String(F.values[t.index] ?? '').trim() && !missing.includes(t)) missing.push({ ...t, label: r.label || t.label }); });
   if (missing.length && show) {
     missing.forEach(f => $('w' + f.index)?.classList.add('miss'));
