@@ -877,17 +877,32 @@ async function demoApi(p){
 }
 
 /* ================= サーバー呼び出し（GETのみ） ================= */
+/* APIや通信のエラー（サーバー側で記録済み・電波など）は、画面のエラーとしては送らない */
+const apiErr = m => { const e = new Error(m); e.api = true; return e; };
+/* 画面で起きた予期しないエラーを、動作ログへ送る（同じものは1回、1回の表示で5件まで） */
+const CE_SENT = new Set();
+function reportClientError(msg){
+  try {
+    if (isDemo() || !cfg || !cfg.url || CE_SENT.size >= 5) return;
+    msg = String(msg || '').slice(0, 300);
+    if (!msg || CE_SENT.has(msg) || /ResizeObserver|Script error\.?$|Load failed|NetworkError|cancell?ed|AbortError/i.test(msg)) return;
+    CE_SENT.add(msg);
+    apiPost({ app:'clientError', msg, where: location.hash || '#/', ua: navigator.userAgent.replace(/^Mozilla\/5\.0 /, '') }).catch(() => {});
+  } catch (e) {}
+}
+window.addEventListener('error', ev => reportClientError((ev.message || 'エラー') + (ev.filename ? ' @' + String(ev.filename).split('/').pop().split('?')[0] + ':' + ev.lineno : '')));
+window.addEventListener('unhandledrejection', ev => { const r = ev.reason; if (r && r.api) return; reportClientError('（非同期）' + ((r && (r.stack || r.message)) || String(r)).split('\n').slice(0, 2).join(' ')); });
 async function api(params, override){
   if (isDemo()) return demoApi(params);
   if (authPending && AUTH && params.app !== 'me' && !override) await AUTH;
   const c = override || cfg;
   const auth = idToken && !override ? { idt:idToken } : { key:c.key };
   const url = c.url + '?' + new URLSearchParams({ ...params, ...auth });
-  if (url.length > 7500) throw new Error('文章が長すぎて一度に送れません（約' + url.length + '文字）。長い欄を少し短くしてください。');
+  if (url.length > 7500) throw apiErr('文章が長すぎて一度に送れません（約' + url.length + '文字）。長い欄を少し短くしてください。');
   let r;
-  try { r = await fetch(url); } catch (e) { throw new Error('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
-  const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした。設定のURLを確認してください。'); });
-  if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
+  try { r = await fetch(url); } catch (e) { throw apiErr('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
+  const j = await r.json().catch(() => { throw apiErr('サーバーの応答を読み取れませんでした。設定のURLを確認してください。'); });
+  if (!j.ok) throw apiErr(j.error || 'エラーが発生しました');
   return j;
 }
 
@@ -897,9 +912,9 @@ async function apiPost(body){
   let r;
   const auth = idToken ? { idt:idToken } : { key:cfg.key };
   try { r = await fetch(cfg.url, { method:'POST', body: JSON.stringify({ ...body, ...auth }) }); }
-  catch (e) { throw new Error('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
-  const j = await r.json().catch(() => { throw new Error('サーバーの応答を読み取れませんでした。少し待ってからもう一度お試しください。'); });
-  if (!j.ok) throw new Error(j.error || 'エラーが発生しました');
+  catch (e) { throw apiErr('通信できませんでした。電波の良い場所でもう一度お試しください。'); }
+  const j = await r.json().catch(() => { throw apiErr('サーバーの応答を読み取れませんでした。少し待ってからもう一度お試しください。'); });
+  if (!j.ok) throw apiErr(j.error || 'エラーが発生しました');
   return j;
 }
 
