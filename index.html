@@ -3464,7 +3464,7 @@ function fieldHtml(f, raw){
     label = `<div class="label" id="${id}l">${esc(f.label)}${req}<span class="hint">いくつでも選べます</span></div>`;
     body = `<div class="chips" role="group" aria-labelledby="${id}l">${opts.map(o =>
       `<button type="button" class="chip" data-f="${f.index}" data-v="${esc(o)}" data-mode="multi" aria-pressed="${sel.includes(o)}">${esc(o)}</button>`).join('')}</div>`;
-  } else if (f.strict && opts.length > 8) {
+  } else if ((f.strict && opts.length > 8) || (f.allowNew && opts.length)) {
     body = `<button type="button" class="picker" id="${id}" data-f="${f.index}" data-mode="pick">${raw ? `<span>${val}</span>` : '<span class="ph">選んでください</span>'}${ICON.down}</button>`;
   } else if (f.strict && opts.length) {
     label = `<div class="label" id="${id}l">${esc(f.label)}${req}</div>`;
@@ -3667,13 +3667,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet()
 function openPicker(f){
   const opts = f.options || [];
   const cur = F.values[f.index] ?? '';
-  const search = opts.length > 12 ? `<label class="search" style="margin-top:0">${ICON.search}<input id="pq" type="search" placeholder="名前の一部で絞り込み" aria-label="絞り込み"></label>` : '';
+  const search = opts.length > 12 || f.allowNew ? `<label class="search" style="margin-top:0">${ICON.search}<input id="pq" type="search" placeholder="${f.allowNew ? '名前の一部で絞り込み（一覧にない名前は入力）' : '名前の一部で絞り込み'}" aria-label="絞り込み・入力"></label>` : '';
   openSheet(f.label, search + '<div id="plist"></div>',
     `<button class="btn s" id="pclear">選択をはずす</button><button class="btn s" id="pclose">閉じる</button>`, gClass(F.group));
   const draw = q => {
     const items = opts.filter(o => !q || o.includes(q));
-    $('plist').innerHTML = items.length ? items.map(o =>
-      `<button class="opt" data-v="${esc(o)}" aria-selected="${o === cur}">${esc(o)}</button>`).join('') : '<div class="empty">見つかりません</div>';
+    const add = f.allowNew && q && !opts.includes(q) ? `<button class="opt" data-v="${esc(q)}" style="color:var(--brand);font-weight:700">＋「${esc(q)}」で決める（一覧にない名前）</button>` : '';
+    $('plist').innerHTML = add + (items.length ? items.map(o =>
+      `<button class="opt" data-v="${esc(o)}" aria-selected="${o === cur}">${esc(o)}</button>`).join('') : (add ? '' : `<div class="empty">見つかりません${f.allowNew ? '。名前を入力すると、その名前で決められます' : ''}</div>`));
     $('plist').querySelectorAll('.opt').forEach(b => b.onclick = () => choose(b.dataset.v));
   };
   const choose = val => {
@@ -3684,6 +3685,7 @@ function openPicker(f){
   };
   draw('');
   if ($('pq')) $('pq').oninput = e => draw(e.target.value.trim());
+  if ($('pq') && f.allowNew) $('pq').onkeydown = e => { const q = e.target.value.trim(); if (e.key === 'Enter' && q) { e.preventDefault(); choose(opts.find(o => o === q) || (opts.filter(o => o.includes(q)).length === 1 ? opts.find(o => o.includes(q)) : q)); } };
   $('pclear').onclick = () => choose('');
   $('pclose').onclick = closeSheet;
 }
