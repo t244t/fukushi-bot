@@ -1429,7 +1429,11 @@ function sougeiEdit(x){
   const opt = (list, v) => list.map(n => `<option value="${esc(n)}">`).join('');
   openSheet(x.id ? '送迎の予定を直す' : '送迎の予定を追加', `
     <datalist id="sgU">${opt(j.users)}</datalist><datalist id="sgS">${opt(j.staff)}</datalist>
-    <label class="js-f"><span>利用者<em>必須</em></span><input id="sg_name" list="sgU" value="${esc(x.name || '')}" autocomplete="off"></label>
+    ${x.id ? `<label class="js-f"><span>利用者<em>必須</em></span><input id="sg_name" list="sgU" value="${esc(x.name || '')}" autocomplete="off"></label>`
+      : `<div class="js-f"><span>利用者（何人でも選べます）<em>必須</em></span>
+        <div id="sg_sel" class="chips" style="margin:4px 0"></div>
+        <input id="sg_q" class="in" placeholder="名前の一部で絞り込み・一覧にない名前は入力してEnter" autocomplete="off">
+        <div id="sg_users" class="chips" style="margin-top:6px;max-height:180px;overflow:auto"></div></div>`}
     <div class="chips" id="sg_kind">${['迎え', '送り'].map(k => `<button type="button" class="chip" data-v="${k}" aria-pressed="${x.kind === k}" style="flex:1">${k === '迎え' ? '🏠→🏢 迎え' : '🏢→🏠 送り'}</button>`).join('')}</div>
     <label class="js-f"><span>送迎の時刻（この30分前に通知）<em>必須</em></span><input id="sg_time" type="time" value="${esc(x.time || '')}"></label>
     <div class="js-f"><span>曜日<em>必須</em></span><div class="chips" id="sg_days">${'月火水木金土日'.split('').map(d => `<button type="button" class="chip mini" data-d="${d}" aria-pressed="${x.days.includes(d)}">${d}</button>`).join('')}</div></div>
@@ -1439,12 +1443,24 @@ function sougeiEdit(x){
     <label class="js-ok" style="padding:8px 0"><input type="checkbox" id="sg_on"${x.on ? ' checked' : ''}> アラームを使う（外すと一時停止）</label>`,
     `${x.id ? '<button class="btn s" id="sgDel" style="--gc:var(--err);color:var(--err)">削除</button>' : ''}<button class="btn p wide" id="sgSave">保存</button>`);
   let kind = x.kind;
+  // 新しく追加するときは、利用者を何人でも選べる（1人ずつ同じ内容の予定を作る）
+  const picked = [];
+  const drawUsers = () => {
+    if (!$('sg_users')) return;
+    const q = $('sg_q').value.trim();
+    $('sg_sel').innerHTML = picked.length ? picked.map(n => `<button type="button" class="chip mini" data-rm="${esc(n)}" aria-pressed="true">${esc(n)} ✕</button>`).join('') : '<span class="small" style="color:var(--sub)">まだ選んでいません</span>';
+    const list = (j.users || []).filter(n => !picked.includes(n) && (!q || n.includes(q))).slice(0, 60);
+    $('sg_users').innerHTML = (q && !(j.users || []).includes(q) && !picked.includes(q) ? `<button type="button" class="chip mini" data-add="${esc(q)}" style="color:var(--brand)">＋「${esc(q)}」を追加</button>` : '') + list.map(n => `<button type="button" class="chip mini" data-add="${esc(n)}">${esc(n)}</button>`).join('');
+    $('sg_sel').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { picked.splice(picked.indexOf(b.dataset.rm), 1); drawUsers(); });
+    $('sg_users').querySelectorAll('[data-add]').forEach(b => b.onclick = () => { picked.push(b.dataset.add); $('sg_q').value = ''; drawUsers(); });
+  };
+  if ($('sg_q')) { $('sg_q').oninput = drawUsers; $('sg_q').onkeydown = e => { const q = e.target.value.trim(); if (e.key === 'Enter' && q) { e.preventDefault(); if (!picked.includes(q)) picked.push(q); e.target.value = ''; drawUsers(); } }; drawUsers(); }
   $('sg_kind').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { kind = b.dataset.v; $('sg_kind').querySelectorAll('[data-v]').forEach(c => c.setAttribute('aria-pressed', c === b)); });
   $('sg_days').querySelectorAll('[data-d]').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
   $('sgSave').onclick = () => {
     const days = [...$('sg_days').querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.d).join('');
-    const data = { id: x.id || '', name: $('sg_name').value.trim(), kind, time: $('sg_time').value, days, place: $('sg_place').value.trim(), staff: $('sg_staff').value.trim(), memo: $('sg_memo').value.trim(), on: $('sg_on').checked };
-    if (!data.name) { toast('利用者を入れてください'); return; }
+    const data = { id: x.id || '', name: x.id ? $('sg_name').value.trim() : picked.join('、'), names: x.id ? null : picked.slice(), kind, time: $('sg_time').value, days, place: $('sg_place').value.trim(), staff: $('sg_staff').value.trim(), memo: $('sg_memo').value.trim(), on: $('sg_on').checked };
+    if (!data.name) { toast(x.id ? '利用者を入れてください' : '利用者を選んでください'); return; }
     if (!data.time) { toast('時刻を入れてください'); return; }
     if (!days) { toast('曜日を選んでください'); return; }
     runAction(() => apiPost({ app:'sougeiSave', data }), () => showSougei());
